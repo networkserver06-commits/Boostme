@@ -257,3 +257,9 @@
 - [x] Confirm GitHub main points to the corrected Vercel schema commit `f030d6e`; local code is consistent with the pushed application.
 - [x] Re-run the final configuration, type, test, and production build checks.
 - [x] Report that live Vercel redeployment has not been independently confirmed and remains user-triggered.
+
+## Vercel configuration conflict correction
+
+- [x] Remove the incompatible `functions` block while preserving the working `builds` configuration.
+- [x] Validate the conflict-free Vercel JSON, application checks, and production build.
+- [ ] Push the conflict-free configuration to GitHub main and provide the new redeploy commit.
