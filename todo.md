@@ -96,3 +96,16 @@
 
 - [x] Validate supabase_migration.sql with a PostgreSQL-compatible parser or structural checks.
 - [x] Deliver the SQL file with concise paste-and-configure instructions.
+
+## Supabase provider verification script
+
+- [x] Add a safe Node test script for Supabase connectivity and schema checks.
+- [x] Verify provider catalog mapping fields, markup derivation, idempotency, and sync audit records.
+- [x] Verify background sync schedule/run records and support dry-run by default with explicit write opt-in.
+- [x] Run the script in dry-run mode and deliver usage instructions.
+
+## Supabase test execution hardening
+
+- [x] Add an explicit recent audit-event verification to the Supabase test script.
+- [x] Detect whether Supabase test credentials are available without exposing them; run a real dry-run when supplied or clearly report that credentialed execution is pending.
+- [x] Deliver the finalized script and instructions to the user.
