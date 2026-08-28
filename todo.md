@@ -150,3 +150,10 @@
 
 - [x] Configure Vercel to build and route the Express API function explicitly alongside the Vite static output.
 - [ ] Verify the live `/api/oauth/start` endpoint reaches the serverless function after redeploy.
+
+## Vercel frozen-install failure
+
+- [x] Resolve the pnpm patchedDependencies mismatch between package.json and pnpm-lock.yaml.
+- [x] Verify `pnpm install --frozen-lockfile` succeeds from a clean dependency state.
+- [x] Re-run type checks, tests, and production build before pushing the deployment fix.
+- [ ] Push the corrected package metadata and lockfile to GitHub main for Vercel redeploy.
