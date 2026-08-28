@@ -239,4 +239,9 @@
 - [x] Split the API app factory from local Vite/bootstrap imports.
 - [x] Produce and include a bundled server app artifact for the Vercel API function.
 - [x] Verify the Vercel-compatible production build, tests, and local API handler loading.
-- [ ] Push the serverless runtime fix to GitHub main and provide redeploy verification steps.
+- [x] Push the serverless runtime fix to GitHub main at `5d50d72` and provide redeploy verification steps.
+
+## Vercel post-push verification
+
+- [x] Document exact Vercel redeploy steps for commit `5d50d72`, required environment variables, and post-deploy checks.
+- [ ] Verify the live custom domain after redeployment no longer returns the serverless module error and authenticated routes load correctly.

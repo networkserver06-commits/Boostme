@@ -35,3 +35,11 @@ Run `pnpm install --frozen-lockfile`, `pnpm check`, `pnpm test`, and `pnpm build
 ## Security notes
 
 Keep all server-side Supabase service-role or secret keys in Vercel server environment variables only. The browser must use only the anon/publishable key. The application’s PostgREST adapter maps camelCase application fields to snake_case database fields and keeps provider credentials on the server side. The storage bucket remains private and returns signed URLs rather than public object URLs.
+
+## Redeploy checklist for the serverless import fix
+
+The serverless runtime correction is committed to GitHub `main` as `5d50d72`. In Vercel, open the project connected to `networkserver06-commits/Boostme`, confirm the Production branch is `main`, and select **Redeploy** for the deployment built from `5d50d72` (or push a new commit if the project is not connected to GitHub). Keep the project root at the repository root and do not override the committed build configuration.
+
+Before redeploying, confirm Production contains `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY` or `SUPABASE_SECRET_KEY`, `VITE_SUPABASE_URL`, `VITE_SUPABASE_ANON_KEY` or `VITE_SUPABASE_KEY`, `JWT_SECRET`, and `OWNER_NAME`. Never place the server-side key in a `VITE_` variable.
+
+After deployment, check `/` for the landing page, `/auth` for the Supabase Auth page, and `/api/trpc/auth.me` for a normal unauthenticated response rather than a `500` or `ERR_MODULE_NOT_FOUND`. Sign in with a Supabase Auth account, open `/admin` with an account whose `app_users.role` is `admin`, and test provider listing, provider connection test, and manual synchronization. In Vercel function logs, the previous `Cannot find module '/var/task/server/_core/index'` error should be absent.
