@@ -229,10 +229,10 @@
 
 ## Vercel and Supabase storage verification
 
-- [ ] Verify GitHub main contains the latest Supabase/provider-management release and compare it with the local checkpoint.
-- [ ] Audit application storage helpers and imports for any remaining non-Supabase storage path.
-- [ ] Check the live custom-domain routes after the GitHub push and identify any required Vercel redeploy or environment configuration.
-- [ ] Report verified deployment and storage readiness without overstating live functionality.
+- [x] Verify GitHub main contains the latest Supabase/provider-management release and compare it with the local checkpoint.
+- [x] Audit application storage helpers and imports for any remaining non-Supabase storage path.
+- [x] Check the live custom-domain routes after the GitHub push and identify the required Vercel redeploy and environment configuration.
+- [x] Report verified deployment and storage readiness without overstating live functionality.
 
 ## Vercel serverless import fix
 
