@@ -26,5 +26,9 @@
       "dest": "/index.html"
     }
   ],
-  "cleanUrls": true
+  "cleanUrls": true,
+  "crons": [
+    { "path": "/api/scheduled/sync-catalog", "schedule": "*/30 * * * *" },
+    { "path": "/api/scheduled/sync-orders", "schedule": "*/10 * * * *" }
+  ]
 }

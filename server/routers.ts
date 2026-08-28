@@ -1,13 +1,9 @@
 import { TRPCError } from "@trpc/server";
 import { z } from "zod";
-import { COOKIE_NAME } from "@shared/const";
-import { getSessionCookieOptions } from "./_core/cookies";
 import { systemRouter } from "./_core/systemRouter";
 import { adminProcedure, protectedProcedure, publicProcedure, router } from "./_core/trpc";
 import { chargeWallet, getActiveServices, getDb, getOrCreateProfile, getUserOrders, getUserWallet, listAdminUsers, listProviders, listSyncRuns, recordAudit, refundOrder, orders, profiles, services, smmProviders, syncRuns, syncSchedules, users, walletTransactions, eq, desc, sql } from "./db";
 import { fetchProviderServices, mapCatalogService, submitProviderOrder } from "./provider";
-import { createHeartbeatJob } from "./_core/heartbeat";
-import { parse as parseCookie } from "cookie";
 
 const serviceInput = z.object({
   name: z.string().min(3),
@@ -32,11 +28,7 @@ export const appRouter = router({
   system: systemRouter,
   auth: router({
     me: publicProcedure.query(opts => opts.ctx.user),
-    logout: publicProcedure.mutation(({ ctx }) => {
-      const cookieOptions = getSessionCookieOptions(ctx.req);
-      ctx.res.clearCookie(COOKIE_NAME, { ...cookieOptions, maxAge: -1 });
-      return { success: true } as const;
-    }),
+    logout: publicProcedure.mutation(() => ({ success: true } as const)),
   }),
   public: router({
     services: publicProcedure.query(() => getActiveServices()),
@@ -200,12 +192,14 @@ export const appRouter = router({
     }),
     provisionSyncSchedules: adminOnly.mutation(async ({ ctx }) => {
       const db = await getDb(); if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database unavailable" });
-      const sessionToken = parseCookie(ctx.req.headers.cookie ?? "")[COOKIE_NAME] ?? "";
-      const catalog = await createHeartbeatJob({ name: "orbit-sync-catalog", cron: "0 */30 * * * *", path: "/api/scheduled/sync-catalog", description: "Sync provider service catalog every 30 minutes" }, sessionToken);
-      const orderStatus = await createHeartbeatJob({ name: "orbit-sync-orders", cron: "0 */10 * * * *", path: "/api/scheduled/sync-orders", description: "Sync outstanding provider orders every 10 minutes" }, sessionToken);
-      await db.insert(syncSchedules).values([{ kind: "catalog", taskUid: catalog.taskUid, cron: "0 */30 * * * *", isActive: 1 }, { kind: "orders", taskUid: orderStatus.taskUid, cron: "0 */10 * * * *", isActive: 1 }]).onDuplicateKeyUpdate({ set: { taskUid: orderStatus.taskUid, cron: "0 */10 * * * *", isActive: 1 } });
-      await recordAudit({ actorUserId: ctx.user.id, action: "sync.schedules_provisioned", entityType: "heartbeat", details: { catalog: catalog.taskUid, orders: orderStatus.taskUid } });
-      return { catalog, orderStatus };
+      const schedules = [{ kind: "catalog" as const, taskUid: "vercel-cron-catalog", cron: "*/30 * * * *" }, { kind: "orders" as const, taskUid: "vercel-cron-orders", cron: "*/10 * * * *" }];
+      for (const schedule of schedules) {
+        const existing = (await db.select().from(syncSchedules).where(eq(syncSchedules.kind, schedule.kind)).limit(1))[0];
+        if (existing) await db.update(syncSchedules).set({ taskUid: schedule.taskUid, cron: schedule.cron, isActive: true }).where(eq(syncSchedules.id, existing.id));
+        else await db.insert(syncSchedules).values({ ...schedule, isActive: true });
+      }
+      await recordAudit({ actorUserId: ctx.user.id, action: "sync.schedules_provisioned", entityType: "vercel_cron", details: { schedules } });
+      return { schedules };
     }),
     runSync: adminOnly.input(z.object({ kind: z.enum(["catalog", "orders"]) })).mutation(async ({ ctx, input }) => {
       const db = await getDb(); if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database unavailable" });

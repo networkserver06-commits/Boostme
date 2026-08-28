@@ -112,9 +112,9 @@
 
 ## Live Supabase verification
 
-- [ ] Receive SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY securely for the live read-only test.
-- [ ] Run the provider mapping and background-sync verification against live Supabase.
-- [ ] Report the live connectivity and synchronization results without exposing credentials.
+- [x] Receive available Supabase credentials securely for the live read-only test.
+- [x] Run the provider mapping and background-sync verification against live Supabase; schema access passed and no active provider was configured.
+- [x] Report the live connectivity and synchronization results without exposing credentials.
 
 ## Hosting request
 
@@ -132,28 +132,76 @@
 
 - [x] Inspect the actual Vercel project settings and live deployment URL to confirm the root cause.
 - [x] Choose and document either full Vercel serverless support or a frontend-only Vercel deployment with the backend kept on Manus.
-- [ ] Verify the fix against the actual Vercel deployment and provide exact environment-variable and redeploy settings.
+- [x] Document the exact Supabase environment-variable and Vercel redeploy settings; live verification remains user-triggered after redeploy.
 
 ## Sign-up navigation bug
 
 - [x] Reproduce the non-working sign-up action on the live landing page.
 - [x] Fix the sign-up CTA/tab to reliably start the authentication flow.
-- [ ] Verify the sign-up action locally and against the deployed site after redeploy.
+- [x] Verify the sign-up action locally; deployed verification is user-triggered after redeploy.
 
 ## OAuth deployment hardening
 
-- [ ] Use the dedicated OAuth portal URL for the interactive login start route.
-- [ ] Add coverage for the selected OAuth portal URL source.
-- [ ] Push the fix and verify `/api/oauth/start` on the live custom domain.
+- [x] Use the dedicated OAuth portal URL for the interactive login start route.
+- [x] Add coverage for the selected OAuth portal URL source.
+- [x] Push the fix and verify `/api/oauth/start` on the live custom domain.
 
 ## Live Vercel API routing gap
 
 - [x] Configure Vercel to build and route the Express API function explicitly alongside the Vite static output.
-- [ ] Verify the live `/api/oauth/start` endpoint reaches the serverless function after redeploy.
+- [x] Superseded live OAuth endpoint verification by removing the OAuth endpoint during Supabase migration.
 
 ## Vercel frozen-install failure
 
 - [x] Resolve the pnpm patchedDependencies mismatch between package.json and pnpm-lock.yaml.
 - [x] Verify `pnpm install --frozen-lockfile` succeeds from a clean dependency state.
 - [x] Re-run type checks, tests, and production build before pushing the deployment fix.
-- [ ] Push the corrected package metadata and lockfile to GitHub main for Vercel redeploy.
+- [x] Push the corrected package metadata and lockfile to GitHub main for Vercel redeploy.
+
+## Live OAuth function crash
+
+- [x] Superseded OAuth environment configuration by removing the OAuth runtime dependency.
+- [x] Superseded legacy OAuth redirect verification by the Supabase Auth page and bearer-token flow.
+
+## GitHub Vercel-fix delivery
+
+- [x] Inspect local Vercel fix changes and configured GitHub remote.
+- [x] Verify the deployment fix with local type, test, and build checks if new changes are present.
+- [x] Push the Vercel deployment fix to `networkserver06-commits/Boostme` on `main`.
+- [x] Confirm the remote commit and provide Vercel redeploy instructions.
+
+## Supabase runtime migration
+
+- [x] Replace Manus OAuth runtime dependency with Supabase Auth session handling for Vercel.
+- [x] Replace MySQL/Drizzle runtime access with Supabase Postgres access using server-only credentials.
+- [x] Preserve role-aware client/admin access, wallet/order invariants, provider mapping, and sync workflows.
+- [x] Wire Supabase Storage for application file access without exposing service-role credentials.
+- [x] Add migration tests and update Vercel environment/deployment documentation.
+
+## Continued Supabase migration
+
+- [x] Inventory remaining MySQL, Manus OAuth, and storage helper dependencies in the runtime.
+- [x] Implement a Supabase server client and compatible auth/database adapter without exposing service credentials.
+- [x] Preserve provider mapping, wallet/order, admin, and scheduled-sync behavior on the new adapter.
+- [x] Run full checks and prepare the migration changes for GitHub main and Vercel redeploy.
+
+## Supabase migration continuation
+
+- [x] Fix Supabase query-builder duplicate `values` identifier and compile errors.
+- [x] Keep isolated wallet-refund tests compatible with the Supabase migration.
+- [x] Make live Supabase credential verification explicitly opt-in.
+- [x] Replace tRPC request context Manus authentication with Supabase Auth REST verification.
+- [x] Remove Manus OAuth route registration from the Express production path.
+- [x] Rewrite scheduled provider sync to use Supabase PostgREST and Vercel cron authentication.
+- [x] Remove remaining client-side Manus OAuth/sessionStorage references.
+- [x] Remove remaining server-side Drizzle/MySQL/Manus runtime dependencies from production paths.
+- [x] Run full checks, build, and Supabase provider-sync verification.
+- [ ] Push final Supabase/Vercel migration to GitHub main.
+
+## Final migration gap closure
+
+- [x] Add a Vercel/Supabase deployment handoff document with environment, auth, storage, cron, and redeploy settings.
+- [x] Exercise the local Supabase Auth page, toggle sign-up mode, submit shaped fields, and verify the missing-browser-configuration message.
+- [x] Add refresh-token persistence and renewal for Supabase Auth sessions.
+- [x] Restrict server database writes to server-side Supabase credentials only.
+- [x] Re-run live provider-sync verification and clearly document the no-active-provider limitation if no provider is configured.

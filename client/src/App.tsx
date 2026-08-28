@@ -4,12 +4,13 @@ import NotFound from "@/pages/NotFound";
 import Admin from "@/pages/Admin";
 import Dashboard from "@/pages/Dashboard";
 import Home from "@/pages/Home";
+import Auth from "@/pages/Auth";
 import { Route, Switch } from "wouter";
 import ErrorBoundary from "./components/ErrorBoundary";
 import { ThemeProvider } from "./contexts/ThemeContext";
 
 function Router() {
-  return <Switch><Route path="/" component={Home} /><Route path="/dashboard" component={Dashboard} /><Route path="/dashboard/orders" component={Dashboard} /><Route path="/dashboard/wallet" component={Dashboard} /><Route path="/admin" component={Admin} /><Route path="/404" component={NotFound} /><Route component={NotFound} /></Switch>;
+  return <Switch><Route path="/" component={Home} /><Route path="/auth" component={Auth} /><Route path="/dashboard" component={Dashboard} /><Route path="/dashboard/orders" component={Dashboard} /><Route path="/dashboard/wallet" component={Dashboard} /><Route path="/admin" component={Admin} /><Route path="/404" component={NotFound} /><Route component={NotFound} /></Switch>;
 }
 
 export default function App() {

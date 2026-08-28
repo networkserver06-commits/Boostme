@@ -11,7 +11,8 @@
 
 const args = new Set(process.argv.slice(2));
 if (args.has("--help") || args.has("-h")) {
-  console.log(`Usage: node scripts/test-supabase-provider-sync.mjs [--write] [--invoke-sync]\n\nRequired: SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY\nOptional: PROVIDER_ID, MARKUP_PERCENT, SYNC_ENDPOINT_URL, SYNC_AUTH_COOKIE\n\nDefault behavior is read-only. --write upserts mapped catalog rows.\n--invoke-sync calls the deployed /api/scheduled/sync-catalog endpoint and\nrequires --write plus SYNC_ENDPOINT_URL and SYNC_AUTH_COOKIE.`);
+  console.log(`Usage: node scripts/test-supabase-provider-sync.mjs [--write] [--invoke-sync]\n\nRequired: SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY
+Optional: PROVIDER_ID, MARKUP_PERCENT, SYNC_ENDPOINT_URL, SYNC_AUTH_TOKEN\n\nDefault behavior is read-only. --write upserts mapped catalog rows.\n--invoke-sync calls the deployed /api/scheduled/sync-catalog endpoint and\nrequires --write plus SYNC_ENDPOINT_URL and SYNC_AUTH_TOKEN.`);
   process.exit(0);
 }
 
@@ -155,14 +156,14 @@ async function main() {
 
   if (invokeSync) {
     const endpoint = process.env.SYNC_ENDPOINT_URL;
-    const cookie = process.env.SYNC_AUTH_COOKIE;
-    assert(endpoint && cookie, "SYNC_ENDPOINT_URL and SYNC_AUTH_COOKIE are required with --invoke-sync");
-    const response = await fetch(endpoint, { method: "POST", headers: { Cookie: `app_session_id=${cookie}`, accept: "application/json" } });
+    const token = process.env.SYNC_AUTH_TOKEN ?? process.env.JWT_SECRET;
+    assert(endpoint && token, "SYNC_ENDPOINT_URL and SYNC_AUTH_TOKEN (or JWT_SECRET) are required with --invoke-sync");
+    const response = await fetch(endpoint, { method: "POST", headers: { Authorization: `Bearer ${token}`, accept: "application/json" } });
     const body = await response.json();
     assert(response.ok && body?.ok, `Background sync endpoint failed: HTTP ${response.status} ${JSON.stringify(body)}`);
     console.log(`PASS live background sync callback: ${JSON.stringify(body)}`);
   } else {
-    console.log("SKIP live callback: provide --invoke-sync, SYNC_ENDPOINT_URL, and SYNC_AUTH_COOKIE to exercise the deployed cron endpoint");
+    console.log("SKIP live callback: provide --invoke-sync, SYNC_ENDPOINT_URL, and SYNC_AUTH_TOKEN to exercise the deployed cron endpoint");
   }
 
   console.log(`\nRESULT: Supabase provider mapping checks passed in ${writeMode ? "write" : "dry-run"} mode.`);
