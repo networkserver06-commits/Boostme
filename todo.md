@@ -78,3 +78,10 @@
 ## Audit assertion
 
 - [x] Assert per-service failure and summary audit events in the provider-mapping test.
+
+## GitHub delivery
+
+- [x] Verify access to https://github.com/networkserver06-commits/Boostme and inspect its main branch state.
+- [x] Run the project verification suite before publishing.
+- [x] Commit the current project update and push it to the repository main branch.
+- [x] Confirm the remote commit and report the GitHub delivery result.
