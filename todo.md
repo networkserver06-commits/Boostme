@@ -250,4 +250,10 @@
 
 - [x] Correct `functions.api/[...path].ts.includeFiles` to the schema-required string form.
 - [x] Validate the corrected Vercel configuration, tests, and production build.
-- [ ] Push the corrected configuration to GitHub main and provide the redeploy commit.
+- [x] Push the corrected configuration to GitHub main at `f030d6e` and provide the redeploy commit.
+
+## Final Vercel fix confirmation
+
+- [x] Confirm GitHub main points to the corrected Vercel schema commit `f030d6e`; local code is consistent with the pushed application.
+- [x] Re-run the final configuration, type, test, and production build checks.
+- [x] Report that live Vercel redeployment has not been independently confirmed and remains user-triggered.
