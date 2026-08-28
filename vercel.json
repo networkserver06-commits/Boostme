@@ -29,7 +29,7 @@
   "cleanUrls": true,
   "functions": {
     "api/[...path].ts": {
-      "includeFiles": ["dist/app.js"]
+      "includeFiles": "dist/app.js"
     }
   },
   "crons": [

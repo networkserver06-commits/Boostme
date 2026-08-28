@@ -245,3 +245,9 @@
 
 - [x] Document exact Vercel redeploy steps for commit `5d50d72`, required environment variables, and post-deploy checks.
 - [ ] Verify the live custom domain after redeployment no longer returns the serverless module error and authenticated routes load correctly.
+
+## Vercel schema correction
+
+- [x] Correct `functions.api/[...path].ts.includeFiles` to the schema-required string form.
+- [x] Validate the corrected Vercel configuration, tests, and production build.
+- [ ] Push the corrected configuration to GitHub main and provide the redeploy commit.
