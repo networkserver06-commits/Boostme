@@ -109,3 +109,27 @@
 - [x] Add an explicit recent audit-event verification to the Supabase test script.
 - [x] Detect whether Supabase test credentials are available without exposing them; run a real dry-run when supplied or clearly report that credentialed execution is pending.
 - [x] Deliver the finalized script and instructions to the user.
+
+## Live Supabase verification
+
+- [ ] Receive SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY securely for the live read-only test.
+- [ ] Run the provider mapping and background-sync verification against live Supabase.
+- [ ] Report the live connectivity and synchronization results without exposing credentials.
+
+## Hosting request
+
+- [x] Verify the project build and runtime requirements for external hosting compatibility.
+- [x] Document the supported publish path and the custom-domain setup for boost.leetec.online.
+- [x] Explain Vercel compatibility limitations for the current full-stack scheduled-sync architecture.
+
+## Vercel rendering bug
+
+- [x] Identify why the Vercel deployment is showing source code instead of the built application.
+- [x] Align the Vercel build/output/runtime configuration with the project structure.
+- [x] Verify the fix locally and document the exact Vercel redeploy settings.
+
+## Vercel deployment verification
+
+- [x] Inspect the actual Vercel project settings and live deployment URL to confirm the root cause.
+- [x] Choose and document either full Vercel serverless support or a frontend-only Vercel deployment with the backend kept on Manus.
+- [ ] Verify the fix against the actual Vercel deployment and provide exact environment-variable and redeploy settings.
