@@ -85,3 +85,14 @@
 - [x] Run the project verification suite before publishing.
 - [x] Commit the current project update and push it to the repository main branch.
 - [x] Confirm the remote commit and report the GitHub delivery result.
+
+## Supabase migration request
+
+- [x] Map the existing MySQL/Drizzle platform tables to Supabase/Postgres equivalents.
+- [x] Draft paste-ready Supabase SQL for application tables, storage metadata, indexes, triggers, and RLS policies.
+- [x] Validate the SQL structure and provide setup/integration notes without executing it against production.
+
+## Supabase handoff validation
+
+- [x] Validate supabase_migration.sql with a PostgreSQL-compatible parser or structural checks.
+- [x] Deliver the SQL file with concise paste-and-configure instructions.
