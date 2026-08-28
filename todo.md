@@ -205,3 +205,20 @@
 - [x] Add refresh-token persistence and renewal for Supabase Auth sessions.
 - [x] Restrict server database writes to server-side Supabase credentials only.
 - [x] Re-run live provider-sync verification and clearly document the no-active-provider limitation if no provider is configured.
+
+## Admin provider management feature
+
+- [x] Add admin provider CRUD/update procedures with server-side credential protection.
+- [x] Add an admin procedure to trigger provider catalog synchronization manually with audit visibility.
+- [x] Build the provider management interface with provider status, endpoint, markup, and sync controls.
+- [x] Add loading, success, failure, and partial-sync feedback states to the admin UI.
+- [x] Add Vitest coverage for provider authorization, management updates, and manual synchronization.
+- [x] Verify the provider workspace responsively and save a feature checkpoint.
+
+## Provider management hardening
+
+- [x] Sanitize provider list responses so API keys never reach the browser.
+- [x] Add edit and delete provider controls with safe credential preservation.
+- [x] Surface partial synchronization failures with actionable admin feedback.
+- [x] Add focused tests for provider save/update/toggle/test and manual sync outcomes.
+- [x] Verify the provider workspace layout and controls through the responsive admin implementation and route guard; authenticated live preview requires a configured admin session.

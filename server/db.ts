@@ -181,7 +181,7 @@ export async function refundOrder(input: { userId: number; orderId: number; amou
   return refund.nextBalance;
 }
 export async function listAdminUsers() { const db = await getDb(); if (!db) return []; const allUsers = await db.from(tableNames.users).select().orderBy(desc(users.createdAt)); const allProfiles = await db.from(tableNames.profiles).select(); return allUsers.map((user) => ({ user, profile: allProfiles.find((profile) => profile.userId === user.id) ?? null })); }
-export async function listProviders() { const db = await getDb(); if (!db) return []; return db.from(tableNames.smmProviders).select().orderBy(desc(smmProviders.createdAt)); }
+export async function listProviders() { const db = await getDb(); if (!db) return []; const rows = await db.from(tableNames.smmProviders).select().orderBy(desc(smmProviders.createdAt)); return rows.map(({ id, name, apiUrl, isActive, lastSyncAt, createdAt }) => ({ id, name, apiUrl, isActive, lastSyncAt, createdAt })); }
 export async function listSyncRuns() { const db = await getDb(); if (!db) return []; return db.from(tableNames.syncRuns).select().orderBy(desc(syncRuns.startedAt)).limit(20); }
 
 export { tableNames };

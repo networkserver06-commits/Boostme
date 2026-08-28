@@ -2,8 +2,9 @@ import { TRPCError } from "@trpc/server";
 import { z } from "zod";
 import { systemRouter } from "./_core/systemRouter";
 import { adminProcedure, protectedProcedure, publicProcedure, router } from "./_core/trpc";
-import { chargeWallet, getActiveServices, getDb, getOrCreateProfile, getUserOrders, getUserWallet, listAdminUsers, listProviders, listSyncRuns, recordAudit, refundOrder, orders, profiles, services, smmProviders, syncRuns, syncSchedules, users, walletTransactions, eq, desc, sql } from "./db";
+import { chargeWallet, getActiveServices, getDb, getOrCreateProfile, getUserOrders, getUserWallet, listAdminUsers, listProviders, listSyncRuns, recordAudit, refundOrder, orders, profiles, services, smmProviders, syncRuns, syncSchedules, users, walletTransactions, tableNames, eq, desc, sql } from "./db";
 import { fetchProviderServices, mapCatalogService, submitProviderOrder } from "./provider";
+import { executeProviderSync } from "./scheduled";
 
 const serviceInput = z.object({
   name: z.string().min(3),
@@ -172,11 +173,45 @@ export const appRouter = router({
       await recordAudit({ actorUserId: ctx.user.id, action: "wallet.adjusted", entityType: "profile", entityId: String(input.userId), details: { ...input, nextBalance } });
       return { success: true, balance: nextBalance };
     }),
-    saveProvider: adminOnly.input(z.object({ id: z.number().int().positive().optional(), name: z.string().min(2), apiUrl: z.string().url(), apiKey: z.string().min(4), isActive: z.number().int().min(0).max(1).default(1) })).mutation(async ({ ctx, input }) => {
+    saveProvider: adminOnly.input(z.object({ id: z.number().int().positive().optional(), name: z.string().min(2), apiUrl: z.string().url(), apiKey: z.string().min(4).optional(), isActive: z.number().int().min(0).max(1).default(1) })).mutation(async ({ ctx, input }) => {
       const db = await getDb(); if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database unavailable" });
-      if (input.id) await db.update(smmProviders).set({ name: input.name, apiUrl: input.apiUrl, apiKey: input.apiKey, isActive: input.isActive }).where(eq(smmProviders.id, input.id)); else await db.insert(smmProviders).values(input);
+      if (input.id) {
+        const values = { name: input.name, apiUrl: input.apiUrl, isActive: input.isActive, ...(input.apiKey ? { apiKey: input.apiKey } : {}) };
+        await db.update(smmProviders).set(values).where(eq(smmProviders.id, input.id));
+      } else {
+        if (!input.apiKey) throw new TRPCError({ code: "BAD_REQUEST", message: "An API key is required for a new provider" });
+        await db.insert(smmProviders).values(input);
+      }
       await recordAudit({ actorUserId: ctx.user.id, action: input.id ? "provider.updated" : "provider.created", entityType: "provider", entityId: input.id ? String(input.id) : undefined });
       return { success: true };
+    }),
+    removeProvider: adminOnly.input(z.object({ id: z.number().int().positive() })).mutation(async ({ ctx, input }) => {
+      const db = await getDb(); if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database unavailable" });
+      const provider = (await db.select().from(smmProviders).where(eq(smmProviders.id, input.id)).limit(1))[0];
+      if (!provider) throw new TRPCError({ code: "NOT_FOUND", message: "Provider not found" });
+      if (provider.isActive) throw new TRPCError({ code: "BAD_REQUEST", message: "Pause the provider before removing it" });
+      await db.request(`${tableNames.smmProviders}?id=eq.${input.id}`, { method: "DELETE", headers: { Prefer: "return=minimal" } });
+      await recordAudit({ actorUserId: ctx.user.id, action: "provider.removed", entityType: "provider", entityId: String(input.id), details: { name: provider.name } });
+      return { success: true };
+    }),
+    toggleProvider: adminOnly.input(z.object({ id: z.number().int().positive(), isActive: z.boolean() })).mutation(async ({ ctx, input }) => {
+      const db = await getDb(); if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database unavailable" });
+      await db.update(smmProviders).set({ isActive: input.isActive }).where(eq(smmProviders.id, input.id));
+      await recordAudit({ actorUserId: ctx.user.id, action: input.isActive ? "provider.activated" : "provider.paused", entityType: "provider", entityId: String(input.id) });
+      return { success: true, isActive: input.isActive };
+    }),
+    testProvider: adminOnly.input(z.object({ id: z.number().int().positive() })).mutation(async ({ ctx, input }) => {
+      const db = await getDb(); if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database unavailable" });
+      const provider = (await db.select().from(smmProviders).where(eq(smmProviders.id, input.id)).limit(1))[0];
+      if (!provider) throw new TRPCError({ code: "NOT_FOUND", message: "Provider not found" });
+      try {
+        const catalog = await fetchProviderServices(provider.apiUrl, provider.apiKey);
+        await recordAudit({ actorUserId: ctx.user.id, action: "provider.connection_tested", entityType: "provider", entityId: String(provider.id), details: { services: catalog.length, ok: true } });
+        return { ok: true, services: catalog.length, message: `Connection healthy · ${catalog.length} services available` };
+      } catch (error) {
+        await recordAudit({ actorUserId: ctx.user.id, action: "provider.connection_tested", entityType: "provider", entityId: String(provider.id), details: { ok: false, error: String(error) } });
+        throw new TRPCError({ code: "BAD_GATEWAY", message: "Provider connection failed. Check the endpoint and credentials." });
+      }
     }),
     markDepositCompleted: adminOnly.input(z.object({ transactionId: z.number().int().positive() })).mutation(async ({ ctx, input }) => {
       const db = await getDb(); if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database unavailable" });
@@ -202,10 +237,13 @@ export const appRouter = router({
       return { schedules };
     }),
     runSync: adminOnly.input(z.object({ kind: z.enum(["catalog", "orders"]) })).mutation(async ({ ctx, input }) => {
-      const db = await getDb(); if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database unavailable" });
-      const [run] = await db.insert(syncRuns).values({ kind: input.kind, status: "running", itemsProcessed: 0 }).$returningId();
-      await recordAudit({ actorUserId: ctx.user.id, action: `sync.${input.kind}.requested`, entityType: "sync_run", entityId: String(run.id) });
-      return { runId: run.id, message: "Sync queued. Provider responses are recorded in the audit log." };
+      await recordAudit({ actorUserId: ctx.user.id, action: `sync.${input.kind}.requested`, entityType: "sync_run", details: { trigger: "admin" } });
+      try {
+        const result = await executeProviderSync(input.kind, { actorUserId: ctx.user.id, taskUid: `admin-${ctx.user.id}-${Date.now()}` });
+        return { ...result, message: result.skipped === "no-provider" ? "No active provider is configured." : `${result.processed} ${input.kind} item${result.processed === 1 ? "" : "s"} synchronized.` };
+      } catch (error) {
+        throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: error instanceof Error ? error.message : "Synchronization failed" });
+      }
     }),
   }),
 });

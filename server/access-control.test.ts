@@ -23,5 +23,8 @@ describe("admin authorization", () => {
     const caller = appRouter.createCaller(context("user"));
     await expect(caller.admin.providerCatalog({ providerId: 1 })).rejects.toMatchObject({ code: "FORBIDDEN" });
     await expect(caller.admin.syncProviderServices({ providerId: 1, serviceIds: ["7"], markupPercent: 150 })).rejects.toMatchObject({ code: "FORBIDDEN" });
+    await expect(caller.admin.toggleProvider({ id: 1, isActive: true })).rejects.toMatchObject({ code: "FORBIDDEN" });
+    await expect(caller.admin.testProvider({ id: 1 })).rejects.toMatchObject({ code: "FORBIDDEN" });
+    await expect(caller.admin.runSync({ kind: "catalog" })).rejects.toMatchObject({ code: "FORBIDDEN" });
   });
 });
