@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { fetchProviderServices, fetchProviderStatus, mapProviderStatus, submitProviderOrder } from "./provider";
+import { fetchProviderServices, fetchProviderStatus, mapCatalogService, mapProviderStatus, submitProviderOrder } from "./provider";
 
 afterEach(() => vi.unstubAllGlobals());
 
@@ -14,6 +14,12 @@ describe("provider status mapping", () => {
 
   it("fails safely to pending for unknown provider states", () => {
     expect(mapProviderStatus("queued_by_vendor")).toBe("pending");
+  });
+});
+
+describe("provider service mapping", () => {
+  it("normalizes a remote service and applies the selected markup", () => {
+    expect(mapCatalogService({ service: "7", name: "Reels views", category: "Instagram Views", rate: "12.5", min: "100", max: "50000" }, 3, 160)).toMatchObject({ providerId: 3, providerServiceId: "7", platform: "Instagram", wholesaleRatePer1k: "12.5000", retailRatePer1k: "32.5000", minQuantity: 100, maxQuantity: 50000, isActive: 1 });
   });
 });
 

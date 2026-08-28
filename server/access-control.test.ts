@@ -18,4 +18,10 @@ describe("admin authorization", () => {
     const caller = appRouter.createCaller(context("admin"));
     await expect(caller.admin.metrics()).resolves.toBeDefined();
   });
+
+  it("protects provider catalog mapping procedures from clients", async () => {
+    const caller = appRouter.createCaller(context("user"));
+    await expect(caller.admin.providerCatalog({ providerId: 1 })).rejects.toMatchObject({ code: "FORBIDDEN" });
+    await expect(caller.admin.syncProviderServices({ providerId: 1, serviceIds: ["7"], markupPercent: 150 })).rejects.toMatchObject({ code: "FORBIDDEN" });
+  });
 });

@@ -5,7 +5,7 @@ import { getSessionCookieOptions } from "./_core/cookies";
 import { systemRouter } from "./_core/systemRouter";
 import { adminProcedure, protectedProcedure, publicProcedure, router } from "./_core/trpc";
 import { chargeWallet, getActiveServices, getDb, getOrCreateProfile, getUserOrders, getUserWallet, listAdminUsers, listProviders, listSyncRuns, recordAudit, refundOrder, orders, profiles, services, smmProviders, syncRuns, syncSchedules, users, walletTransactions, eq, desc, sql } from "./db";
-import { submitProviderOrder } from "./provider";
+import { fetchProviderServices, mapCatalogService, submitProviderOrder } from "./provider";
 import { createHeartbeatJob } from "./_core/heartbeat";
 import { parse as parseCookie } from "cookie";
 
@@ -121,6 +121,40 @@ export const appRouter = router({
     walletActivity: adminOnly.query(async () => { const db = await getDb(); return db ? db.select().from(walletTransactions).orderBy(desc(walletTransactions.createdAt)).limit(100) : []; }),
     services: adminOnly.query(async () => { const db = await getDb(); return db ? db.select().from(services).orderBy(desc(services.createdAt)) : []; }),
     providers: adminOnly.query(() => listProviders()),
+    providerCatalog: adminOnly.input(z.object({ providerId: z.number().int().positive() })).query(async ({ input }) => {
+      const db = await getDb(); if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database unavailable" });
+      const provider = (await db.select().from(smmProviders).where(eq(smmProviders.id, input.providerId)).limit(1))[0];
+      if (!provider) throw new TRPCError({ code: "NOT_FOUND", message: "Provider not found" });
+      const remote = await fetchProviderServices(provider.apiUrl, provider.apiKey);
+      const local = await db.select().from(services).where(eq(services.providerId, provider.id));
+      const mapped = new Map(local.filter(item => item.providerServiceId).map(item => [item.providerServiceId, item]));
+      return remote.map(item => ({ ...item, providerServiceId: String(item.service), localService: mapped.get(String(item.service)) ?? null }));
+    }),
+    syncProviderServices: adminOnly.input(z.object({ providerId: z.number().int().positive(), serviceIds: z.array(z.string().min(1)).min(1), markupPercent: z.number().min(0).max(1000).default(150) })).mutation(async ({ ctx, input }) => {
+      const db = await getDb(); if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database unavailable" });
+      const provider = (await db.select().from(smmProviders).where(eq(smmProviders.id, input.providerId)).limit(1))[0];
+      if (!provider) throw new TRPCError({ code: "NOT_FOUND", message: "Provider not found" });
+      const remote = await fetchProviderServices(provider.apiUrl, provider.apiKey);
+      const selected = remote.filter(item => input.serviceIds.includes(String(item.service)));
+      let synced = 0;
+      const failures: Array<{ providerServiceId: string; error: string }> = [];
+      for (const item of selected) {
+        const providerServiceId = String(item.service);
+        try {
+          const values = mapCatalogService(item, provider.id, input.markupPercent);
+          const existing = (await db.select().from(services).where(eq(services.providerServiceId, providerServiceId)).limit(1))[0];
+          if (existing) await db.update(services).set(values).where(eq(services.id, existing.id)); else await db.insert(services).values(values);
+          synced += 1;
+        } catch (error) {
+          const failure = { providerServiceId, error: error instanceof Error ? error.message : String(error) };
+          failures.push(failure);
+          await recordAudit({ actorUserId: ctx.user.id, action: "provider.service_mapping_failed", entityType: "provider_service", entityId: providerServiceId, details: failure });
+        }
+      }
+      await db.update(smmProviders).set({ lastSyncAt: new Date() }).where(eq(smmProviders.id, provider.id));
+      await recordAudit({ actorUserId: ctx.user.id, action: "provider.services_synced", entityType: "provider", entityId: String(provider.id), details: { selected: input.serviceIds.length, synced, failures, markupPercent: input.markupPercent } });
+      return { synced, requested: input.serviceIds.length, failures };
+    }),
     syncRuns: adminOnly.query(() => listSyncRuns()),
     upsertService: adminOnly.input(serviceInput.extend({ id: z.number().int().positive().optional(), isActive: z.number().int().min(0).max(1).optional() })).mutation(async ({ ctx, input }) => {
       const db = await getDb(); if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database unavailable" });

@@ -55,3 +55,26 @@
 
 - [x] Test successful scheduled provider polling and completed sync-run updates.
 - [x] Test provider polling failure handling and resulting sync-run state.
+
+## Provider service mapping feature
+
+- [x] Add admin provider catalog preview and safe production-service import controls.
+- [x] Add mapping persistence for provider service IDs, local service metadata, markup, and availability.
+- [x] Add selected-service sync with resilient per-service errors and audit visibility.
+- [x] Build an admin mapping interface with filters, selection, mapping status, and feedback states.
+- [x] Add Vitest coverage for mapping authorization, sync success, and partial provider failures.
+- [x] Verify the mapping UI responsively and save a feature checkpoint.
+
+## Provider mapping hardening
+
+- [x] Make selected-service sync resilient with per-service outcomes and detailed audit visibility.
+- [x] Add direct tests for admin provider catalog/mapping authorization and partial sync failures.
+- [x] Save a new checkpoint after the provider-mapping feature is fully verified.
+
+## Direct mapping sync coverage
+
+- [x] Exercise admin.syncProviderServices with mixed success/failure and assert partial outcomes plus audit behavior.
+
+## Audit assertion
+
+- [x] Assert per-service failure and summary audit events in the provider-mapping test.

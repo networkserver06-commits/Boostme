@@ -10,6 +10,10 @@ export async function providerRequest<T>(apiUrl: string, apiKey: string, body: R
 }
 
 export async function fetchProviderServices(apiUrl: string, apiKey: string) { return providerRequest<ProviderService[]>(apiUrl, apiKey, { action: "services" }); }
+
+export function mapCatalogService(item: ProviderService, providerId: number, markupPercent: number) {
+  return { providerId, providerServiceId: String(item.service), name: item.name, platform: item.category?.split(" ")[0] || "Social", category: item.category || item.type || "General", wholesaleRatePer1k: Number(item.rate).toFixed(4), retailRatePer1k: (Number(item.rate) * (1 + markupPercent / 100)).toFixed(4), minQuantity: Number(item.min), maxQuantity: Number(item.max), isActive: 1 };
+}
 export async function submitProviderOrder(apiUrl: string, apiKey: string, input: { service: string; link: string; quantity: number }) { return providerRequest<{ order: string }>(apiUrl, apiKey, { action: "add", ...input }); }
 export async function fetchProviderStatus(apiUrl: string, apiKey: string, order: string) { return providerRequest<ProviderOrderStatus>(apiUrl, apiKey, { action: "status", order }); }
 

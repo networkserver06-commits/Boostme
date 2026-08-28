@@ -145,7 +145,7 @@ export async function listAdminUsers() {
 export async function listProviders() {
   const db = await getDb();
   if (!db) return [];
-  return db.select().from(smmProviders).orderBy(desc(smmProviders.createdAt));
+  return db.select({ id: smmProviders.id, name: smmProviders.name, isActive: smmProviders.isActive, lastSyncAt: smmProviders.lastSyncAt, createdAt: smmProviders.createdAt }).from(smmProviders).orderBy(desc(smmProviders.createdAt));
 }
 
 export async function listSyncRuns() {
