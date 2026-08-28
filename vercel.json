@@ -27,6 +27,11 @@
     }
   ],
   "cleanUrls": true,
+  "functions": {
+    "api/[...path].ts": {
+      "includeFiles": ["dist/app.js"]
+    }
+  },
   "crons": [
     { "path": "/api/scheduled/sync-catalog", "schedule": "*/30 * * * *" },
     { "path": "/api/scheduled/sync-orders", "schedule": "*/10 * * * *" }

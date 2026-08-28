@@ -1,28 +1,10 @@
 import "dotenv/config";
-import express, { type Express } from "express";
 import { createServer } from "http";
 import net from "net";
-import { createExpressMiddleware } from "@trpc/server/adapters/express";
-import { appRouter } from "../routers";
-import { createContext } from "./context";
+import { createApp } from "../app";
 import { serveStatic, setupVite } from "./vite";
-import { scheduledSyncHandler } from "../scheduled";
 
-export function createApp(): Express {
-  const app = express();
-  app.use(express.json({ limit: "50mb" }));
-  app.use(express.urlencoded({ limit: "50mb", extended: true }));
-  app.get("/api/scheduled/sync-catalog", (req, res) => { void scheduledSyncHandler(req, res); });
-  app.get("/api/scheduled/sync-orders", (req, res) => { void scheduledSyncHandler(req, res); });
-  app.use(
-    "/api/trpc",
-    createExpressMiddleware({
-      router: appRouter,
-      createContext,
-    })
-  );
-  return app;
-}
+export { createApp } from "../app";
 
 function isPortAvailable(port: number): Promise<boolean> {
   return new Promise(resolve => {

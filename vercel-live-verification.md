@@ -1,7 +1,9 @@
-# Live Vercel verification — 2026-08-28
+# Live Vercel and Supabase Storage Verification — 2026-08-28
 
-The custom domain `https://boost.leetec.online/` serves the public Orbit Growth landing page successfully, including navigation, hero content, service sections, pricing calculator, and CTA controls.
+The custom domain `https://boost.leetec.online/` continues to serve the public landing page successfully after the GitHub push.
 
-The live route `https://boost.leetec.online/auth` currently returns Vercel `404: NOT_FOUND`. This indicates the Vercel deployment is serving the landing page but does not have the current client-side SPA fallback or the latest Supabase Auth route available at that deployment. The current local checkpoint includes the `/auth` route, so the live deployment is behind the local checkpoint unless the deployed project uses a separate configuration.
+The live route `https://boost.leetec.online/auth` still returns Vercel `404: NOT_FOUND`. Therefore the current Vercel deployment has not yet exposed the latest SPA authentication route, or its routing/build configuration is not using the pushed application output. The provider-management and Supabase Auth flows cannot be considered live until this route is fixed and redeployed.
 
-Repository comparison: local HEAD is checkpoint `9746d1b` with provider-management changes; GitHub `networkserver06-commits/Boostme` `main` remains at `af0f50c`, so the latest provider-management checkpoint has not been pushed to GitHub. A Vercel project connected to that GitHub branch cannot contain the latest provider-management code yet.
+GitHub `networkserver06-commits/Boostme` main is at `b741d5a`. The local checkout includes a later checkpoint snapshot `d5fa0af6` for the verification notes/TODO state, but the application feature itself is included in the pushed commit ancestry.
+
+Storage audit: `server/storage.ts` uses Supabase Storage REST endpoints exclusively, with the `orbit-assets` bucket and server-side Supabase credentials for upload and signed-download operations. No active server entrypoint import was found for the legacy `storageProxy`; only the unused legacy file and unrelated optional Manus Forge helpers remain in framework modules. Application storage paths therefore use Supabase Storage, subject to the required server Supabase environment variables and bucket/policy configuration.

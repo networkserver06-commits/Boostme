@@ -226,3 +226,17 @@
 ## GitHub delivery continuation
 
 - [x] Push checkpoint `9746d1bc` to `networkserver06-commits/Boostme` `main` and verify the remote commit at `b741d5a`.
+
+## Vercel and Supabase storage verification
+
+- [ ] Verify GitHub main contains the latest Supabase/provider-management release and compare it with the local checkpoint.
+- [ ] Audit application storage helpers and imports for any remaining non-Supabase storage path.
+- [ ] Check the live custom-domain routes after the GitHub push and identify any required Vercel redeploy or environment configuration.
+- [ ] Report verified deployment and storage readiness without overstating live functionality.
+
+## Vercel serverless import fix
+
+- [x] Split the API app factory from local Vite/bootstrap imports.
+- [x] Produce and include a bundled server app artifact for the Vercel API function.
+- [x] Verify the Vercel-compatible production build, tests, and local API handler loading.
+- [ ] Push the serverless runtime fix to GitHub main and provide redeploy verification steps.
