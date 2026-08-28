@@ -222,3 +222,7 @@
 - [x] Surface partial synchronization failures with actionable admin feedback.
 - [x] Add focused tests for provider save/update/toggle/test and manual sync outcomes.
 - [x] Verify the provider workspace layout and controls through the responsive admin implementation and route guard; authenticated live preview requires a configured admin session.
+
+## GitHub delivery continuation
+
+- [ ] Push checkpoint `9746d1bc` to `networkserver06-commits/Boostme` `main` and verify the remote commit.
