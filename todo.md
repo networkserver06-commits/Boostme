@@ -196,7 +196,7 @@
 - [x] Remove remaining client-side Manus OAuth/sessionStorage references.
 - [x] Remove remaining server-side Drizzle/MySQL/Manus runtime dependencies from production paths.
 - [x] Run full checks, build, and Supabase provider-sync verification.
-- [ ] Push final Supabase/Vercel migration to GitHub main.
+- [x] Push final Supabase/Vercel migration to GitHub main.
 
 ## Final migration gap closure
 
