@@ -145,3 +145,8 @@
 - [ ] Use the dedicated OAuth portal URL for the interactive login start route.
 - [ ] Add coverage for the selected OAuth portal URL source.
 - [ ] Push the fix and verify `/api/oauth/start` on the live custom domain.
+
+## Live Vercel API routing gap
+
+- [x] Configure Vercel to build and route the Express API function explicitly alongside the Vite static output.
+- [ ] Verify the live `/api/oauth/start` endpoint reaches the serverless function after redeploy.
