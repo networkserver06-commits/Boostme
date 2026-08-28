@@ -1,6 +1,8 @@
-import { COOKIE_NAME, ONE_YEAR_MS, OAUTH_STATE_COOKIE, decodeOAuthState } from "@shared/const";
+import { COOKIE_NAME, ONE_YEAR_MS, OAUTH_STATE_COOKIE, decodeOAuthState, encodeOAuthState } from "@shared/const";
 import { parse as parseCookieHeader } from "cookie";
+import crypto from "node:crypto";
 import type { Express, Request, Response } from "express";
+import { ENV } from "./env";
 import * as db from "../db";
 import { getSessionCookieOptions } from "./cookies";
 import { sdk } from "./sdk";
@@ -10,7 +12,43 @@ function getQueryParam(req: Request, key: string): string | undefined {
   return typeof value === "string" ? value : undefined;
 }
 
+function getRequestOrigin(req: Request) {
+  const forwardedProto = req.get("x-forwarded-proto")?.split(",")[0]?.trim();
+  const protocol = forwardedProto || req.protocol;
+  const host = req.get("host");
+  if (!host) throw new Error("OAuth start request has no host header");
+  return `${protocol}://${host}`;
+}
+
+export function createOAuthStartUrl(req: Request, nonce: string) {
+  const redirectUri = `${getRequestOrigin(req)}/api/oauth/callback`;
+  const state = encodeOAuthState({ redirectUri, nonce });
+  const portalUrl = ENV.oAuthPortalUrl || ENV.oAuthServerUrl;
+  const url = new URL(`${portalUrl}/app-auth`);
+  url.searchParams.set("appId", ENV.appId);
+  url.searchParams.set("redirectUri", redirectUri);
+  url.searchParams.set("state", state);
+  url.searchParams.set("type", "signIn");
+  return url;
+}
+
 export function registerOAuthRoutes(app: Express) {
+  app.get("/api/oauth/start", (req: Request, res: Response) => {
+    try {
+      const nonce = crypto.randomUUID();
+      res.cookie(OAUTH_STATE_COOKIE, nonce, {
+        maxAge: 10 * 60 * 1000,
+        path: "/",
+        secure: true,
+        sameSite: "none",
+      });
+      res.redirect(302, createOAuthStartUrl(req, nonce).toString());
+    } catch (error) {
+      console.error("[OAuth] Start failed", error);
+      res.status(500).json({ error: "OAuth start failed" });
+    }
+  });
+
   app.get("/api/oauth/callback", async (req: Request, res: Response) => {
     const code = getQueryParam(req, "code");
     const state = getQueryParam(req, "state");

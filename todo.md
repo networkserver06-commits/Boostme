@@ -133,3 +133,15 @@
 - [x] Inspect the actual Vercel project settings and live deployment URL to confirm the root cause.
 - [x] Choose and document either full Vercel serverless support or a frontend-only Vercel deployment with the backend kept on Manus.
 - [ ] Verify the fix against the actual Vercel deployment and provide exact environment-variable and redeploy settings.
+
+## Sign-up navigation bug
+
+- [x] Reproduce the non-working sign-up action on the live landing page.
+- [x] Fix the sign-up CTA/tab to reliably start the authentication flow.
+- [ ] Verify the sign-up action locally and against the deployed site after redeploy.
+
+## OAuth deployment hardening
+
+- [ ] Use the dedicated OAuth portal URL for the interactive login start route.
+- [ ] Add coverage for the selected OAuth portal URL source.
+- [ ] Push the fix and verify `/api/oauth/start` on the live custom domain.
