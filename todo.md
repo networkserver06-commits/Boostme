@@ -1,0 +1,57 @@
+# Project TODO
+
+- [x] Establish the elegant dark-mode visual system, typography, responsive layout, and navigation shell.
+- [x] Build the public landing page with service positioning, social proof-safe trust messaging, CTA sign-in flow, and interactive pricing preview.
+- [x] Preserve and wire Manus OAuth authentication with client/admin role-aware routes and guarded operations.
+- [x] Add SMM domain schema for profiles, providers, services, orders, wallet transactions, sync runs, and audit events.
+- [x] Implement wallet ledger primitives with atomic balance-safe order charging and transaction history.
+- [x] Implement client dashboard metrics, catalog browsing, order creation, validation, and order history/status tracking.
+- [x] Implement provider integration layer for catalog import, fulfillment submission, status mapping, retries, and error reporting.
+- [x] Implement admin dashboard for pricing/markup, services, providers, orders, wallet activity, and key metrics.
+- [x] Implement scheduled provider catalog and outstanding-order synchronization with audit visibility and resilient failures.
+- [x] Add Vitest coverage for authentication, authorization, wallet/order invariants, provider status mapping, and sync behavior.
+- [x] Run type checks, tests, and responsive visual verification; resolve any issues before delivery.
+- [ ] Save the completed project checkpoint and provide the version to the user.
+
+## Requirement history
+
+- [ ] User requested a polished social-media growth platform with secure client and administrator experiences.
+
+## Follow-up hardening
+
+- [x] Hide and guard admin routes and navigation based on the authenticated user role.
+- [x] Make wallet charging race-safe with a row lock or conditional balance update and correct pending-ledger balances.
+- [x] Add platform-specific target URL validation plus order status filtering and refresh behavior.
+- [x] Submit provider orders during order creation, persist provider order IDs, and retry transient provider failures.
+- [x] Add admin orders and wallet activity views plus explicit markup controls.
+- [x] Create real heartbeat jobs for catalog and order sync, persist task UIDs, and include all outstanding statuses.
+- [x] Add Vitest coverage for admin authorization, wallet/order invariants, scheduled sync, and provider fulfillment.
+- [x] Perform responsive visual verification at desktop and mobile breakpoints.
+
+## Final hardening pass
+
+- [x] Fix pending deposit ledger entries so balanceAfter reflects correct pending-balance semantics.
+- [x] Add explicit administrator markup percentage controls and derived retail pricing.
+- [x] Expand scheduled order sync to include pending and partial outstanding orders.
+- [x] Add Vitest coverage for wallet deduction/refund invariants and scheduled sync handling.
+- [x] Capture and review responsive screenshots for dashboard and admin pages.
+
+## Last quality pass
+
+- [x] Recalculate retail pricing whenever wholesale cost changes and keep saved pricing aligned with the displayed markup.
+- [x] Add tests for refund invariants and scheduled sync success/failure behavior.
+
+## Test completeness
+
+- [x] Add focused refundOrder tests for balance updates, failed-order marking, and refund ledger insertion.
+- [x] Add scheduledSyncHandler tests for cron-only authentication and sync completion/failure paths.
+
+## Direct handler coverage
+
+- [x] Exercise refundOrder itself with a mocked transaction database.
+- [x] Exercise scheduledSyncHandler itself for cron rejection and provider-sync completion/error paths.
+
+## Final scheduled-sync coverage
+
+- [x] Test successful scheduled provider polling and completed sync-run updates.
+- [x] Test provider polling failure handling and resulting sync-run state.
