@@ -4,6 +4,11 @@
   "buildCommand": "pnpm build",
   "outputDirectory": "dist/public",
   "cleanUrls": true,
+  "functions": {
+    "api/[...path].ts": {
+      "includeFiles": "dist/app.js"
+    }
+  },
   "rewrites": [
     { "source": "/api/(.*)", "destination": "/api/[...path]" },
     { "source": "/auth", "destination": "/index.html" },

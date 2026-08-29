@@ -1,7 +1,8 @@
 import { readFile } from "node:fs/promises";
 
 const config = JSON.parse(await readFile(new URL("../vercel.json", import.meta.url), "utf8"));
-if (config.builds || config.functions) throw new Error("Legacy builds/functions configuration must be absent");
+if (config.builds) throw new Error("Legacy builds configuration must be absent");
+if (config.functions?.["api/[...path].ts"]?.includeFiles !== "dist/app.js") throw new Error("API function must include dist/app.js as a string");
 if (config.buildCommand !== "pnpm build") throw new Error("Expected pnpm build command");
 if (config.outputDirectory !== "dist/public") throw new Error("Expected dist/public output directory");
 if (!Array.isArray(config.rewrites) || config.rewrites.length < 5) {
