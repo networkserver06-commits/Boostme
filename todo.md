@@ -354,3 +354,9 @@
 - [x] Provide a paste-safe correction for the malformed SQL separator at line 289.
 - [x] Provide exact Supabase Auth email-confirmation steps for `networkserver06@gmail.com`.
 - [x] Explain the required order: confirm email, sign in once, then promote the app user to admin.
+
+## Promote requested admin email
+
+- [x] Prepare exact SQL for `networkserver06@gmail.com` using the existing `public.app_users.role` contract.
+- [x] Validate the SQL is update-and-verify only, with no user creation or secret exposure.
+- [x] Deliver the SQL and explain the required sign-out/sign-in sequence.
