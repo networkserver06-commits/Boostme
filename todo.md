@@ -244,7 +244,7 @@
 ## Vercel post-push verification
 
 - [x] Document exact Vercel redeploy steps for commit `5d50d72`, required environment variables, and post-deploy checks.
-- [ ] Verify the live custom domain after redeployment no longer returns the serverless module error and authenticated routes load correctly.
+- [x] Verify the live custom domain after the latest deployment attempt; `/auth` and `/api/trpc/auth.me` still return Vercel 404s, so the correct Vercel deployment assignment remains pending.
 
 ## Vercel schema correction
 
@@ -284,3 +284,10 @@
 - [x] Preserve provider synchronization through the admin manual-sync controls and document the daily cron behavior.
 - [x] Validate the Hobby-compatible configuration, tests, and production build.
 - [x] Push the Hobby-compatible deployment fix to GitHub main at `2a6ce06` and report the commit.
+
+## Live Auth route 404 remediation
+
+- [x] Confirm the current Vercel SPA fallback and API routing behavior for `/auth`.
+- [x] Implement a robust Vercel client-route fallback that preserves `/api/*` functions.
+- [x] Validate the route configuration and production build.
+- [ ] Push the `/auth` route fix to GitHub main and provide redeploy instructions.
