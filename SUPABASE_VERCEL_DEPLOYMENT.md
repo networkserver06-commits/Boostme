@@ -13,8 +13,8 @@ Run `supabase_migration.sql` once in the Supabase SQL Editor. The migration crea
 | `SUPABASE_URL` | Yes | Server-side Supabase project URL. |
 | `SUPABASE_SERVICE_ROLE_KEY` or `SUPABASE_SECRET_KEY` | Yes | Server-only key for PostgREST writes and private Storage operations. Never expose it as a `VITE_` variable. |
 | `SUPABASE_KEY` | Optional | Server-side fallback key when the deployment uses one Supabase key for both API calls and database access. Prefer the service-role/secret key for this backend. |
-| `VITE_SUPABASE_URL` | Yes | Browser-safe Supabase project URL used by the Auth page. |
-| `VITE_SUPABASE_ANON_KEY` or `VITE_SUPABASE_KEY` | Yes | Browser-safe publishable/anon key used for email/password sign-in, sign-up, and refresh-token renewal. Do not put a service-role key in either variable. |
+| `VITE_SUPABASE_URL` or `NEXT_PUBLIC_SUPABASE_URL` | Yes | Browser-safe Supabase project URL used by the Auth page. The current Vite build accepts both naming conventions. |
+| `VITE_SUPABASE_ANON_KEY`, `VITE_SUPABASE_KEY`, `NEXT_PUBLIC_SUPABASE_ANON_KEY`, or `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` | Yes | Browser-safe publishable/anon key used for email/password sign-in, sign-up, and refresh-token renewal. Do not put a service-role key in any public variable. |
 | `JWT_SECRET` | Yes | Shared secret used to authenticate Vercel cron callbacks. |
 | `OWNER_NAME` | Recommended | Owner label used by existing application metadata. |
 
@@ -40,6 +40,6 @@ Keep all server-side Supabase service-role or secret keys in Vercel server envir
 
 The serverless runtime correction is committed to GitHub `main` as `5d50d72`. In Vercel, open the project connected to `networkserver06-commits/Boostme`, confirm the Production branch is `main`, and select **Redeploy** for the deployment built from `5d50d72` (or push a new commit if the project is not connected to GitHub). Keep the project root at the repository root and do not override the committed build configuration.
 
-Before redeploying, confirm Production contains `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY` or `SUPABASE_SECRET_KEY`, `VITE_SUPABASE_URL`, `VITE_SUPABASE_ANON_KEY` or `VITE_SUPABASE_KEY`, `JWT_SECRET`, and `OWNER_NAME`. Never place the server-side key in a `VITE_` variable.
+Before redeploying, confirm Production contains `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY` or `SUPABASE_SECRET_KEY`, one supported public URL variable (`VITE_SUPABASE_URL` or `NEXT_PUBLIC_SUPABASE_URL`), one supported public key variable (`VITE_SUPABASE_ANON_KEY`, `VITE_SUPABASE_KEY`, `NEXT_PUBLIC_SUPABASE_ANON_KEY`, or `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY`), `JWT_SECRET`, and `OWNER_NAME`. Never place the server-side key in a `VITE_` or `NEXT_PUBLIC_` variable.
 
 After deployment, check `/` for the landing page, `/auth` for the Supabase Auth page, and `/api/trpc/auth.me` for a normal unauthenticated response rather than a `500` or `ERR_MODULE_NOT_FOUND`. Sign in with a Supabase Auth account, open `/admin` with an account whose `app_users.role` is `admin`, and test provider listing, provider connection test, and manual synchronization. In Vercel function logs, the previous `Cannot find module '/var/task/server/_core/index'` error should be absent.

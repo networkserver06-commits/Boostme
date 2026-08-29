@@ -323,3 +323,9 @@
 - [x] Verify the live Auth route and unauthenticated tRPC response after Supabase variables were added to Vercel.
 - [x] Run local regression checks and confirm the Supabase server adapter requires only server-side credentials.
 - [x] Record the live verification result and distinguish environment readiness from provider/admin workflow testing.
+
+## Existing Vercel Supabase variable compatibility
+
+- [x] Support the existing `NEXT_PUBLIC_SUPABASE_URL` and `NEXT_PUBLIC_SUPABASE_ANON_KEY` names in the browser Auth and session code.
+- [x] Expose the existing `NEXT_PUBLIC_*` variables through the Vite production build without exposing server-only keys.
+- [x] Validate the built bundle, tests, and live Auth configuration after redeployment.

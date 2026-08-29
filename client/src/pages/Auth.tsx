@@ -1,9 +1,10 @@
 import { FormEvent, useState } from "react";
 import { useLocation } from "wouter";
 import { saveSupabaseSession } from "@/lib/supabaseAuth";
+import { supabaseBrowserConfig } from "@/lib/supabaseConfig";
 
-const supabaseUrl = (import.meta.env.VITE_SUPABASE_URL as string | undefined)?.replace(/\/$/, "");
-const supabaseKey = (import.meta.env.VITE_SUPABASE_ANON_KEY as string | undefined) ?? (import.meta.env.VITE_SUPABASE_KEY as string | undefined);
+const supabaseUrl = supabaseBrowserConfig?.url;
+const supabaseKey = supabaseBrowserConfig?.key;
 
 export default function Auth() {
   const [, navigate] = useLocation();
@@ -18,7 +19,7 @@ export default function Auth() {
     event.preventDefault();
     setMessage("");
     if (!supabaseUrl || !supabaseKey) {
-      setMessage("Supabase browser configuration is missing. Add VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY in Vercel.");
+      setMessage("Supabase browser configuration is missing. Add VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY, or use the supported NEXT_PUBLIC_SUPABASE_URL and NEXT_PUBLIC_SUPABASE_ANON_KEY variables in Vercel, then redeploy.");
       return;
     }
     setBusy(true);

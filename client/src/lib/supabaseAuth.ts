@@ -1,8 +1,10 @@
+import { supabaseBrowserConfig } from "./supabaseConfig";
+
 type SupabaseSession = { access_token: string; refresh_token?: string; expires_at?: number };
 
 const STORAGE_KEY = "supabase-auth-session";
-const url = (import.meta.env.VITE_SUPABASE_URL as string | undefined)?.replace(/\/$/, "");
-const key = (import.meta.env.VITE_SUPABASE_ANON_KEY as string | undefined) ?? (import.meta.env.VITE_SUPABASE_KEY as string | undefined);
+const url = supabaseBrowserConfig?.url;
+const key = supabaseBrowserConfig?.key;
 
 export function getSupabaseSession(): SupabaseSession | null {
   try {

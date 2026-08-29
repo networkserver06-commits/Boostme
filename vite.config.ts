@@ -161,6 +161,7 @@ export default defineConfig({
     },
   },
   envDir: path.resolve(import.meta.dirname),
+  envPrefix: ["VITE_", "NEXT_PUBLIC_"],
   root: path.resolve(import.meta.dirname, "client"),
   publicDir: path.resolve(import.meta.dirname, "client", "public"),
   build: {
