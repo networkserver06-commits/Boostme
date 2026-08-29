@@ -10,3 +10,7 @@ After the `9d79416` GitHub push redeployed, `https://boost.leetec.online/auth` r
 ## Supabase client configuration check — 2026-08-29
 
 The live Auth JavaScript bundle still contains the branch that immediately reports `Supabase browser configuration is missing` and asks for `VITE_SUPABASE_URL` plus `VITE_SUPABASE_ANON_KEY`. No public Supabase project URL is present in the downloaded bundle. Therefore, the server-side API routing is healthy, but browser sign-in/sign-up cannot be considered verified until those two Vite variables are present in Vercel Production and a new deployment is created after adding them.
+
+## Public-variable compatibility verification — 2026-08-29
+
+After commit `280c21e` redeployed, the live bundle changed and now embeds a Supabase project URL plus a public-key-shaped value. The live `/`, `/auth`, `/admin`, `/dashboard`, and `/api/trpc/auth.me` routes all return HTTP 200. A safe invalid-password request to the embedded Supabase Auth endpoint returned HTTP 400, confirming that the public Auth configuration is accepted without creating or changing an account. Server-side credentials were not exposed.
