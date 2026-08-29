@@ -283,4 +283,4 @@
 - [x] Remove sub-daily Vercel cron declarations that are blocked on Hobby accounts.
 - [x] Preserve provider synchronization through the admin manual-sync controls and document the daily cron behavior.
 - [x] Validate the Hobby-compatible configuration, tests, and production build.
-- [ ] Push the Hobby-compatible deployment fix to GitHub main and report the commit.
+- [x] Push the Hobby-compatible deployment fix to GitHub main at `2a6ce06` and report the commit.
