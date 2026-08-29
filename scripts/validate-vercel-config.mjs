@@ -7,7 +7,8 @@ if (config.outputDirectory !== "dist/public") throw new Error("Expected dist/pub
 if (!Array.isArray(config.rewrites) || config.rewrites[0]?.destination !== "/index.html") {
   throw new Error("Expected SPA fallback rewrite");
 }
-if (!Array.isArray(config.crons) || config.crons.length !== 2) throw new Error("Expected catalog and order cron declarations");
+if (!Array.isArray(config.crons) || config.crons.length !== 1) throw new Error("Expected one Hobby-compatible daily cron declaration");
+if (config.crons[0]?.schedule !== "0 3 * * *") throw new Error("Cron must run once daily at 03:00 UTC");
 const apiSource = await readFile(new URL("../api/[...path].ts", import.meta.url), "utf8");
 if (apiSource.includes("server/_core/index") || !apiSource.includes("../server/app.ts")) {
   throw new Error("API entrypoint must bundle server/app.ts directly");

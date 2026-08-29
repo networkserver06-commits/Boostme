@@ -22,7 +22,7 @@ Supabase Auth email confirmation settings determine whether sign-up immediately 
 
 ## Vercel configuration
 
-Use the repository root as the Vercel project root. The committed `vercel.json` builds `api/[...path].ts` as the Node function, builds the Vite client into `dist/public`, routes `/api/*` to the function, and declares catalog and order cron schedules. After adding the environment variables in **Production**, redeploy from the `main` branch. The scheduled handlers accept `Authorization: Bearer <JWT_SECRET>` and also accept an optional `x-task-uid` header for audit correlation.
+Use the repository root as the Vercel project root. The committed `vercel.json` builds the Vite client into `dist/public`, lets Vercel auto-detect and bundle `api/[...path].ts`, and declares one Hobby-compatible daily catalog cron at 03:00 UTC. Order synchronization remains available through the admin workspace’s manual sync action; a Pro Vercel plan can add a separate daily order cron later if desired. After adding the environment variables in **Production**, redeploy from the `main` branch. The scheduled handler accepts `Authorization: Bearer <JWT_SECRET>` and also accepts an optional `x-task-uid` header for audit correlation.
 
 ## Auth behavior
 

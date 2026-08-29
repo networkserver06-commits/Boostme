@@ -276,4 +276,11 @@
 - [x] Inspect every API entrypoint and build output for references to `server/_core/index`.
 - [x] Remove the stale runtime import from the Vercel function and add a direct-source entrypoint assertion.
 - [x] Run configuration, type, tests, production build, and API-entrypoint smoke checks.
-- [ ] Push the final stale-import fix to GitHub main and report the redeploy commit.
+- [x] Push the final stale-import fix to GitHub main at `0ec1ba0` and report the redeploy commit.
+
+## Vercel Hobby cron compatibility
+
+- [x] Remove sub-daily Vercel cron declarations that are blocked on Hobby accounts.
+- [x] Preserve provider synchronization through the admin manual-sync controls and document the daily cron behavior.
+- [x] Validate the Hobby-compatible configuration, tests, and production build.
+- [ ] Push the Hobby-compatible deployment fix to GitHub main and report the commit.
