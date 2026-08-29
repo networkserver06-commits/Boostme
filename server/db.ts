@@ -132,6 +132,21 @@ export async function getDb() {
   return _db;
 }
 
+export async function ensureEnvironmentProvider(dbOverride?: SupabaseDb) {
+  const apiUrl = process.env.BASE_URL?.trim().replace(/\/$/, "");
+  const apiKey = process.env.API_KEY?.trim();
+  if (!apiUrl || !apiKey) return null;
+  try { new URL(apiUrl); } catch { return null; }
+  const db = dbOverride ?? await getDb();
+  if (!db) return null;
+  const active = (await db.from(tableNames.smmProviders).select().where(eq(smmProviders.isActive, true)).limit(1))[0];
+  if (active) return active;
+  const existing = (await db.from(tableNames.smmProviders).select().where(eq(smmProviders.apiUrl, apiUrl)).limit(1))[0];
+  if (existing) return existing.isActive ? existing : null;
+  const created = await db.from(tableNames.smmProviders).insert({ name: "ShakerGain", apiUrl, apiKey, isActive: true });
+  return created[0] ?? null;
+}
+
 export async function upsertUser(user: any) {
   const db = await getDb(); if (!db) return;
   const values = mapIn({ openId: user.openId, name: user.name, email: user.email, loginMethod: user.loginMethod, role: user.role ?? (user.openId === ENV.ownerOpenId ? "admin" : "user"), lastSignedIn: user.lastSignedIn ?? new Date() });
@@ -181,7 +196,7 @@ export async function refundOrder(input: { userId: number; orderId: number; amou
   return refund.nextBalance;
 }
 export async function listAdminUsers() { const db = await getDb(); if (!db) return []; const allUsers = await db.from(tableNames.users).select().orderBy(desc(users.createdAt)); const allProfiles = await db.from(tableNames.profiles).select(); return allUsers.map((user) => ({ user, profile: allProfiles.find((profile) => profile.userId === user.id) ?? null })); }
-export async function listProviders() { const db = await getDb(); if (!db) return []; const rows = await db.from(tableNames.smmProviders).select().orderBy(desc(smmProviders.createdAt)); return rows.map(({ id, name, apiUrl, isActive, lastSyncAt, createdAt }) => ({ id, name, apiUrl, isActive, lastSyncAt, createdAt })); }
+export async function listProviders() { const db = await getDb(); if (!db) return []; await ensureEnvironmentProvider(db); const rows = await db.from(tableNames.smmProviders).select().orderBy(desc(smmProviders.createdAt)); return rows.map(({ id, name, apiUrl, isActive, lastSyncAt, createdAt }) => ({ id, name, apiUrl, isActive, lastSyncAt, createdAt })); }
 export async function listSyncRuns() { const db = await getDb(); if (!db) return []; return db.from(tableNames.syncRuns).select().orderBy(desc(syncRuns.startedAt)).limit(20); }
 
 export { tableNames };

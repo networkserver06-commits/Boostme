@@ -3,7 +3,7 @@ import { z } from "zod";
 import { systemRouter } from "./_core/systemRouter";
 import { adminProcedure, protectedProcedure, publicProcedure, router } from "./_core/trpc";
 import { chargeWallet, getActiveServices, getDb, getOrCreateProfile, getUserOrders, getUserWallet, listAdminUsers, listProviders, listSyncRuns, recordAudit, refundOrder, orders, profiles, services, smmProviders, syncRuns, syncSchedules, users, walletTransactions, tableNames, eq, desc, sql } from "./db";
-import { fetchProviderServices, mapCatalogService, submitProviderOrder } from "./provider";
+import { fetchProviderServices, getProviderServiceId, mapCatalogService, submitProviderOrder } from "./provider";
 import { executeProviderSync } from "./scheduled";
 
 const serviceInput = z.object({
@@ -121,18 +121,18 @@ export const appRouter = router({
       const remote = await fetchProviderServices(provider.apiUrl, provider.apiKey);
       const local = await db.select().from(services).where(eq(services.providerId, provider.id));
       const mapped = new Map(local.filter(item => item.providerServiceId).map(item => [item.providerServiceId, item]));
-      return remote.map(item => ({ ...item, providerServiceId: String(item.service), localService: mapped.get(String(item.service)) ?? null }));
+      return remote.map(item => { const providerServiceId = getProviderServiceId(item); return { ...item, providerServiceId, localService: mapped.get(providerServiceId) ?? null }; });
     }),
     syncProviderServices: adminOnly.input(z.object({ providerId: z.number().int().positive(), serviceIds: z.array(z.string().min(1)).min(1), markupPercent: z.number().min(0).max(1000).default(150) })).mutation(async ({ ctx, input }) => {
       const db = await getDb(); if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database unavailable" });
       const provider = (await db.select().from(smmProviders).where(eq(smmProviders.id, input.providerId)).limit(1))[0];
       if (!provider) throw new TRPCError({ code: "NOT_FOUND", message: "Provider not found" });
       const remote = await fetchProviderServices(provider.apiUrl, provider.apiKey);
-      const selected = remote.filter(item => input.serviceIds.includes(String(item.service)));
+      const selected = remote.filter(item => input.serviceIds.includes(getProviderServiceId(item)));
       let synced = 0;
       const failures: Array<{ providerServiceId: string; error: string }> = [];
       for (const item of selected) {
-        const providerServiceId = String(item.service);
+        const providerServiceId = getProviderServiceId(item);
         try {
           const values = mapCatalogService(item, provider.id, input.markupPercent);
           const existing = (await db.select().from(services).where(eq(services.providerServiceId, providerServiceId)).limit(1))[0];

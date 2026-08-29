@@ -1,6 +1,6 @@
 import type { Request, Response } from "express";
-import { eq, getDb, orders, recordAudit, services, smmProviders, syncRuns, tableNames } from "./db";
-import { fetchProviderServices, fetchProviderStatus, mapProviderStatus } from "./provider";
+import { ensureEnvironmentProvider, eq, getDb, orders, recordAudit, services, smmProviders, syncRuns, tableNames } from "./db";
+import { fetchProviderServices, fetchProviderStatus, getProviderServiceId, mapCatalogService, mapProviderStatus } from "./provider";
 
 export const OUTSTANDING_ORDER_STATUSES = ["pending", "in_progress", "partial"] as const;
 export const isAuthorizedCron = (user: { isCron?: boolean; taskUid?: string }) => Boolean(user.isCron && user.taskUid);
@@ -17,7 +17,7 @@ export async function executeProviderSync(kind: SyncKind, options: { taskUid?: s
   const getServices = options.fetchProviderServices ?? fetchProviderServices;
   const getStatus = options.fetchProviderStatus ?? fetchProviderStatus;
   const audit = options.recordAudit ?? recordAudit;
-  const provider = (await db.from(tableNames.smmProviders).select().where(eq(smmProviders.isActive, true)).limit(1))[0];
+  const provider = (await db.from(tableNames.smmProviders).select().where(eq(smmProviders.isActive, true)).limit(1))[0] ?? await ensureEnvironmentProvider(db);
   const run = (await db.from(tableNames.syncRuns).insert({ providerId: provider?.id ?? null, kind, status: "running", itemsProcessed: 0 }))[0];
   if (!provider) {
     if (run) await db.from(tableNames.syncRuns).update({ status: "failed", errorMessage: "No active provider configured", finishedAt: new Date() }).where(eq(syncRuns.id, run.id));
@@ -27,8 +27,8 @@ export async function executeProviderSync(kind: SyncKind, options: { taskUid?: s
   if (kind === "catalog") {
     const catalog = await getServices(provider.apiUrl, provider.apiKey);
     for (const item of catalog) {
-      const existing = (await db.from(tableNames.services).select().where(eq(services.providerServiceId, String(item.service))).limit(1))[0];
-      const values = { providerId: provider.id, providerServiceId: String(item.service), name: item.name, platform: item.category?.split(" ")[0] || "Social", category: item.category || item.type || "General", wholesaleRatePer1k: Number(item.rate).toFixed(4), retailRatePer1k: (Number(item.rate) * 2.5).toFixed(4), minQuantity: Number(item.min), maxQuantity: Number(item.max), isActive: true };
+      const existing = (await db.from(tableNames.services).select().where(eq(services.providerServiceId, getProviderServiceId(item))).limit(1))[0];
+      const values = mapCatalogService(item, provider.id, 150);
       if (existing) await db.from(tableNames.services).update(values).where(eq(services.id, existing.id)); else await db.from(tableNames.services).insert(values);
       processed += 1;
     }

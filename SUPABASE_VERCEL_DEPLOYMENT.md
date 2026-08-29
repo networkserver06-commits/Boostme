@@ -4,7 +4,7 @@ This project now uses **Supabase Auth**, **Supabase PostgREST**, and **Supabase 
 
 ## Supabase setup
 
-Run `supabase_migration.sql` once in the Supabase SQL Editor. The migration creates the application tables, private `orbit-assets` storage bucket, indexes, triggers, wallet helper, and RLS defaults. Configure at least one active row in `smm_providers` before running provider catalog or order synchronization; otherwise the verification script correctly reports that connectivity succeeded but no provider is available to sync.
+Run `supabase_migration.sql` once in the Supabase SQL Editor. The migration creates the application tables, private `orbit-assets` storage bucket, indexes, triggers, wallet helper, and RLS defaults. Configure at least one active row in `smm_providers` before running provider catalog or order synchronization, or provide the server-only ShakerGain `BASE_URL` and `API_KEY` variables. The app creates the ShakerGain row only when no active provider exists; an existing active provider takes precedence and a paused matching provider is not silently reactivated.
 
 ## Vercel environment variables
 
@@ -17,6 +17,8 @@ Run `supabase_migration.sql` once in the Supabase SQL Editor. The migration crea
 | `VITE_SUPABASE_ANON_KEY`, `VITE_SUPABASE_KEY`, `NEXT_PUBLIC_SUPABASE_ANON_KEY`, or `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` | Yes | Browser-safe publishable/anon key used for email/password sign-in, sign-up, and refresh-token renewal. Do not put a service-role key in any public variable. |
 | `JWT_SECRET` | Yes | Shared secret used to authenticate Vercel cron callbacks. |
 | `OWNER_NAME` | Recommended | Owner label used by existing application metadata. |
+| `BASE_URL` | Optional | Server-only ShakerGain provider endpoint. When no active provider exists, the app idempotently creates a `ShakerGain` provider row from this value. |
+| `API_KEY` | Optional | Server-only ShakerGain provider key paired with `BASE_URL`. Never expose it as `VITE_` or `NEXT_PUBLIC_`. |
 
 Supabase Auth email confirmation settings determine whether sign-up immediately returns a session or asks the user to confirm their email. Add the production site URL and `/auth` path to Supabase Auth redirect/site settings as appropriate for the project domain.
 
@@ -40,6 +42,6 @@ Keep all server-side Supabase service-role or secret keys in Vercel server envir
 
 The serverless runtime correction is committed to GitHub `main` as `5d50d72`. In Vercel, open the project connected to `networkserver06-commits/Boostme`, confirm the Production branch is `main`, and select **Redeploy** for the deployment built from `5d50d72` (or push a new commit if the project is not connected to GitHub). Keep the project root at the repository root and do not override the committed build configuration.
 
-Before redeploying, confirm Production contains `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY` or `SUPABASE_SECRET_KEY`, one supported public URL variable (`VITE_SUPABASE_URL` or `NEXT_PUBLIC_SUPABASE_URL`), one supported public key variable (`VITE_SUPABASE_ANON_KEY`, `VITE_SUPABASE_KEY`, `NEXT_PUBLIC_SUPABASE_ANON_KEY`, or `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY`), `JWT_SECRET`, and `OWNER_NAME`. Never place the server-side key in a `VITE_` or `NEXT_PUBLIC_` variable.
+Before redeploying, confirm Production contains `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY` or `SUPABASE_SECRET_KEY`, one supported public URL variable (`VITE_SUPABASE_URL` or `NEXT_PUBLIC_SUPABASE_URL`), one supported public key variable (`VITE_SUPABASE_ANON_KEY`, `VITE_SUPABASE_KEY`, `NEXT_PUBLIC_SUPABASE_ANON_KEY`, or `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY`), `JWT_SECRET`, and `OWNER_NAME`. For automatic ShakerGain setup, also keep `BASE_URL=https://shakergainske.com/api/v2` and `API_KEY` server-only. Never place the provider or Supabase server-side key in a `VITE_` or `NEXT_PUBLIC_` variable.
 
 After deployment, check `/` for the landing page, `/auth` for the Supabase Auth page, and `/api/trpc/auth.me` for a normal unauthenticated response rather than a `500` or `ERR_MODULE_NOT_FOUND`. Sign in with a Supabase Auth account, open `/admin` with an account whose `app_users.role` is `admin`, and test provider listing, provider connection test, and manual synchronization. In Vercel function logs, the previous `Cannot find module '/var/task/server/_core/index'` error should be absent.

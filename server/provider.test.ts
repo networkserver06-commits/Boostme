@@ -21,6 +21,10 @@ describe("provider service mapping", () => {
   it("normalizes a remote service and applies the selected markup", () => {
     expect(mapCatalogService({ service: "7", name: "Reels views", category: "Instagram Views", rate: "12.5", min: "100", max: "50000" }, 3, 160)).toMatchObject({ providerId: 3, providerServiceId: "7", platform: "Instagram", wholesaleRatePer1k: "12.5000", retailRatePer1k: "32.5000", minQuantity: 100, maxQuantity: 50000, isActive: 1 });
   });
+
+  it("supports ShakerGain’s documented services and Category aliases", () => {
+    expect(mapCatalogService({ services: "1", name: "Data Entry", Category: "Seo", rate: 1, min: "10", max: "100000", type: "Default" }, 8, 100)).toMatchObject({ providerId: 8, providerServiceId: "1", platform: "Seo", category: "Seo", wholesaleRatePer1k: "1.0000", retailRatePer1k: "2.0000" });
+  });
 });
 
 describe("provider REST adapter", () => {
