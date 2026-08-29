@@ -335,4 +335,4 @@
 - [x] Add idempotent server-only bootstrap from Vercel `BASE_URL` and `API_KEY` when no active provider exists.
 - [x] Support ShakerGain catalog aliases (`services` and `Category`) across preview, mapping, and scheduled sync.
 - [x] Add regression coverage and run safe catalog connectivity checks without creating orders.
-- [ ] Push the ShakerGain integration and save a final checkpoint.
+- [x] Push the ShakerGain integration and save a final checkpoint.
