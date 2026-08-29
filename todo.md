@@ -290,4 +290,4 @@
 - [x] Confirm the current Vercel SPA fallback and API routing behavior for `/auth`.
 - [x] Implement a robust Vercel client-route fallback that preserves `/api/*` functions.
 - [x] Validate the route configuration and production build.
-- [ ] Push the `/auth` route fix to GitHub main and provide redeploy instructions.
+- [x] Push the `/auth` route fix to GitHub main at `c0a6c11` and provide redeploy instructions.
