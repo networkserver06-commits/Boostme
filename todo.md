@@ -336,3 +336,15 @@
 - [x] Support ShakerGain catalog aliases (`services` and `Category`) across preview, mapping, and scheduled sync.
 - [x] Add regression coverage and run safe catalog connectivity checks without creating orders.
 - [x] Push the ShakerGain integration and save a final checkpoint.
+
+## Full Supabase SQL delivery
+
+- [x] Review the existing Supabase migration against all current application tables and features.
+- [x] Produce a complete safe-to-paste SQL script for schema, storage, indexes, policies, wallet helpers, and admin verification.
+- [x] Validate the SQL structure and deliver paste instructions without executing destructive changes against production.
+
+## Complete Supabase setup SQL
+
+- [x] Reconcile the migration with the current Supabase Auth, provider, wallet, order, sync, audit, and storage implementation.
+- [x] Deliver a single safe-to-paste SQL file with schema, indexes, triggers, RLS defaults, private storage, wallet helper, and verification queries.
+- [x] Validate the SQL file structurally and provide exact execution instructions in Supabase SQL Editor.
