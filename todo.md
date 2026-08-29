@@ -328,4 +328,4 @@
 
 - [x] Support the existing `NEXT_PUBLIC_SUPABASE_URL` and `NEXT_PUBLIC_SUPABASE_ANON_KEY` names in the browser Auth and session code.
 - [x] Expose the existing `NEXT_PUBLIC_*` variables through the Vite production build without exposing server-only keys.
-- [x] Validate the built bundle, tests, and live Auth configuration after redeployment.
+- [ ] Validate the live Auth configuration after the compatibility fix redeploys.
