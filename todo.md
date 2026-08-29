@@ -360,3 +360,9 @@
 - [x] Prepare exact SQL for `networkserver06@gmail.com` using the existing `public.app_users.role` contract.
 - [x] Validate the SQL is update-and-verify only, with no user creation or secret exposure.
 - [x] Deliver the SQL and explain the required sign-out/sign-in sequence.
+
+## Inline Supabase SQL and Auth confirmation UX
+
+- [x] Provide the complete Supabase setup SQL directly in the final message, including admin promotion for `networkserver06@gmail.com`.
+- [x] Improve the Auth page error handling for unconfirmed email and provide a resend-confirmation action.
+- [x] Validate the Auth change, SQL structure, and deployment build before delivery.

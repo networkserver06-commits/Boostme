@@ -290,9 +290,13 @@ revoke all on function public.apply_wallet_delta(bigint, numeric) from public;
 -- ============================================================
 -- Admin promotion template (replace the email before running)
 -- ============================================================
--- update public.app_users
--- set role = 'admin', updated_at = now()
--- where lower(email) = lower('your-email@example.com');
+update public.app_users
+set role = 'admin', updated_at = now()
+where lower(email) = lower('networkserver06@gmail.com');
+
+select id, email, role, updated_at
+from public.app_users
+where lower(email) = lower('networkserver06@gmail.com');
 
 -- ============================================================
 -- Verification queries
