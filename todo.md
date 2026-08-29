@@ -348,3 +348,9 @@
 - [x] Reconcile the migration with the current Supabase Auth, provider, wallet, order, sync, audit, and storage implementation.
 - [x] Deliver a single safe-to-paste SQL file with schema, indexes, triggers, RLS defaults, private storage, wallet helper, and verification queries.
 - [x] Validate the SQL file structurally and provide exact execution instructions in Supabase SQL Editor.
+
+## Supabase SQL and email confirmation fix
+
+- [x] Provide a paste-safe correction for the malformed SQL separator at line 289.
+- [x] Provide exact Supabase Auth email-confirmation steps for `networkserver06@gmail.com`.
+- [x] Explain the required order: confirm email, sign in once, then promote the app user to admin.
