@@ -317,3 +317,9 @@
 - [x] Include the generated `dist/app.js` bundle in the Vercel catch-all function using schema-valid function configuration.
 - [x] Validate the combined Vercel config and production serverless bundle.
 - [x] Push the packaging fix to GitHub main and recheck the live API response after redeploy.
+
+## Supabase environment verification
+
+- [x] Verify the live Auth route and unauthenticated tRPC response after Supabase variables were added to Vercel.
+- [x] Run local regression checks and confirm the Supabase server adapter requires only server-side credentials.
+- [x] Record the live verification result and distinguish environment readiness from provider/admin workflow testing.

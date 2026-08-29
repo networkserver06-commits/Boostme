@@ -6,3 +6,7 @@ The deployed custom domain now serves the Supabase Auth page successfully at `/a
 ## Final live route check — 2026-08-29 06:00 UTC
 
 After the `9d79416` GitHub push redeployed, `https://boost.leetec.online/auth` returns HTTP 200 and renders the Auth page. `https://boost.leetec.online/api/trpc/auth.me` returns HTTP 200 with `{"result":{"data":{"json":null}}}`, which is the expected unauthenticated tRPC response. The previous API 404 and FUNCTION_INVOCATION_FAILED errors are resolved.
+
+## Supabase client configuration check — 2026-08-29
+
+The live Auth JavaScript bundle still contains the branch that immediately reports `Supabase browser configuration is missing` and asks for `VITE_SUPABASE_URL` plus `VITE_SUPABASE_ANON_KEY`. No public Supabase project URL is present in the downloaded bundle. Therefore, the server-side API routing is healthy, but browser sign-in/sign-up cannot be considered verified until those two Vite variables are present in Vercel Production and a new deployment is created after adding them.
