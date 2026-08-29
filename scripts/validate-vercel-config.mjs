@@ -13,6 +13,8 @@ for (const path of ["/auth", "/admin", "/dashboard", "/(.*)"]) {
 }
 if (!Array.isArray(config.crons) || config.crons.length !== 1) throw new Error("Expected one Hobby-compatible daily cron declaration");
 if (config.crons[0]?.schedule !== "0 3 * * *") throw new Error("Cron must run once daily at 03:00 UTC");
+const packageJson = JSON.parse(await readFile(new URL("../package.json", import.meta.url), "utf8"));
+if (!packageJson.scripts.build.includes("prepare-spa-routes.mjs")) throw new Error("Build must prepare physical SPA routes");
 const apiSource = await readFile(new URL("../api/[...path].ts", import.meta.url), "utf8");
 if (apiSource.includes("server/_core/index") || !apiSource.includes("../server/app.ts")) {
   throw new Error("API entrypoint must bundle server/app.ts directly");

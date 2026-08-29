@@ -291,3 +291,9 @@
 - [x] Implement a robust Vercel client-route fallback that preserves `/api/*` functions.
 - [x] Validate the route configuration and production build.
 - [x] Push the `/auth` route fix to GitHub main at `c0a6c11` and provide redeploy instructions.
+
+## Physical SPA route fallback
+
+- [x] Generate physical `auth`, `admin`, and `dashboard` route entrypoints in `dist/public` during the production build.
+- [x] Validate the generated route artifacts and all application checks.
+- [ ] Push the route-artifact fallback to GitHub main and provide the redeploy commit.
