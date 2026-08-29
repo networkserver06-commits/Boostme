@@ -262,4 +262,11 @@
 
 - [x] Remove the incompatible `functions` block while preserving the working `builds` configuration.
 - [x] Validate the conflict-free Vercel JSON, application checks, and production build.
-- [ ] Push the conflict-free configuration to GitHub main and provide the new redeploy commit.
+- [x] Push the conflict-free configuration to GitHub main at `847ef3f` and provide the new redeploy commit.
+
+## Vercel deployment failure remediation
+
+- [x] Inspect the current Vercel build configuration and API runtime failure path.
+- [x] Implement the Vercel-compatible deployment fix and add a deterministic smoke check.
+- [x] Run configuration, type, test, production-build, and API-entrypoint validation.
+- [ ] Push the final deployment fix to GitHub main and report the redeploy commit.
