@@ -19,7 +19,7 @@ if (config.crons[0]?.schedule !== "0 3 * * *") throw new Error("Cron must run on
 const packageJson = JSON.parse(await readFile(new URL("../package.json", import.meta.url), "utf8"));
 if (!packageJson.scripts.build.includes("prepare-spa-routes.mjs")) throw new Error("Build must prepare physical SPA routes");
 const apiSource = await readFile(new URL("../api/[...path].ts", import.meta.url), "utf8");
-if (apiSource.includes("server/_core/index") || !apiSource.includes("../server/app.ts")) {
-  throw new Error("API entrypoint must bundle server/app.ts directly");
+if (apiSource.includes("server/_core/index") || !apiSource.includes("../dist/app.js")) {
+  throw new Error("API entrypoint must import the bundled dist/app.js artifact");
 }
 console.log("vercel-config-ok");

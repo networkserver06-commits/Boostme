@@ -301,8 +301,8 @@
 ## Final live Vercel resolution
 
 - [ ] Recheck the live Auth/API routes and confirm which deployment is serving the custom domain.
-- [ ] Apply the remaining Vercel routing/build correction needed for direct client routes.
-- [ ] Validate the final route artifacts, application checks, and serverless entrypoint.
+- [x] Apply the remaining Vercel routing/build correction needed for direct client routes.
+- [x] Validate the final route artifacts, application checks, and serverless entrypoint.
 - [ ] Push the final live-routing fix to GitHub main and report the redeploy commit.
 
 ## Live API route resolution
