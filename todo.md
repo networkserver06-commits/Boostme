@@ -296,4 +296,4 @@
 
 - [x] Generate physical `auth`, `admin`, and `dashboard` route entrypoints in `dist/public` during the production build.
 - [x] Validate the generated route artifacts and all application checks.
-- [ ] Push the route-artifact fallback to GitHub main and provide the redeploy commit.
+- [x] Push the route-artifact fallback to GitHub main at `60e764d` and provide the redeploy commit.

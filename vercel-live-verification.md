@@ -1,8 +1,4 @@
 
-## Latest post-schema live check — 2026-08-28 17:31 UTC
+## Live check after user-reported redeploy — 2026-08-29 05:50 UTC
 
-After GitHub main was updated through `f030d6e`, the custom domain still returns `404: NOT_FOUND` at `/auth` and `500: FUNCTION_INVOCATION_FAILED` at `/api/trpc/auth.me`. The corrected Vercel configuration is present on GitHub and passes local validation. This confirms the remaining issue is that the Vercel project has not redeployed the corrected main commit, is connected to a different repository/branch, or has a separate dashboard build configuration overriding the repository settings. Live confirmation remains pending until the correct Vercel project deploys `f030d6e`.
-
-## Hobby-compatible deployment check — 2026-08-29 05:11 UTC
-
-After the Hobby cron fix was pushed, `/auth` and `/api/trpc/auth.me` both returned Vercel `404: NOT_FOUND`. The result indicates the custom domain is still not serving the expected repository deployment or the Vercel project has not successfully built/assigned the latest deployment. The repository configuration itself passes local validation and the final code is on GitHub main.
+The custom homepage at `https://boost.leetec.online/` is reachable and serves the site title, but `https://boost.leetec.online/auth` still returns `404: NOT_FOUND`. The latest check confirms the Auth route is not being served by the expected SPA fallback in the live Vercel deployment. The repository fix is on GitHub main at `c0a6c11` and local validation passes; the remaining problem is the Vercel project/build configuration or the deployed artifact, not the local route code.
