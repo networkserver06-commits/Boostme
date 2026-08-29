@@ -300,20 +300,20 @@
 
 ## Final live Vercel resolution
 
-- [ ] Recheck the live Auth/API routes and confirm which deployment is serving the custom domain.
+- [x] Recheck the live Auth/API routes and confirm which deployment is serving the custom domain.
 - [x] Apply the remaining Vercel routing/build correction needed for direct client routes.
 - [x] Validate the final route artifacts, application checks, and serverless entrypoint.
-- [ ] Push the final live-routing fix to GitHub main and report the redeploy commit.
+- [x] Push the final live-routing fix to GitHub main and report the redeploy commit.
 
 ## Live API route resolution
 
 - [x] Add an explicit Vercel `/api/*` rewrite to the catch-all serverless function before the SPA fallback.
 - [x] Validate API routing configuration, build, and serverless entrypoint.
-- [ ] Push the API route fix to GitHub main and report the redeploy commit.
-- [ ] Recheck the live tRPC endpoint after Vercel redeploy.
+- [x] Push the API route fix to GitHub main and report the redeploy commit.
+- [x] Recheck the live tRPC endpoint after Vercel redeploy.
 
 ## Vercel API bundle packaging
 
 - [x] Include the generated `dist/app.js` bundle in the Vercel catch-all function using schema-valid function configuration.
 - [x] Validate the combined Vercel config and production serverless bundle.
-- [ ] Push the packaging fix to GitHub main and recheck the live API response after redeploy.
+- [x] Push the packaging fix to GitHub main and recheck the live API response after redeploy.
