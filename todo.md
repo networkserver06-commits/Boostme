@@ -297,3 +297,17 @@
 - [x] Generate physical `auth`, `admin`, and `dashboard` route entrypoints in `dist/public` during the production build.
 - [x] Validate the generated route artifacts and all application checks.
 - [x] Push the route-artifact fallback to GitHub main at `60e764d` and provide the redeploy commit.
+
+## Final live Vercel resolution
+
+- [ ] Recheck the live Auth/API routes and confirm which deployment is serving the custom domain.
+- [ ] Apply the remaining Vercel routing/build correction needed for direct client routes.
+- [ ] Validate the final route artifacts, application checks, and serverless entrypoint.
+- [ ] Push the final live-routing fix to GitHub main and report the redeploy commit.
+
+## Live API route resolution
+
+- [x] Add an explicit Vercel `/api/*` rewrite to the catch-all serverless function before the SPA fallback.
+- [x] Validate API routing configuration, build, and serverless entrypoint.
+- [ ] Push the API route fix to GitHub main and report the redeploy commit.
+- [ ] Recheck the live tRPC endpoint after Vercel redeploy.

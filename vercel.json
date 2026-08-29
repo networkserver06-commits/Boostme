@@ -5,6 +5,7 @@
   "outputDirectory": "dist/public",
   "cleanUrls": true,
   "rewrites": [
+    { "source": "/api/(.*)", "destination": "/api/[...path]" },
     { "source": "/auth", "destination": "/index.html" },
     { "source": "/admin", "destination": "/index.html" },
     { "source": "/dashboard", "destination": "/index.html" },
