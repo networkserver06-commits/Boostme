@@ -1,4 +1,4 @@
-// Vercel packages this generated, Vite-free server bundle with the function.
-import { createApp } from "../dist/app.js";
+// Vercel bundles this pure API factory; it intentionally excludes local Vite/bootstrap code.
+import { createApp } from "../server/app.ts";
 
 export default createApp();

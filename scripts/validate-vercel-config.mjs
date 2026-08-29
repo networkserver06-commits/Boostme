@@ -1,11 +1,15 @@
 import { readFile } from "node:fs/promises";
 
 const config = JSON.parse(await readFile(new URL("../vercel.json", import.meta.url), "utf8"));
-if (config.functions) throw new Error("functions cannot be used with builds");
-if (!Array.isArray(config.builds) || config.builds.length < 2) throw new Error("Expected Node and static build declarations");
-const nodeBuild = config.builds.find((build) => build.use === "@vercel/node");
-if (!Array.isArray(nodeBuild?.config?.includeFiles) || !nodeBuild.config.includeFiles.includes("dist/app.js")) {
-  throw new Error("@vercel/node must include dist/app.js via build config");
+if (config.builds || config.functions) throw new Error("Legacy builds/functions configuration must be absent");
+if (config.buildCommand !== "pnpm build") throw new Error("Expected pnpm build command");
+if (config.outputDirectory !== "dist/public") throw new Error("Expected dist/public output directory");
+if (!Array.isArray(config.rewrites) || config.rewrites[0]?.destination !== "/index.html") {
+  throw new Error("Expected SPA fallback rewrite");
 }
 if (!Array.isArray(config.crons) || config.crons.length !== 2) throw new Error("Expected catalog and order cron declarations");
+const apiSource = await readFile(new URL("../api/[...path].ts", import.meta.url), "utf8");
+if (apiSource.includes("server/_core/index") || !apiSource.includes("../server/app.ts")) {
+  throw new Error("API entrypoint must bundle server/app.ts directly");
+}
 console.log("vercel-config-ok");

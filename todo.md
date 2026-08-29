@@ -269,4 +269,11 @@
 - [x] Inspect the current Vercel build configuration and API runtime failure path.
 - [x] Implement the Vercel-compatible deployment fix and add a deterministic smoke check.
 - [x] Run configuration, type, test, production-build, and API-entrypoint validation.
-- [ ] Push the final deployment fix to GitHub main and report the redeploy commit.
+- [x] Push the final deployment fix to GitHub main at `5579291` and report the redeploy commit.
+
+## Final Vercel stale-import remediation
+
+- [x] Inspect every API entrypoint and build output for references to `server/_core/index`.
+- [x] Remove the stale runtime import from the Vercel function and add a direct-source entrypoint assertion.
+- [x] Run configuration, type, tests, production build, and API-entrypoint smoke checks.
+- [ ] Push the final stale-import fix to GitHub main and report the redeploy commit.
