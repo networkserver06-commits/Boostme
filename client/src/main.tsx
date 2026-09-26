@@ -6,14 +6,16 @@ import { createRoot } from "react-dom/client";
 import superjson from "superjson";
 import App from "./App";
 import { startLogin } from "./const";
-import { getSupabaseSession, refreshSupabaseSession } from "./lib/supabaseAuth";
+import { refreshSupabaseSession } from "./lib/supabaseAuth";
 import "./index.css";
 
 const queryClient = new QueryClient();
 
 const redirectToLoginIfUnauthorized = (error: unknown) => {
   if (!(error instanceof TRPCClientError) || typeof window === "undefined") return;
-  if (error.message === UNAUTHED_ERR_MSG && window.location.pathname !== "/auth") startLogin();
+  if (error.message === UNAUTHED_ERR_MSG && window.location.pathname !== "/auth") {
+    startLogin(window.location.pathname + window.location.search);
+  }
 };
 
 queryClient.getQueryCache().subscribe(event => {
@@ -37,8 +39,9 @@ const trpcClient = trpc.createClient({
     httpBatchLink({
       url: "/api/trpc",
       transformer: superjson,
-      headers() {
-        const token = getSupabaseSession()?.access_token ?? localStorage.getItem("supabase-access-token");
+      async headers() {
+        const session = await refreshSupabaseSession();
+        const token = session?.access_token;
         return token ? { Authorization: `Bearer ${token}` } : {};
       },
       fetch(input, init) {
@@ -47,8 +50,6 @@ const trpcClient = trpc.createClient({
     }),
   ],
 });
-
-void refreshSupabaseSession();
 
 createRoot(document.getElementById("root")!).render(
   <trpc.Provider client={trpcClient} queryClient={queryClient}>

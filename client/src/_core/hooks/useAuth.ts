@@ -1,7 +1,6 @@
 import { startLogin } from "@/const";
 import { trpc } from "@/lib/trpc";
-import { TRPCClientError } from "@trpc/client";
-import { clearSupabaseSession } from "@/lib/supabaseAuth";
+import { signOutSupabase } from "@/lib/supabaseAuth";
 import { useCallback, useEffect, useMemo } from "react";
 
 type UseAuthOptions = { redirectOnUnauthenticated?: boolean; redirectPath?: string };
@@ -10,30 +9,25 @@ export function useAuth(options?: UseAuthOptions) {
   const { redirectOnUnauthenticated = false, redirectPath } = options ?? {};
   const utils = trpc.useUtils();
   const meQuery = trpc.auth.me.useQuery(undefined, { retry: false, refetchOnWindowFocus: false });
-  const logoutMutation = trpc.auth.logout.useMutation({ onSuccess: () => utils.auth.me.setData(undefined, null) });
-
   const logout = useCallback(async () => {
-    try { await logoutMutation.mutateAsync(); } catch (error: unknown) {
-      if (!(error instanceof TRPCClientError) || error.data?.code !== "UNAUTHORIZED") throw error;
-    } finally {
-      clearSupabaseSession();
-      utils.auth.me.setData(undefined, null);
-      await utils.auth.me.invalidate();
-    }
-  }, [logoutMutation, utils]);
+    await signOutSupabase();
+    utils.auth.me.setData(undefined, null);
+    await utils.auth.me.invalidate();
+  }, [utils]);
 
   const state = useMemo(() => ({
     user: meQuery.data ?? null,
-    loading: meQuery.isLoading || logoutMutation.isPending,
-    error: meQuery.error ?? logoutMutation.error ?? null,
+    loading: meQuery.isLoading,
+    error: meQuery.error ?? null,
     isAuthenticated: Boolean(meQuery.data),
-  }), [meQuery.data, meQuery.error, meQuery.isLoading, logoutMutation.error, logoutMutation.isPending]);
+  }), [meQuery.data, meQuery.error, meQuery.isLoading]);
 
   useEffect(() => {
-    if (!redirectOnUnauthenticated || meQuery.isLoading || logoutMutation.isPending || state.user || typeof window === "undefined") return;
+    if (!redirectOnUnauthenticated || meQuery.isLoading || state.user || typeof window === "undefined") return;
     if (redirectPath && window.location.pathname === redirectPath) return;
-    if (redirectPath) window.location.href = redirectPath; else startLogin();
-  }, [redirectOnUnauthenticated, redirectPath, logoutMutation.isPending, meQuery.isLoading, state.user]);
+    if (redirectPath) window.location.href = redirectPath;
+    else startLogin(window.location.pathname + window.location.search);
+  }, [redirectOnUnauthenticated, redirectPath, meQuery.isLoading, state.user]);
 
   return { ...state, refresh: () => meQuery.refetch(), logout };
 }

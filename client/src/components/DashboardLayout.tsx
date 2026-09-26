@@ -71,7 +71,7 @@ export default function DashboardLayout({
             </p>
           </div>
           <Button
-            onClick={() => startLogin()}
+            onClick={() => startLogin(window.location.pathname + window.location.search)}
             size="lg"
             className="w-full shadow-lg hover:shadow-xl transition-all"
           >
@@ -108,11 +108,12 @@ function DashboardLayoutContent({
 }: DashboardLayoutContentProps) {
   const { user, logout } = useAuth();
   const [location, setLocation] = useLocation();
-  const { state, toggleSidebar } = useSidebar();
+  const { state, toggleSidebar, setOpenMobile } = useSidebar();
   const isCollapsed = state === "collapsed";
   const [isResizing, setIsResizing] = useState(false);
   const sidebarRef = useRef<HTMLDivElement>(null);
-  const activeMenuItem = menuItems.find(item => item.path === location);
+  const activeMenuItem = menuItems.find(item => item.path === location)
+    ?? menuItems.find(item => item.path !== "/dashboard" && location.startsWith(`${item.path}/`));
   const isMobile = useIsMobile();
 
   useEffect(() => {
@@ -170,9 +171,9 @@ function DashboardLayoutContent({
               </button>
               {!isCollapsed ? (
                 <div className="flex items-center gap-2 min-w-0">
-                  <span className="font-semibold tracking-tight truncate">
+                  <button type="button" onClick={() => setLocation("/")} className="font-semibold tracking-tight truncate text-left hover:text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring" aria-label="Go to Orbit Growth home">
                     orbit growth
-                  </span>
+                  </button>
                 </div>
               ) : null}
             </div>
@@ -181,12 +182,13 @@ function DashboardLayoutContent({
           <SidebarContent className="gap-0">
             <SidebarMenu className="px-2 py-1">
               {menuItems.filter(item => item.path !== "/admin" || user?.role === "admin").map(item => {
-                const isActive = location === item.path;
+                const isActive = location === item.path || (item.path !== "/dashboard" && location.startsWith(`${item.path}/`));
                 return (
                   <SidebarMenuItem key={item.path}>
                     <SidebarMenuButton
                       isActive={isActive}
-                      onClick={() => setLocation(item.path)}
+                      aria-current={isActive ? "page" : undefined}
+                      onClick={() => { setLocation(item.path); setOpenMobile(false); }}
                       tooltip={item.label}
                       className={`h-10 transition-all font-normal`}
                     >
@@ -207,7 +209,7 @@ function DashboardLayoutContent({
                 <button className="flex items-center gap-3 rounded-lg px-1 py-1 hover:bg-accent/50 transition-colors w-full text-left group-data-[collapsible=icon]:justify-center focus:outline-none focus-visible:ring-2 focus-visible:ring-ring">
                   <Avatar className="h-9 w-9 border shrink-0">
                     <AvatarFallback className="text-xs font-medium">
-                      {user?.name?.charAt(0).toUpperCase()}
+                      {(user?.name || user?.email || "OG").charAt(0).toUpperCase()}
                     </AvatarFallback>
                   </Avatar>
                   <div className="flex-1 min-w-0 group-data-[collapsible=icon]:hidden">
