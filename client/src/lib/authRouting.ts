@@ -19,3 +19,11 @@ export function safeAuthReturnPath(candidate: string | null | undefined) {
 
   return DEFAULT_RETURN_PATH;
 }
+
+/** Build the in-app callback URL Supabase should use for signup, resend, and recovery emails. */
+export function buildSupabaseAuthRedirect(origin: string, returnTo: string, mode?: "reset") {
+  const redirect = new URL("/auth", origin);
+  redirect.searchParams.set("next", safeAuthReturnPath(returnTo));
+  if (mode) redirect.searchParams.set("mode", mode);
+  return redirect.toString();
+}

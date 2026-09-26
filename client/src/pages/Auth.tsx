@@ -1,10 +1,10 @@
-import { FormEvent, useEffect, useState } from "react";
+import { FormEvent, useCallback, useEffect, useState } from "react";
 import { useLocation } from "wouter";
 import { ArrowLeft, ArrowRight, Eye, EyeOff, LockKeyhole, Mail, ShieldCheck, Sparkles } from "lucide-react";
 import { saveSupabaseSession, getSupabaseSession, captureSupabaseSessionFromHash } from "@/lib/supabaseAuth";
 import { supabaseBrowserConfig } from "@/lib/supabaseConfig";
-import { isEmailNotConfirmedError } from "@/lib/authError";
-import { safeAuthReturnPath } from "@/lib/authRouting";
+import { getSupabaseCallbackError, isEmailNotConfirmedError } from "@/lib/authError";
+import { buildSupabaseAuthRedirect, safeAuthReturnPath } from "@/lib/authRouting";
 import { useAuth } from "@/_core/hooks/useAuth";
 import { trpc } from "@/lib/trpc";
 
@@ -40,19 +40,44 @@ export default function Auth() {
   const [busy, setBusy] = useState(false);
   const [returnTo] = useState(() => safeAuthReturnPath(new URLSearchParams(window.location.search).get("next")));
 
+  const verifyAndContinue = useCallback(async (successMessage: string) => {
+    setBusy(true);
+    try {
+      const appUser = await utils.auth.me.fetch();
+      if (!appUser) {
+        setStatus("Supabase accepted the account, but this app could not verify the workspace session. Check that the server-side Supabase URL/key point to the same project and that the app database migration has been applied.");
+        return false;
+      }
+      utils.auth.me.setData(undefined, appUser);
+      setStatus(successMessage, "success");
+      navigate(returnTo);
+      return true;
+    } catch {
+      setStatus("Your Supabase session was created, but the workspace could not verify it. Check the server-side Supabase URL/key and database setup, then try again.");
+      return false;
+    } finally {
+      setBusy(false);
+    }
+  }, [navigate, returnTo, utils.auth.me]);
+
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
+    const callbackError = getSupabaseCallbackError(window.location.search, window.location.hash);
+    if (callbackError) {
+      setMode(params.get("mode") === "reset" ? "forgot" : "signin");
+      setStatus(callbackError);
+      setNeedsConfirmation(params.get("mode") !== "reset");
+      return;
+    }
     const linkType = captureSupabaseSessionFromHash();
     if (linkType === "recovery" || (params.get("mode") === "reset" && getSupabaseSession()?.access_token)) {
       setMode("reset");
       setMessage("Choose a new password for your account.");
       setMessageKind("success");
     } else if (linkType) {
-      setMessage("Email confirmed. Opening your workspace…");
-      setMessageKind("success");
-      void utils.auth.me.invalidate().then(() => navigate(returnTo));
+      void verifyAndContinue("Email confirmed. Opening your workspace…");
     }
-  }, [navigate, returnTo, utils.auth.me]);
+  }, [verifyAndContinue]);
 
   useEffect(() => {
     if (auth.user && mode !== "reset") navigate(returnTo);
@@ -71,7 +96,7 @@ export default function Auth() {
     }
     setBusy(true);
     try {
-      const redirectTo = `${window.location.origin}/auth?mode=reset&next=${encodeURIComponent(returnTo)}`;
+      const redirectTo = buildSupabaseAuthRedirect(window.location.origin, returnTo, "reset");
       const response = await fetch(`${supabaseUrl}/auth/v1/recover?redirect_to=${encodeURIComponent(redirectTo)}`, {
         method: "POST",
         headers: { apikey: supabaseKey, "Content-Type": "application/json" },
@@ -95,7 +120,7 @@ export default function Auth() {
     }
     setBusy(true);
     try {
-      const redirectTo = `${window.location.origin}/auth?next=${encodeURIComponent(returnTo)}`;
+      const redirectTo = buildSupabaseAuthRedirect(window.location.origin, returnTo);
       const response = await fetch(`${supabaseUrl}/auth/v1/resend?redirect_to=${encodeURIComponent(redirectTo)}`, {
         method: "POST",
         headers: { apikey: supabaseKey, "Content-Type": "application/json" },
@@ -138,9 +163,7 @@ export default function Auth() {
         });
         const body = await response.json().catch(() => ({})) as AuthResponse;
         if (!response.ok) throw new Error(getErrorMessage(body, "Unable to update the password."));
-        setStatus("Password updated. You’re being signed in…", "success");
-        await utils.auth.me.invalidate();
-        navigate(returnTo);
+        await verifyAndContinue("Password updated. You’re being signed in…");
       } catch (error) {
         setStatus(error instanceof Error ? error.message : "Unable to update the password.");
       } finally {
@@ -155,7 +178,10 @@ export default function Auth() {
     }
     setBusy(true);
     try {
-      const endpoint = mode === "signin" ? "/auth/v1/token?grant_type=password" : "/auth/v1/signup";
+      const redirectTo = buildSupabaseAuthRedirect(window.location.origin, returnTo);
+      const endpoint = mode === "signin"
+        ? "/auth/v1/token?grant_type=password"
+        : `/auth/v1/signup?redirect_to=${encodeURIComponent(redirectTo)}`;
       const response = await fetch(`${supabaseUrl}${endpoint}`, {
         method: "POST",
         headers: { apikey: supabaseKey, "Content-Type": "application/json" },
@@ -179,8 +205,7 @@ export default function Auth() {
       }
       const session = saveSupabaseSession(body as AuthResponse & { access_token: string });
       if (!session.access_token) throw new Error("The authentication service did not return a valid session.");
-      await utils.auth.me.invalidate();
-      navigate(returnTo);
+      await verifyAndContinue("Signed in. Opening your workspace…");
     } catch (error) {
       setStatus(error instanceof Error ? error.message : "Authentication failed.");
     } finally {
