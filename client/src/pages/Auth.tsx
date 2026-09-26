@@ -43,7 +43,8 @@ export default function Auth() {
   const verifyAndContinue = useCallback(async (successMessage: string) => {
     setBusy(true);
     try {
-      const appUser = await utils.auth.me.fetch();
+      const refreshedSession = await auth.refresh();
+      const appUser = refreshedSession.data;
       if (!appUser) {
         setStatus("Supabase accepted the account, but this app could not verify the workspace session. Check that the server-side Supabase URL/key point to the same project and that the app database migration has been applied.");
         return false;
@@ -58,7 +59,7 @@ export default function Auth() {
     } finally {
       setBusy(false);
     }
-  }, [navigate, returnTo, utils.auth.me]);
+  }, [auth.refresh, navigate, returnTo, utils.auth.me]);
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
