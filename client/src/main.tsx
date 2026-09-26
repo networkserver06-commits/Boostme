@@ -1,33 +1,49 @@
 import { trpc } from "@/lib/trpc";
-import { UNAUTHED_ERR_MSG } from "@shared/const";
+import { isUnauthorizedError, friendlyErrorMessage } from "@shared/errorMessages";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { httpBatchLink, TRPCClientError } from "@trpc/client";
+import { httpBatchLink } from "@trpc/client";
 import { createRoot } from "react-dom/client";
+import { toast } from "sonner";
 import superjson from "superjson";
 import App from "./App";
 import { startLogin } from "./const";
 import "./index.css";
 
-const queryClient = new QueryClient();
-const redirectToLoginIfUnauthorized = (error: unknown) => {
-  if (!(error instanceof TRPCClientError) || typeof window === "undefined") return;
-  if (error.message === UNAUTHED_ERR_MSG && window.location.pathname !== "/auth") {
-    startLogin(window.location.pathname + window.location.search);
-  }
-};
-
-queryClient.getQueryCache().subscribe(event => {
-  if (event.type === "updated" && event.action.type === "error") {
-    const error = event.query.state.error;
-    redirectToLoginIfUnauthorized(error);
-    console.error("[API Query Error]", error);
-  }
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      staleTime: 20_000,
+      gcTime: 5 * 60_000,
+      refetchOnWindowFocus: false,
+      retry: (failureCount, error) => !isUnauthorizedError(error) && failureCount < 2,
+      retryDelay: (attempt) => Math.min(500 * 2 ** attempt, 2_000),
+    },
+  },
 });
-queryClient.getMutationCache().subscribe(event => {
+
+queryClient.getQueryCache().subscribe((event) => {
+  if (event.type !== "updated" || event.action.type !== "error") return;
+  const error = event.query.state.error;
+  if (isUnauthorizedError(error)) {
+    if (typeof window !== "undefined" && window.location.pathname !== "/auth") {
+      startLogin(window.location.pathname + window.location.search);
+    }
+    return;
+  }
+
+  console.error("[API Query Error]", error);
+  toast.error("Couldn't load this information", {
+    id: `query-error-${event.query.queryHash}`,
+    description: friendlyErrorMessage(error, "Check your connection, then try again."),
+    action: { label: "Retry", onClick: () => { void event.query.fetch(); } },
+    duration: 7_000,
+    closeButton: true,
+  });
+});
+
+queryClient.getMutationCache().subscribe((event) => {
   if (event.type === "updated" && event.action.type === "error") {
-    const error = event.mutation.state.error;
-    redirectToLoginIfUnauthorized(error);
-    console.error("[API Mutation Error]", error);
+    console.error("[API Mutation Error]", event.mutation.state.error);
   }
 });
 

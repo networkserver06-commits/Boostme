@@ -1,3 +1,5 @@
+import { normalizeServicePresentation } from "../shared/serviceCatalog";
+
 export type ProviderService = { service?: string | number; services?: string | number; name: string; category?: string; Category?: string; type?: string; rate: string | number; min: string | number; max: string | number };
 export type ProviderOrderStatus = { status: string; start_count?: string | number; remains?: string | number; charge?: string | number };
 
@@ -17,7 +19,9 @@ export function getProviderServiceId(item: ProviderService) {
 
 export function mapCatalogService(item: ProviderService, providerId: number, markupPercent: number) {
   const category = item.category || item.Category || item.type || "General";
-  return { providerId, providerServiceId: getProviderServiceId(item), name: item.name, platform: category.split(" ")[0] || "Social", category, wholesaleRatePer1k: Number(item.rate).toFixed(4), retailRatePer1k: (Number(item.rate) * (1 + markupPercent / 100)).toFixed(4), minQuantity: Number(item.min), maxQuantity: Number(item.max), isActive: 1 };
+  const imported = { providerId, providerServiceId: getProviderServiceId(item), name: item.name, platform: category.split(" ")[0] || "Social", category, wholesaleRatePer1k: Number(item.rate).toFixed(4), retailRatePer1k: (Number(item.rate) * (1 + markupPercent / 100)).toFixed(4), minQuantity: Number(item.min), maxQuantity: Number(item.max), isActive: 1 };
+  const normalized = normalizeServicePresentation(imported);
+  return { ...imported, platform: normalized.platform, category: normalized.category };
 }
 export async function submitProviderOrder(apiUrl: string, apiKey: string, input: { service: string; link: string; quantity: number }) { return providerRequest<{ order: string }>(apiUrl, apiKey, { action: "add", ...input }); }
 export async function fetchProviderStatus(apiUrl: string, apiKey: string, order: string) { return providerRequest<ProviderOrderStatus>(apiUrl, apiKey, { action: "status", order }); }

@@ -1,8 +1,9 @@
 import { FormEvent, useEffect, useState } from "react";
-import { useLocation } from "wouter";
+import { Link, useLocation } from "wouter";
 import { ArrowLeft, ArrowRight, Eye, EyeOff, LockKeyhole, Mail, ShieldCheck, Sparkles } from "lucide-react";
 import { useAuth } from "@/_core/hooks/useAuth";
 import { safeAuthReturnPath } from "@/lib/authRouting";
+import { friendlyErrorMessage, isUnauthorizedError } from "@shared/errorMessages";
 import { trpc } from "@/lib/trpc";
 
 type AuthMode = "signin" | "signup";
@@ -47,8 +48,10 @@ export default function Auth() {
       setStatus(mode === "signup" ? "Account created. Opening your dashboard…" : "Signed in. Opening your dashboard…", "success");
       navigate(returnTo);
     } catch (error) {
-      const message = error instanceof Error ? error.message : "Authentication failed. Please try again.";
-      setStatus(message.includes("CONFLICT") ? "An account with this email already exists. Sign in instead." : message);
+      const message = mode === "signin" && isUnauthorizedError(error)
+        ? "Email or password is incorrect. Check your details and try again."
+        : friendlyErrorMessage(error, "We couldn't complete sign-in. Check your connection and try again.");
+      setStatus(message);
     } finally {
       setBusy(false);
     }
@@ -64,7 +67,7 @@ export default function Auth() {
       <div className="grid min-h-screen lg:grid-cols-[1.05fr_.95fr]">
         <aside className="relative hidden overflow-hidden border-r border-white/8 bg-[#0b1220] p-10 lg:flex lg:flex-col lg:justify-between xl:p-16">
           <div className="pointer-events-none absolute inset-0 opacity-70 [background-image:radial-gradient(circle_at_15%_10%,rgba(56,189,248,.18),transparent_34%),radial-gradient(circle_at_80%_85%,rgba(99,102,241,.16),transparent_34%)]" />
-          <a href="/" className="relative inline-flex w-fit items-center gap-3 text-sm font-semibold tracking-tight"><span className="grid h-10 w-10 place-items-center rounded-xl bg-blue-500"><Sparkles className="h-5 w-5" /></span> orbit growth</a>
+          <Link href="/" className="relative inline-flex w-fit items-center gap-3 text-sm font-semibold tracking-tight"><span className="grid h-10 w-10 place-items-center rounded-xl bg-blue-500"><Sparkles className="h-5 w-5" /></span> orbit growth</Link>
           <div className="relative max-w-xl py-16">
             <p className="inline-flex items-center gap-2 rounded-full border border-blue-300/20 bg-blue-300/10 px-3 py-1.5 text-xs font-medium text-blue-200"><ShieldCheck className="h-3.5 w-3.5" /> Your work, in one clear place</p>
             <h1 className="mt-7 text-5xl font-semibold leading-[1.05] tracking-[-.06em] xl:text-6xl">A calmer way to keep growth moving.</h1>
@@ -79,8 +82,8 @@ export default function Auth() {
 
         <section className="flex min-h-screen flex-col px-5 py-6 sm:px-8 lg:px-12 xl:px-20">
           <header className="flex items-center justify-between">
-            <a href="/" className="inline-flex items-center gap-2 text-sm font-semibold tracking-tight lg:hidden"><span className="grid h-8 w-8 place-items-center rounded-lg bg-blue-500"><Sparkles className="h-4 w-4" /></span> orbit growth</a>
-            <a href="/" className="ml-auto inline-flex items-center gap-2 text-sm text-slate-400 transition hover:text-white"><ArrowLeft className="h-4 w-4" /> Back to site</a>
+            <Link href="/" className="inline-flex items-center gap-2 text-sm font-semibold tracking-tight lg:hidden"><span className="grid h-8 w-8 place-items-center rounded-lg bg-blue-500"><Sparkles className="h-4 w-4" /></span> orbit growth</Link>
+            <Link href="/" className="ml-auto inline-flex items-center gap-2 text-sm text-slate-400 transition hover:text-white"><ArrowLeft className="h-4 w-4" /> Back to site</Link>
           </header>
 
           <div className="mx-auto flex w-full max-w-md flex-1 flex-col justify-center py-12">

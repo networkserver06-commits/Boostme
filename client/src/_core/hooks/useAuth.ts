@@ -7,7 +7,7 @@ type UseAuthOptions = { redirectOnUnauthenticated?: boolean; redirectPath?: stri
 export function useAuth(options?: UseAuthOptions) {
   const { redirectOnUnauthenticated = false, redirectPath } = options ?? {};
   const utils = trpc.useUtils();
-  const meQuery = trpc.auth.me.useQuery(undefined, { retry: false, refetchOnWindowFocus: false });
+  const meQuery = trpc.auth.me.useQuery(undefined, { refetchOnWindowFocus: false });
   const refresh = useCallback(() => meQuery.refetch(), [meQuery.refetch]);
   const logoutMutation = trpc.auth.logout.useMutation();
   const logout = useCallback(async () => {

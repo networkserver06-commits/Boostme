@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { trpc } from "@/lib/trpc";
+import { friendlyErrorMessage } from "@shared/errorMessages";
 import { ArrowRight, ArrowUpRight, CheckCircle2, Clock3, CreditCard, ExternalLink, Link2, Loader2, Plus, Search, ShoppingBag, WalletCards } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { useLocation } from "wouter";
@@ -17,12 +18,15 @@ type Order = { id: number; serviceId: number; targetLink: string; quantity: numb
 type WalletEntry = { id: number; reference: string; type: string; amount: string; balanceAfter: string; status: string };
 
 export default function Dashboard() {
-  const [location] = useLocation();
+  const [location, setLocation] = useLocation();
   const { user } = useAuth();
-  const overview = trpc.dashboard.overview.useQuery(undefined, { retry: false });
-  const services = trpc.dashboard.services.useQuery();
-  const orders = trpc.dashboard.orders.useQuery(undefined, { refetchInterval: 30000 });
-  const wallet = trpc.dashboard.wallet.useQuery();
+  const isOrdersPage = location === "/dashboard/orders";
+  const isWalletPage = location === "/dashboard/wallet";
+  const isOverviewPage = !isOrdersPage && !isWalletPage;
+  const overview = trpc.dashboard.overview.useQuery(undefined, { enabled: isOverviewPage || isWalletPage });
+  const services = trpc.dashboard.services.useQuery(undefined, { enabled: isOverviewPage });
+  const orders = trpc.dashboard.orders.useQuery(undefined, { enabled: isOverviewPage || isOrdersPage, refetchInterval: isOrdersPage ? 30000 : false });
+  const wallet = trpc.dashboard.wallet.useQuery(undefined, { enabled: isWalletPage });
   const [serviceId, setServiceId] = useState(() => new URLSearchParams(window.location.search).get("serviceId") ?? "");
   const [targetLink, setTargetLink] = useState("");
   const [quantity, setQuantity] = useState(1000);
@@ -35,17 +39,13 @@ export default function Dashboard() {
   useEffect(() => { const match = services.data?.find((service) => service.id === Number(serviceId)); if (match) setQuantity(match.minQuantity); }, [services.data, serviceId]);
   const charge = selected ? Number((Number(selected.retailRatePer1k) * quantity / 1000).toFixed(2)) : 0;
   const filteredOrders = useMemo(() => (orders.data ?? []).filter((order) => `${order.id} ${order.targetLink}`.toLowerCase().includes(search.toLowerCase()) && (statusFilter === "all" || order.status === statusFilter)), [orders.data, search, statusFilter]);
-  const isOrdersPage = location === "/dashboard/orders";
-  const isWalletPage = location === "/dashboard/wallet";
-  const isOverviewPage = !isOrdersPage && !isWalletPage;
-
   const createOrder = trpc.dashboard.createOrder.useMutation({
     onSuccess: () => { toast.success("Order placed", { description: "Your wallet was charged and the order is now pending fulfillment." }); void overview.refetch(); void orders.refetch(); void wallet.refetch(); setTargetLink(""); },
-    onError: (error) => toast.error(error.message),
+    onError: (error) => toast.error("Order could not be placed", { description: friendlyErrorMessage(error, "Check the order details and your connection, then try again."), duration: 6500 }),
   });
   const requestDeposit = trpc.dashboard.requestDeposit.useMutation({
     onSuccess: () => { toast.success("Top-up request received", { description: "An administrator will verify the payment before adding credit to your wallet." }); void wallet.refetch(); setPhone(""); },
-    onError: (error) => toast.error(error.message),
+    onError: (error) => toast.error("Top-up request failed", { description: friendlyErrorMessage(error, "Check the details and your connection, then try again."), duration: 6500 }),
   });
 
   const heading = isOrdersPage ? "Follow every order." : isWalletPage ? "Your wallet, clearly tracked." : `Welcome${user?.name ? `, ${user.name.split(" ")[0]}` : " back"}.`;
@@ -55,11 +55,13 @@ export default function Dashboard() {
     <header className="flex flex-col justify-between gap-4 sm:flex-row sm:items-end"><div><p className="text-[10px] font-semibold uppercase tracking-[.2em] text-cyan-200">Your account <span className="mx-1.5 text-slate-600">/</span> {isOrdersPage ? "Orders" : isWalletPage ? "Wallet" : "Overview"}</p><h1 className="mt-2 text-2xl font-semibold tracking-[-.045em] text-white sm:text-3xl">{heading}</h1><p className="mt-2 max-w-2xl text-sm leading-6 text-slate-400">{description}</p></div>{isOrdersPage && <span className="inline-flex items-center gap-2 self-start rounded-full border border-blue-200/10 bg-blue-200/[.05] px-3 py-2 text-xs text-blue-100 sm:self-auto"><span className="h-1.5 w-1.5 animate-pulse rounded-full bg-blue-300" /> Refreshes every 30 sec</span>}</header>
 
     {isOverviewPage && <>
+      <QueryIssue label="Dashboard overview" error={overview.error} retry={() => void overview.refetch()} />
+      <QueryIssue label="Service catalog" error={services.error} retry={() => void services.refetch()} />
       <div className="grid grid-cols-2 gap-3 xl:grid-cols-4">
-        <Metric label="Available balance" value={overview.isLoading ? "…" : money(overview.data?.profile?.balance)} note="Ready for your next order" icon={<CreditCard className="h-4 w-4" />} accent="blue" />
-        <Metric label="All orders" value={overview.isLoading ? "…" : (overview.data?.metrics.totalOrders ?? 0).toLocaleString()} note="Your account history" icon={<ShoppingBag className="h-4 w-4" />} accent="cyan" />
-        <Metric label="In progress" value={overview.isLoading ? "…" : (overview.data?.metrics.pendingOrders ?? 0).toLocaleString()} note="Pending or being fulfilled" icon={<Clock3 className="h-4 w-4" />} accent="violet" />
-        <Metric label="Total order charges" value={overview.isLoading ? "…" : money(overview.data?.metrics.totalSpent)} note="Across all recorded orders" icon={<WalletCards className="h-4 w-4" />} accent="emerald" />
+        <Metric label="Available balance" value={(overview.isLoading || overview.isError) ? "—" : money(overview.data?.profile?.balance)} note="Ready for your next order" icon={<CreditCard className="h-4 w-4" />} accent="blue" />
+        <Metric label="All orders" value={(overview.isLoading || overview.isError) ? "—" : (overview.data?.metrics.totalOrders ?? 0).toLocaleString()} note="Your account history" icon={<ShoppingBag className="h-4 w-4" />} accent="cyan" />
+        <Metric label="In progress" value={(overview.isLoading || overview.isError) ? "—" : (overview.data?.metrics.pendingOrders ?? 0).toLocaleString()} note="Pending or being fulfilled" icon={<Clock3 className="h-4 w-4" />} accent="violet" />
+        <Metric label="Total order charges" value={(overview.isLoading || overview.isError) ? "—" : money(overview.data?.metrics.totalSpent)} note="Across all recorded orders" icon={<WalletCards className="h-4 w-4" />} accent="emerald" />
       </div>
       <div className="grid gap-5 xl:grid-cols-[1.15fr_.85fr]">
         <section className="rounded-2xl border border-blue-200/10 bg-[linear-gradient(145deg,rgba(31,75,143,.12),rgba(13,20,31,.92)_45%)] p-5 shadow-[0_16px_60px_rgba(0,0,0,.14)] sm:p-6">
@@ -74,11 +76,11 @@ export default function Dashboard() {
         </section>
         <TopUpCard phone={phone} setPhone={setPhone} amount={depositAmount} setAmount={setDepositAmount} pending={requestDeposit.isPending} onSubmit={() => requestDeposit.mutate({ amount: depositAmount, phone })} compact />
       </div>
-      <OrderTable orders={filteredOrders} search={search} setSearch={setSearch} statusFilter={statusFilter} setStatusFilter={setStatusFilter} recent onViewAll={() => window.location.assign("/dashboard/orders")} />
+      <OrderTable orders={filteredOrders} search={search} setSearch={setSearch} statusFilter={statusFilter} setStatusFilter={setStatusFilter} recent onViewAll={() => setLocation("/dashboard/orders")} />
     </>}
 
-    {isOrdersPage && <OrderTable orders={filteredOrders} search={search} setSearch={setSearch} statusFilter={statusFilter} setStatusFilter={setStatusFilter} recent={false} />}
-    {isWalletPage && <><div className="grid gap-4 lg:grid-cols-[.65fr_1.35fr]"><section className="rounded-2xl border border-emerald-200/10 bg-[linear-gradient(145deg,rgba(16,100,75,.15),rgba(13,20,31,.9)_55%)] p-5 sm:p-6"><div className="flex items-start justify-between"><div><p className="text-[10px] font-semibold uppercase tracking-[.18em] text-emerald-200">Available balance</p><p className="mt-4 text-3xl font-semibold tracking-tight text-white">{overview.isLoading ? "…" : money(overview.data?.profile?.balance)}</p><p className="mt-2 text-xs text-slate-400">Your current account credit</p></div><span className="grid h-10 w-10 place-items-center rounded-xl bg-emerald-300/10 text-emerald-200"><WalletCards className="h-5 w-5" /></span></div></section><TopUpCard phone={phone} setPhone={setPhone} amount={depositAmount} setAmount={setDepositAmount} pending={requestDeposit.isPending} onSubmit={() => requestDeposit.mutate({ amount: depositAmount, phone })} /></div><WalletTable wallet={wallet.data ?? []} balance={overview.data?.profile?.balance} loading={wallet.isLoading} /></>}
+    {isOrdersPage && <><QueryIssue label="Order history" error={orders.error} retry={() => void orders.refetch()} /><OrderTable orders={filteredOrders} search={search} setSearch={setSearch} statusFilter={statusFilter} setStatusFilter={setStatusFilter} recent={false} /></>}
+    {isWalletPage && <><QueryIssue label="Wallet balance" error={overview.error} retry={() => void overview.refetch()} /><div className="grid gap-4 lg:grid-cols-[.65fr_1.35fr]"><section className="rounded-2xl border border-emerald-200/10 bg-[linear-gradient(145deg,rgba(16,100,75,.15),rgba(13,20,31,.9)_55%)] p-5 sm:p-6"><div className="flex items-start justify-between"><div><p className="text-[10px] font-semibold uppercase tracking-[.18em] text-emerald-200">Available balance</p><p className="mt-4 text-3xl font-semibold tracking-tight text-white">{(overview.isLoading || overview.isError) ? "—" : money(overview.data?.profile?.balance)}</p><p className="mt-2 text-xs text-slate-400">Your current account credit</p></div><span className="grid h-10 w-10 place-items-center rounded-xl bg-emerald-300/10 text-emerald-200"><WalletCards className="h-5 w-5" /></span></div></section><TopUpCard phone={phone} setPhone={setPhone} amount={depositAmount} setAmount={setDepositAmount} pending={requestDeposit.isPending} onSubmit={() => requestDeposit.mutate({ amount: depositAmount, phone })} /></div><QueryIssue label="Wallet activity" error={wallet.error} retry={() => void wallet.refetch()} /><WalletTable wallet={wallet.data ?? []} balance={overview.data?.profile?.balance} loading={wallet.isLoading} /></>}
   </div></DashboardLayout>;
 }
 
@@ -104,4 +106,9 @@ function StatusBadge({ status }: { status: string }) {
 
 function WalletTable({ wallet, balance, loading }: { wallet: WalletEntry[]; balance?: string | null; loading: boolean }) {
   return <section className="overflow-hidden rounded-2xl border border-white/[.08] bg-[#0c131e]"><div className="flex items-center justify-between gap-4 border-b border-white/[.07] p-5 sm:px-6"><div><p className="text-[10px] font-semibold uppercase tracking-[.18em] text-emerald-200">Wallet ledger</p><h2 className="mt-1.5 text-lg font-semibold text-white">Recent activity</h2></div><span className="text-right"><span className="block text-[9px] text-slate-500">Current balance</span><span className="mt-1 block text-sm font-semibold tabular-nums text-white">{money(balance)}</span></span></div><div className="overflow-x-auto"><table className="w-full min-w-[620px] text-left text-xs"><thead className="border-b border-white/[.07] bg-white/[.015] text-[9px] uppercase tracking-[.14em] text-slate-500"><tr><th className="px-5 py-3 font-semibold sm:px-6">Reference</th><th className="px-3 py-3 font-semibold">Type</th><th className="px-3 py-3 font-semibold">Amount</th><th className="px-3 py-3 font-semibold">Balance after</th><th className="px-5 py-3 font-semibold sm:px-6">Status</th></tr></thead><tbody>{wallet.map((tx) => <tr key={tx.id} className="border-b border-white/[.05] last:border-0"><td className="max-w-[200px] truncate px-5 py-4 text-slate-300 sm:px-6">{tx.reference}</td><td className="whitespace-nowrap px-3 py-4 capitalize text-slate-400">{tx.type.replaceAll("_", " ")}</td><td className={`whitespace-nowrap px-3 py-4 font-medium tabular-nums ${Number(tx.amount) >= 0 ? "text-emerald-200" : "text-white"}`}>{Number(tx.amount) >= 0 ? "+" : ""}{money(tx.amount)}</td><td className="whitespace-nowrap px-3 py-4 tabular-nums text-slate-300">{money(tx.balanceAfter)}</td><td className="px-5 py-4 capitalize text-slate-400 sm:px-6">{tx.status}</td></tr>)}{wallet.length === 0 && <tr><td colSpan={5} className="px-6 py-12 text-center"><WalletCards className="mx-auto h-5 w-5 text-slate-600" /><p className="mt-3 text-sm font-medium text-slate-300">{loading ? "Loading wallet activity…" : "Your ledger is ready."}</p><p className="mt-1 text-xs text-slate-500">{loading ? "" : "Top-ups and order charges will show here."}</p></td></tr>}</tbody></table></div></section>;
+}
+
+function QueryIssue({ label, error, retry }: { label: string; error: unknown; retry: () => void }) {
+  if (!error) return null;
+  return <div role="alert" className="flex flex-col items-start justify-between gap-3 rounded-xl border border-rose-300/15 bg-rose-300/[.035] px-4 py-3 sm:flex-row sm:items-center"><div><p className="text-xs font-medium text-rose-100">{label} couldn't be loaded</p><p className="mt-1 text-[10px] text-slate-400">{friendlyErrorMessage(error, "Check your connection and try again.")}</p></div><Button size="sm" variant="outline" className="h-8 shrink-0 border-rose-200/15 text-[10px]" onClick={retry}>Retry</Button></div>;
 }

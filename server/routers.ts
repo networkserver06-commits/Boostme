@@ -5,6 +5,7 @@ import { adminProcedure, protectedProcedure, publicProcedure, router } from "./_
 import { chargeWallet, getActiveServices, getDb, getOrCreateProfile, getUserByEmail, getUserOrders, getUserWallet, listAdminUsers, listProviders, listSyncRuns, recordAudit, refundOrder, orders, profiles, services, smmProviders, syncRuns, syncSchedules, users, walletTransactions, eq, desc, sql } from "./db";
 import { clearAuthAttempts, consumeAuthAttempt, createSession, hashPassword, normalizeEmail, readSessionToken, revokeSession, verifyPassword } from "./_core/passwordAuth";
 import { fetchProviderServices, getProviderServiceId, mapCatalogService, submitProviderOrder } from "./provider";
+import { normalizeServicePresentation } from "../shared/serviceCatalog";
 import { executeProviderSync } from "./scheduled";
 
 const serviceInput = z.object({
@@ -123,9 +124,10 @@ export const appRouter = router({
       const service = (await db.select().from(services).where(eq(services.id, input.serviceId)).limit(1))[0];
       if (!service || service.isActive !== 1) throw new TRPCError({ code: "NOT_FOUND", message: "Service is not available" });
       const host = new URL(input.targetLink).hostname.toLowerCase();
-      const validHosts: Record<string, string[]> = { Instagram: ["instagram.com", "www.instagram.com"], TikTok: ["tiktok.com", "www.tiktok.com"], YouTube: ["youtube.com", "www.youtube.com", "youtu.be"] };
-      const allowed = validHosts[service.platform];
-      if (allowed && !allowed.some((item) => host === item || host.endsWith(`.${item}`))) throw new TRPCError({ code: "BAD_REQUEST", message: `Target URL must be a valid ${service.platform} link` });
+      const servicePlatform = normalizeServicePresentation(service).platform;
+      const validHosts: Record<string, string[]> = { Instagram: ["instagram.com"], TikTok: ["tiktok.com"], YouTube: ["youtube.com", "youtu.be"], Facebook: ["facebook.com", "fb.watch", "fb.me"], X: ["x.com", "twitter.com"], WhatsApp: ["whatsapp.com", "wa.me"], Telegram: ["t.me", "telegram.me"] };
+      const allowed = validHosts[servicePlatform];
+      if (allowed && !allowed.some((item) => host === item || host.endsWith(`.${item}`))) throw new TRPCError({ code: "BAD_REQUEST", message: `Target URL must be a valid ${servicePlatform} link` });
       if (input.quantity < service.minQuantity || input.quantity > service.maxQuantity) throw new TRPCError({ code: "BAD_REQUEST", message: `Quantity must be between ${service.minQuantity.toLocaleString()} and ${service.maxQuantity.toLocaleString()}` });
       const charge = Number((Number(service.retailRatePer1k) * input.quantity / 1000).toFixed(2));
       try {
@@ -175,7 +177,7 @@ export const appRouter = router({
     users: adminOnly.query(() => listAdminUsers()),
     orders: adminOnly.query(async () => { const db = await getDb(); return db ? db.select().from(orders).orderBy(desc(orders.createdAt)).limit(100) : []; }),
     walletActivity: adminOnly.query(async () => { const db = await getDb(); return db ? db.select().from(walletTransactions).orderBy(desc(walletTransactions.createdAt)).limit(100) : []; }),
-    services: adminOnly.query(async () => { const db = await getDb(); return db ? db.select().from(services).orderBy(desc(services.createdAt)) : []; }),
+    services: adminOnly.query(async () => { const db = await getDb(); const rows = db ? await db.select().from(services).orderBy(desc(services.createdAt)) : []; return rows.map(normalizeServicePresentation); }),
     providers: adminOnly.query(() => listProviders()),
     providerCatalog: adminOnly.input(z.object({ providerId: z.number().int().positive() })).query(async ({ input }) => {
       const db = await getDb(); if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database unavailable" });
