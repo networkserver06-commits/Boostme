@@ -1,16 +1,20 @@
 import { Toaster } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import NotFound from "@/pages/NotFound";
-import Admin from "@/pages/Admin";
-import Dashboard from "@/pages/Dashboard";
 import Home from "@/pages/Home";
 import Auth from "@/pages/Auth";
+import { lazy, Suspense } from "react";
 import { Route, Switch } from "wouter";
 import ErrorBoundary from "./components/ErrorBoundary";
 import { ThemeProvider } from "./contexts/ThemeContext";
 
+const Admin = lazy(() => import("@/pages/Admin"));
+const Dashboard = lazy(() => import("@/pages/Dashboard"));
+const Services = lazy(() => import("@/pages/Services"));
+const Account = lazy(() => import("@/pages/Account"));
+
 function Router() {
-  return <Switch><Route path="/" component={Home} /><Route path="/auth" component={Auth} /><Route path="/dashboard" component={Dashboard} /><Route path="/dashboard/orders" component={Dashboard} /><Route path="/dashboard/wallet" component={Dashboard} /><Route path="/admin" component={Admin} /><Route path="/404" component={NotFound} /><Route component={NotFound} /></Switch>;
+  return <Suspense fallback={<div className="grid min-h-screen place-items-center bg-[#080d15] text-sm text-slate-400">Loading your page…</div>}><Switch><Route path="/" component={Home} /><Route path="/auth" component={Auth} /><Route path="/dashboard" component={Dashboard} /><Route path="/dashboard/services" component={Services} /><Route path="/dashboard/orders" component={Dashboard} /><Route path="/dashboard/wallet" component={Dashboard} /><Route path="/dashboard/account" component={Account} /><Route path="/admin" component={Admin} /><Route path="/404" component={NotFound} /><Route component={NotFound} /></Switch></Suspense>;
 }
 
 export default function App() {

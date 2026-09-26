@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { eq, getUserByEmail, setTursoClientForTesting, users } from "./db";
+import { eq, getUserByEmail, profiles, setTursoClientForTesting, users } from "./db";
 import { createTestDatabase } from "./testDb";
 import { appRouter } from "./routers";
 import type { TrpcContext } from "./_core/context";
@@ -67,6 +67,21 @@ describe("Turso-backed authentication", () => {
     await caller.auth.signup({ name: "Member", email: "member@example.com", password: "correct horse battery staple" });
     await expect(caller.auth.signup({ name: "Member 2", email: "MEMBER@example.com", password: "another secure password" })).rejects.toMatchObject({ code: "CONFLICT" });
     expect(await db.select().from(users).where(eq(users.email, "member@example.com"))).toHaveLength(1);
+  });
+
+  it("keeps one user and one profile when equivalent-email signups race", async () => {
+    const db = await setup();
+    const callers = [createContext(), createContext()].map(({ context }) => appRouter.createCaller(context));
+    const results = await Promise.allSettled([
+      callers[0].auth.signup({ name: "First", email: "Race@example.com", password: "correct horse battery staple" }),
+      callers[1].auth.signup({ name: "Second", email: " race@EXAMPLE.com ", password: "another secure password" }),
+    ]);
+
+    expect(results.filter((result) => result.status === "fulfilled")).toHaveLength(1);
+    const rejected = results.find((result) => result.status === "rejected");
+    expect(rejected?.status === "rejected" ? rejected.reason : undefined).toMatchObject({ code: "CONFLICT" });
+    expect(await db.select().from(users).where(eq(users.email, "race@example.com"))).toHaveLength(1);
+    expect(await db.select().from(profiles)).toHaveLength(1);
   });
 
   it("enforces a persistent 15-minute login-attempt limit and resets it after the window", async () => {
