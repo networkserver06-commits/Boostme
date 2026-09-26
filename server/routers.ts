@@ -60,7 +60,14 @@ export const appRouter = router({
       } catch (error) {
         if (error instanceof TRPCError) throw error;
         const message = error instanceof Error ? error.message : "";
-        if (/unique|constraint/i.test(message)) throw new TRPCError({ code: "CONFLICT", message: "An account with this email already exists. Sign in instead." });
+        const duplicateEmailError = /unique|constraint/i.test(message);
+        if (duplicateEmailError) throw new TRPCError({ code: "CONFLICT", message: "An account with this email already exists. Sign in instead." });
+        for (let attempt = 0; attempt < 3; attempt++) {
+          let existing;
+          try { existing = await getUserByEmail(email); } catch { break; }
+          if (existing) throw new TRPCError({ code: "CONFLICT", message: "An account with this email already exists. Sign in instead." });
+          if (attempt < 2) await new Promise((resolve) => setTimeout(resolve, 15 * (attempt + 1)));
+        }
         throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Unable to create account. Please try again." });
       }
     }),
