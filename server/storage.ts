@@ -1,12 +1,13 @@
+// Upload assets to the app's configured S3-compatible object store via Forge presigned URLs.
+// Downloads use /manus-storage/{key}, served through the signed-URL proxy.
 import crypto from "node:crypto";
+import { ENV } from "./_core/env";
 
-const BUCKET = "orbit-assets";
-
-function getStorageConfig() {
-  const url = process.env.SUPABASE_URL?.replace(/\/$/, "");
-  const key = process.env.SUPABASE_SERVICE_ROLE_KEY ?? process.env.SUPABASE_SECRET_KEY ?? process.env.SUPABASE_KEY;
-  if (!url || !key) throw new Error("Supabase Storage config missing: set SUPABASE_URL and a server-side Supabase key");
-  return { url, key };
+function getForgeConfig() {
+  const forgeUrl = ENV.forgeApiUrl;
+  const forgeKey = ENV.forgeApiKey;
+  if (!forgeUrl || !forgeKey) throw new Error("Storage config missing: set BUILT_IN_FORGE_API_URL and BUILT_IN_FORGE_API_KEY");
+  return { forgeUrl: forgeUrl.replace(/\/+$/, ""), forgeKey };
 }
 
 function normalizeKey(relKey: string) { return relKey.replace(/^\/+/, ""); }
@@ -17,33 +18,33 @@ function appendHashSuffix(relKey: string) {
 }
 
 export async function storagePut(relKey: string, data: Buffer | Uint8Array | string, contentType = "application/octet-stream") {
-  const { url, key } = getStorageConfig();
-  const objectKey = appendHashSuffix(normalizeKey(relKey));
-  const response = await fetch(`${url}/storage/v1/object/${BUCKET}/${objectKey}`, {
-    method: "POST",
-    headers: { apikey: key, Authorization: `Bearer ${key}`, "Content-Type": contentType, "x-upsert": "false" },
-    body: typeof data === "string" ? data : new Uint8Array(data),
-  });
-  if (!response.ok) throw new Error(`Supabase Storage upload failed (${response.status}): ${await response.text()}`);
-  return { key: objectKey, url: await storageGetSignedUrl(objectKey) };
+  const { forgeUrl, forgeKey } = getForgeConfig();
+  const key = appendHashSuffix(normalizeKey(relKey));
+  const presignUrl = new URL("v1/storage/presign/put", forgeUrl + "/");
+  presignUrl.searchParams.set("path", key);
+  const presignResp = await fetch(presignUrl, { headers: { Authorization: `Bearer ${forgeKey}` } });
+  if (!presignResp.ok) throw new Error(`Storage presign failed (${presignResp.status}): ${await presignResp.text().catch(() => "")}`);
+  const { url } = await presignResp.json() as { url?: string };
+  if (!url) throw new Error("Storage backend returned an empty upload URL");
+  const body = typeof data === "string" ? new Blob([data], { type: contentType }) : new Blob([data as any], { type: contentType });
+  const uploadResp = await fetch(url, { method: "PUT", headers: { "Content-Type": contentType }, body });
+  if (!uploadResp.ok) throw new Error(`Storage upload failed (${uploadResp.status})`);
+  return { key, url: `/manus-storage/${key}` };
 }
 
 export async function storageGet(relKey: string) {
-  const objectKey = normalizeKey(relKey);
-  return { key: objectKey, url: await storageGetSignedUrl(objectKey) };
+  const key = normalizeKey(relKey);
+  return { key, url: `/manus-storage/${key}` };
 }
 
-export async function storageGetSignedUrl(relKey: string, expiresIn = 3600) {
-  const { url, key } = getStorageConfig();
-  const objectKey = normalizeKey(relKey);
-  const response = await fetch(`${url}/storage/v1/object/sign/${BUCKET}/${objectKey}`, {
-    method: "POST",
-    headers: { apikey: key, Authorization: `Bearer ${key}`, "Content-Type": "application/json" },
-    body: JSON.stringify({ expiresIn }),
-  });
-  if (!response.ok) throw new Error(`Supabase Storage signed URL failed (${response.status}): ${await response.text()}`);
-  const body = await response.json() as { signedURL?: string; signedUrl?: string };
-  const signed = body.signedURL ?? body.signedUrl;
-  if (!signed) throw new Error("Supabase Storage returned no signed URL");
-  return signed.startsWith("http") ? signed : `${url}/storage/v1${signed}`;
+export async function storageGetSignedUrl(relKey: string) {
+  const { forgeUrl, forgeKey } = getForgeConfig();
+  const key = normalizeKey(relKey);
+  const getUrl = new URL("v1/storage/presign/get", forgeUrl + "/");
+  getUrl.searchParams.set("path", key);
+  const response = await fetch(getUrl, { headers: { Authorization: `Bearer ${forgeKey}` } });
+  if (!response.ok) throw new Error(`Storage signed URL failed (${response.status}): ${await response.text().catch(() => "")}`);
+  const body = await response.json() as { url?: string };
+  if (!body.url) throw new Error("Storage backend returned no signed URL");
+  return body.url;
 }

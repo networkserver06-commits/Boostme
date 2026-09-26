@@ -1,15 +1,14 @@
 import { defineConfig } from "drizzle-kit";
 
-const connectionString = process.env.DATABASE_URL;
-if (!connectionString) {
-  throw new Error("DATABASE_URL is required to run drizzle commands");
-}
+const url = process.env.TURSO_DATABASE_URL;
+if (!url) throw new Error("TURSO_DATABASE_URL is required to run Drizzle commands");
 
 export default defineConfig({
   schema: "./drizzle/schema.ts",
-  out: "./drizzle",
-  dialect: "mysql",
+  out: "./drizzle/turso",
+  dialect: "turso",
   dbCredentials: {
-    url: connectionString,
+    url,
+    authToken: process.env.TURSO_AUTH_TOKEN ?? "",
   },
 });

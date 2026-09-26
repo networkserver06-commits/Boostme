@@ -1,33 +1,53 @@
 import { describe, expect, it, vi } from "vitest";
+import { eq, orders, services, smmProviders, syncRuns } from "./db";
+import { createTestDb } from "./testDb";
 import { executeProviderSync } from "./scheduled";
 
-const dbFixture = (provider: any, rows: any[] = []) => {
-  const updates: any[] = [];
-  return {
-    updates,
-    from: (table: string) => {
-      if (table === "smm_providers") return { select: () => ({ where: () => ({ limit: async () => provider ? [provider] : [] }) }), update: (values: any) => ({ where: async () => updates.push({ table, values }) }) };
-      if (table === "services") return { select: () => ({ where: () => ({ limit: async () => rows.filter((row) => row.providerServiceId) }) }), insert: async (values: any) => { updates.push({ table, values }); return [{ id: 7 }]; }, update: (values: any) => ({ where: async () => updates.push({ table, values }) }) };
-      if (table === "sync_runs") return { insert: async () => [{ id: 12 }], update: (values: any) => ({ where: async () => updates.push({ table, values }) }) };
-      return { insert: async () => [], update: () => ({ where: async () => undefined }), select: async () => [] };
-    },
-  };
-};
+const dbDependency = (db: Awaited<ReturnType<typeof createTestDb>>) => vi.fn().mockResolvedValue(db) as any;
 
-describe("manual provider synchronization", () => {
-  it("imports the provider catalog and closes the sync run", async () => {
-    const db = dbFixture({ id: 3, apiUrl: "https://provider.example", apiKey: "secret" });
-    const result = await executeProviderSync("catalog", { actorUserId: 9, getDb: vi.fn().mockResolvedValue(db), fetchProviderServices: vi.fn().mockResolvedValue([{ service: "42", name: "Views", category: "Instagram Views", rate: "10", min: "100", max: "100000" }]), recordAudit: vi.fn() });
-    expect(result).toMatchObject({ runId: 12, processed: 1 });
-    expect(db.updates.some((entry) => entry.table === "services")).toBe(true);
-    expect(db.updates.some((entry) => entry.values?.status === "completed")).toBe(true);
+async function seedProvider(db: Awaited<ReturnType<typeof createTestDb>>) {
+  const [provider] = await db.insert(smmProviders).values({ name: "Test provider", apiUrl: "https://provider.example", apiKey: "private-test-key", isActive: 1 }).returning();
+  return provider;
+}
+
+describe("Turso-backed provider synchronization", () => {
+  it("imports and persists catalog services and closes a sync run", async () => {
+    const db = await createTestDb();
+    const provider = await seedProvider(db);
+    const result = await executeProviderSync("catalog", {
+      actorUserId: 9,
+      getDb: dbDependency(db),
+      fetchProviderServices: vi.fn().mockResolvedValue([{ service: "42", name: "Views", category: "Instagram Views", rate: "10", min: "100", max: "100000" }]),
+      recordAudit: vi.fn() as any,
+    });
+    expect(result).toMatchObject({ processed: 1 });
+    expect(await db.select().from(services).where(eq(services.providerId, provider.id))).toMatchObject([{ providerServiceId: "42", name: "Views", isActive: 1 }]);
+    expect(await db.select().from(syncRuns)).toMatchObject([{ status: "completed", itemsProcessed: 1 }]);
   });
 
-  it("returns a no-provider result without calling the provider API", async () => {
-    const db = dbFixture(null);
+  it("records a visible failed run and skips when no provider is configured", async () => {
+    vi.stubEnv("BASE_URL", "");
+    vi.stubEnv("API_KEY", "");
+    const db = await createTestDb();
     const fetchProviderServices = vi.fn();
-    const result = await executeProviderSync("catalog", { getDb: vi.fn().mockResolvedValue(db), fetchProviderServices, recordAudit: vi.fn() });
-    expect(result).toMatchObject({ runId: 12, processed: 0, skipped: "no-provider" });
+    const result = await executeProviderSync("catalog", { getDb: dbDependency(db), fetchProviderServices, recordAudit: vi.fn() as any });
+    expect(result).toMatchObject({ processed: 0, skipped: "no-provider" });
     expect(fetchProviderServices).not.toHaveBeenCalled();
+    expect(await db.select().from(syncRuns)).toMatchObject([{ status: "failed", itemsProcessed: 0 }]);
+    vi.unstubAllEnvs();
+  });
+
+  it("updates provider-order status through libSQL", async () => {
+    const db = await createTestDb();
+    const provider = await seedProvider(db);
+    const [order] = await db.insert(orders).values({ userId: 3, serviceId: 1, providerOrderId: "p-41", targetLink: "https://instagram.com/test", quantity: 1000, charge: "2.00", startCount: 0, remains: 1000, status: "pending" }).returning();
+    const result = await executeProviderSync("orders", {
+      getDb: dbDependency(db),
+      fetchProviderStatus: vi.fn().mockResolvedValue({ status: "Completed", remains: "0", start_count: "10" }),
+      recordAudit: vi.fn() as any,
+    });
+    expect(result.processed).toBe(1);
+    expect(await db.select().from(orders).where(eq(orders.id, order.id))).toMatchObject([{ status: "completed", remains: 0, startCount: 10 }]);
+    expect(await db.select().from(syncRuns)).toMatchObject([{ providerId: provider.id, kind: "orders", status: "completed", itemsProcessed: 1 }]);
   });
 });

@@ -14,10 +14,9 @@ function createAuthContext(): { ctx: TrpcContext; clearedCookies: CookieCall[] }
 
   const user: AuthenticatedUser = {
     id: 1,
-    openId: "sample-user",
     email: "sample@example.com",
     name: "Sample User",
-    loginMethod: "manus",
+    loginMethod: "password",
     role: "user",
     createdAt: new Date(),
     updatedAt: new Date(),
@@ -41,13 +40,15 @@ function createAuthContext(): { ctx: TrpcContext; clearedCookies: CookieCall[] }
 }
 
 describe("auth.logout", () => {
-  it("reports logout success for the Supabase client-managed session", async () => {
+  it("reports success and expires the HTTP-only session cookie", async () => {
     const { ctx, clearedCookies } = createAuthContext();
     const caller = appRouter.createCaller(ctx);
 
     const result = await caller.auth.logout();
 
     expect(result).toEqual({ success: true });
-    expect(clearedCookies).toHaveLength(0);
+    expect(clearedCookies).toHaveLength(1);
+    expect(clearedCookies[0].name).toBe("boostme_session");
+    expect(clearedCookies[0].options).toMatchObject({ httpOnly: true, sameSite: "lax", path: "/" });
   });
 });

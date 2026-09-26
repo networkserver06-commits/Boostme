@@ -1,16 +1,20 @@
+# Production verification status
 
-## Live route check — 2026-08-29 05:53 UTC
+## Database replacement readiness
 
-The deployed custom domain now serves the Supabase Auth page successfully at `/auth`; the prior Auth 404 is resolved. The direct `/api/trpc/auth.me` request still returns Vercel `404: NOT_FOUND`, so the API serverless route is not yet exposed by the live Vercel project. The frontend deployment and SPA fallback are working, but backend API routing remains a separate unresolved deployment issue.
+- Application code uses `@libsql/client` + Drizzle and app-managed password/cookie auth; the previous hosted-auth, REST database, and file-storage integrations are removed from the runtime.
+- Automated schema initialization creates Turso tables and indexes when the configured database is first contacted.
+- Unit tests use in-memory SQLite and cover account creation, password verification, session issuance/revocation, admin promotion, throttling, provider sync, and ledger invariants.
+- This sandbox had no Vercel environment values or prior-database export. It has not connected to, created, or changed the production Turso database and has not copied production records.
+- **Production cutover is not data-complete until existing service, provider, order, wallet, user/profile, schedule, run, and audit records are exported and reconciled in Turso.** The old database was not deleted by this code change.
 
-## Final live route check — 2026-08-29 06:00 UTC
+## Required live checks after deployment
 
-After the `9d79416` GitHub push redeployed, `https://boost.leetec.online/auth` returns HTTP 200 and renders the Auth page. `https://boost.leetec.online/api/trpc/auth.me` returns HTTP 200 with `{"result":{"data":{"json":null}}}`, which is the expected unauthenticated tRPC response. The previous API 404 and FUNCTION_INVOCATION_FAILED errors are resolved.
+1. Confirm Vercel Production has `TURSO_DATABASE_URL`, `TURSO_AUTH_TOKEN`, and `ADMIN_EMAIL` configured server-side, plus existing cron/provider/asset variables for enabled features.
+2. Visit `/auth` using a test database/account and confirm the browser receives an HTTP-only session cookie.
+3. Verify `/api/trpc/auth.me` returns the current user after signin and `null` after logout.
+4. Confirm non-admin users cannot access admin procedures; test the configured admin account separately.
+5. Confirm asset-download rewrites and scheduled-sync routes return expected status.
+6. Compare imported user/order counts, wallet balances, and ledger totals against an untouched source backup before directing customers to the new database.
 
-## Supabase client configuration check — 2026-08-29
-
-The live Auth JavaScript bundle still contains the branch that immediately reports `Supabase browser configuration is missing` and asks for `VITE_SUPABASE_URL` plus `VITE_SUPABASE_ANON_KEY`. No public Supabase project URL is present in the downloaded bundle. Therefore, the server-side API routing is healthy, but browser sign-in/sign-up cannot be considered verified until those two Vite variables are present in Vercel Production and a new deployment is created after adding them.
-
-## Public-variable compatibility verification — 2026-08-29
-
-After commit `280c21e` redeployed, the live bundle changed and now embeds a Supabase project URL plus a public-key-shaped value. The live `/`, `/auth`, `/admin`, `/dashboard`, and `/api/trpc/auth.me` routes all return HTTP 200. A safe invalid-password request to the embedded Supabase Auth endpoint returned HTTP 400, confirming that the public Auth configuration is accepted without creating or changing an account. Server-side credentials were not exposed.
+Do not enable public no-verification signup until the trusted `ADMIN_EMAIL` account is registered; otherwise anyone can claim that address and be promoted to admin. Email verification and reset delivery remain follow-up work.
