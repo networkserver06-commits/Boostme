@@ -13,7 +13,7 @@ export default function Auth() {
   const utils = trpc.useUtils();
   const signIn = trpc.auth.signin.useMutation();
   const signUp = trpc.auth.signup.useMutation();
-  const [mode, setMode] = useState<AuthMode>("signin");
+  const [mode, setMode] = useState<AuthMode>(() => new URLSearchParams(window.location.search).get("mode") === "signup" ? "signup" : "signin");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [name, setName] = useState("");
@@ -42,9 +42,9 @@ export default function Auth() {
         : await signUp.mutateAsync({ name: name.trim(), email: email.trim(), password });
       const refreshed = await auth.refresh();
       const user = refreshed.data ?? result.user;
-      if (!user) throw new Error("Your account was created, but the workspace session could not be confirmed. Please sign in again.");
+      if (!user) throw new Error("Your account was created, but your session could not be confirmed. Please sign in again.");
       utils.auth.me.setData(undefined, user);
-      setStatus(mode === "signup" ? "Account created. Opening your workspace…" : "Signed in. Opening your workspace…", "success");
+      setStatus(mode === "signup" ? "Account created. Opening your dashboard…" : "Signed in. Opening your dashboard…", "success");
       navigate(returnTo);
     } catch (error) {
       const message = error instanceof Error ? error.message : "Authentication failed. Please try again.";
@@ -56,7 +56,7 @@ export default function Auth() {
 
   const title = mode === "signin" ? "Welcome back" : "Create your account";
   const description = mode === "signin"
-    ? "Sign in to your creator workspace and pick up where you left off."
+    ? "Sign in to manage your orders, wallet activity, and delivery updates."
     : "Create an account to manage orders, wallet activity, and delivery updates.";
 
   return (
@@ -70,7 +70,7 @@ export default function Auth() {
             <h1 className="mt-7 text-5xl font-semibold leading-[1.05] tracking-[-.06em] xl:text-6xl">A calmer way to keep growth moving.</h1>
             <p className="mt-6 max-w-md text-base leading-7 text-slate-400">Track orders, understand wallet activity, and get a clear view of what needs your attention next.</p>
             <div className="mt-10 grid gap-3 sm:grid-cols-2">
-              <div className="rounded-2xl border border-white/10 bg-white/[.035] p-4"><p className="text-xs text-slate-500">Workspace</p><p className="mt-2 text-sm font-medium">Orders and status in one view</p></div>
+              <div className="rounded-2xl border border-white/10 bg-white/[.035] p-4"><p className="text-xs text-slate-500">Your dashboard</p><p className="mt-2 text-sm font-medium">Orders and status in one view</p></div>
               <div className="rounded-2xl border border-white/10 bg-white/[.035] p-4"><p className="text-xs text-slate-500">Account access</p><p className="mt-2 text-sm font-medium">Private password and session</p></div>
             </div>
           </div>
@@ -85,7 +85,7 @@ export default function Auth() {
 
           <div className="mx-auto flex w-full max-w-md flex-1 flex-col justify-center py-12">
             <div className="mb-8">
-              <p className="text-xs font-semibold uppercase tracking-[.22em] text-blue-300">Secure workspace access</p>
+              <p className="text-xs font-semibold uppercase tracking-[.22em] text-blue-300">Secure account access</p>
               <h2 className="mt-3 text-3xl font-semibold tracking-[-.045em] sm:text-4xl">{title}</h2>
               <p className="mt-3 text-sm leading-6 text-slate-400">{description}</p>
             </div>
@@ -105,7 +105,7 @@ export default function Auth() {
             </div>
             <p className="mt-8 inline-flex items-center justify-center gap-2 text-center text-xs leading-5 text-slate-600"><ShieldCheck className="h-3.5 w-3.5 shrink-0" /> Email verification is temporarily disabled. Use a unique password and sign up only with an email you control.</p>
           </div>
-          <footer className="pb-4 text-center text-xs text-slate-700">Need help? Contact your workspace administrator.</footer>
+          <footer className="pb-4 text-center text-xs text-slate-700">Need help? Contact your account administrator.</footer>
         </section>
       </div>
     </main>

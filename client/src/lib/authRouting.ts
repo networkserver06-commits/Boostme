@@ -1,6 +1,6 @@
 const DEFAULT_RETURN_PATH = "/dashboard";
 
-/** Accept only in-app workspace routes; never allow an external/open redirect. */
+/** Accept only in-app account routes; never allow an external/open redirect. */
 export function safeAuthReturnPath(candidate: string | null | undefined) {
   if (!candidate || !candidate.startsWith("/") || candidate.startsWith("//") || candidate.includes("\\")) {
     return DEFAULT_RETURN_PATH;
@@ -14,7 +14,7 @@ export function safeAuthReturnPath(candidate: string | null | undefined) {
     }
     if (parsed.pathname === "/admin") return `${parsed.pathname}${parsed.search}${parsed.hash}`;
   } catch {
-    // Malformed paths fall back to the workspace overview.
+    // Malformed paths fall back to the account overview.
   }
 
   return DEFAULT_RETURN_PATH;
