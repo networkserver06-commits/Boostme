@@ -1399,11 +1399,11 @@ export default function ComponentsShowcase() {
                 <div className="space-y-4">
                   <div className="text-sm text-muted-foreground">
                     <p>
-                      A ready-to-use chat interface component that integrates with the LLM system.
+                      A reusable, presentational chat interface component.
                       Features markdown rendering, auto-scrolling, and loading states.
                     </p>
                     <p className="mt-2">
-                      This is a demo with simulated responses. In a real app, you'd connect it to a tRPC mutation.
+                      This is a local demo with simulated responses; it does not contact an AI service.
                     </p>
                   </div>
                   <AIChatBox

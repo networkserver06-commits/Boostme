@@ -1,6 +1,6 @@
 # Turso + Vercel deployment
 
-Boostme uses **Turso/libSQL (SQLite)** for application data and app-managed email/password authentication. No separate hosted-auth or REST database service is required. Its schema is created idempotently on first server request in each serverless process.
+Boostme uses **Turso/libSQL (SQLite)** for application data and app-managed email/password authentication. The server also retains the configured provider API integration for order fulfillment and catalog sync. No separate hosted-auth, AI, map, speech, notification, or object-storage service is required by the app.
 
 ## Required Vercel variables
 
@@ -14,10 +14,6 @@ Set these on the Vercel project for **Production** and Preview as needed. Redepl
 | `JWT_SECRET` | Yes for cron | Server-only bearer secret accepted by scheduled provider-sync endpoints. |
 | `BASE_URL` | Optional | Provider API endpoint for ShakerGain bootstrap when no active provider exists. |
 | `API_KEY` | Optional | Server-only provider API key paired with `BASE_URL`. |
-| `BUILT_IN_FORGE_API_URL` | If using generated assets | Server-side S3-compatible asset storage endpoint. |
-| `BUILT_IN_FORGE_API_KEY` | If using generated assets | Server-only asset-storage credential. |
-
-`TURSO_DATABASE_URL`, `TURSO_AUTH_TOKEN`, and `ADMIN_EMAIL` are the database/auth settings. Preserve the existing cron, provider, and asset-storage variables for those features.
 
 ## Database initialization
 
@@ -50,4 +46,4 @@ pnpm build
 
 Before production use, verify the Vercel deployment uses the intended Turso database, check `/auth`, register a test user in a non-production database, verify its HTTP-only cookie and `auth.me` session, test logout/revocation, and exercise an admin-only route. Do not use real customer wallet/order data for the first end-to-end test.
 
-A daily provider-catalog cron remains configured in `vercel.json`; scheduled requests require `Authorization: Bearer $JWT_SECRET`. Object downloads use the existing Forge/S3-compatible storage proxy at `/manus-storage/*`, independent of the database.
+A daily provider-catalog cron remains configured in `vercel.json`; scheduled requests require `Authorization: Bearer $JWT_SECRET`.

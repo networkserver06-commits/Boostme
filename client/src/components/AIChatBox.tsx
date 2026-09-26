@@ -7,7 +7,7 @@ import { useState, useEffect, useRef } from "react";
 import { Streamdown } from "streamdown";
 
 /**
- * Message type matching server-side LLM Message interface
+ * Generic message type for a caller-managed conversation.
  */
 export type Message = {
   role: "system" | "user" | "assistant";
@@ -17,13 +17,13 @@ export type Message = {
 export type AIChatBoxProps = {
   /**
    * Messages array to display in the chat.
-   * Should match the format used by invokeLLM on the server.
+   * Messages displayed by this UI component.
    */
   messages: Message[];
 
   /**
    * Callback when user sends a message.
-   * Typically you'll call a tRPC mutation here to invoke the LLM.
+   * The caller decides how to handle submitted text.
    */
   onSendMessage: (content: string) => void;
 
@@ -60,10 +60,10 @@ export type AIChatBoxProps = {
 };
 
 /**
- * A ready-to-use AI chat box component that integrates with the LLM system.
+ * A presentational chat box. It does not call an AI service by itself.
  *
  * Features:
- * - Matches server-side Message interface for seamless integration
+ * - Uses a simple caller-supplied message interface
  * - Markdown rendering with Streamdown
  * - Auto-scrolls to latest message
  * - Loading states
