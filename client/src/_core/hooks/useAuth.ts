@@ -9,6 +9,7 @@ export function useAuth(options?: UseAuthOptions) {
   const { redirectOnUnauthenticated = false, redirectPath } = options ?? {};
   const utils = trpc.useUtils();
   const meQuery = trpc.auth.me.useQuery(undefined, { retry: false, refetchOnWindowFocus: false });
+  const refresh = useCallback(() => meQuery.refetch(), [meQuery.refetch]);
   const logout = useCallback(async () => {
     await signOutSupabase();
     utils.auth.me.setData(undefined, null);
@@ -29,5 +30,5 @@ export function useAuth(options?: UseAuthOptions) {
     else startLogin(window.location.pathname + window.location.search);
   }, [redirectOnUnauthenticated, redirectPath, meQuery.isLoading, state.user]);
 
-  return { ...state, refresh: () => meQuery.refetch(), logout };
+  return { ...state, refresh, logout };
 }
