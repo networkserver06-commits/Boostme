@@ -1,5 +1,5 @@
 import type { Request, Response } from "express";
-import { ensureEnvironmentProvider, eq, getDb, orders, recordAudit, services, smmProviders, syncRuns, tableNames } from "./db";
+import { ensureEnvironmentProvider, desc, eq, getDb, orders, recordAudit, services, smmProviders, syncRuns } from "./db";
 import { fetchProviderServices, fetchProviderStatus, getProviderServiceId, mapCatalogService, mapProviderStatus } from "./provider";
 
 export const OUTSTANDING_ORDER_STATUSES = ["pending", "in_progress", "partial"] as const;
@@ -17,37 +17,37 @@ export async function executeProviderSync(kind: SyncKind, options: { taskUid?: s
   const getServices = options.fetchProviderServices ?? fetchProviderServices;
   const getStatus = options.fetchProviderStatus ?? fetchProviderStatus;
   const audit = options.recordAudit ?? recordAudit;
-  const provider = (await db.from(tableNames.smmProviders).select().where(eq(smmProviders.isActive, true)).limit(1))[0] ?? await ensureEnvironmentProvider(db);
-  const run = (await db.from(tableNames.syncRuns).insert({ providerId: provider?.id ?? null, kind, status: "running", itemsProcessed: 0 }))[0];
+  const provider = (await db.select().from(smmProviders).where(eq(smmProviders.isActive, 1)).limit(1))[0] ?? await ensureEnvironmentProvider(db);
+  const [run] = await db.insert(syncRuns).values({ providerId: provider?.id ?? null, kind, status: "running", itemsProcessed: 0 }).returning();
   if (!provider) {
-    if (run) await db.from(tableNames.syncRuns).update({ status: "failed", errorMessage: "No active provider configured", finishedAt: new Date() }).where(eq(syncRuns.id, run.id));
+    if (run) await db.update(syncRuns).set({ status: "failed", errorMessage: "No active provider configured", finishedAt: new Date() }).where(eq(syncRuns.id, run.id));
     return { runId: run?.id ?? null, processed: 0, skipped: "no-provider" as const };
   }
   let processed = 0;
   if (kind === "catalog") {
     const catalog = await getServices(provider.apiUrl, provider.apiKey);
     for (const item of catalog) {
-      const existing = (await db.from(tableNames.services).select().where(eq(services.providerServiceId, getProviderServiceId(item))).limit(1))[0];
+      const existing = (await db.select().from(services).where(eq(services.providerServiceId, getProviderServiceId(item))).limit(1))[0];
       const values = mapCatalogService(item, provider.id, 150);
-      if (existing) await db.from(tableNames.services).update(values).where(eq(services.id, existing.id)); else await db.from(tableNames.services).insert(values);
+      if (existing) await db.update(services).set(values).where(eq(services.id, existing.id)); else await db.insert(services).values(values);
       processed += 1;
     }
-    await db.from(tableNames.smmProviders).update({ lastSyncAt: new Date() }).where(eq(smmProviders.id, provider.id));
+    await db.update(smmProviders).set({ lastSyncAt: new Date() }).where(eq(smmProviders.id, provider.id));
   } else {
-    const allOrders = await db.from(tableNames.orders).select();
-    const outstanding = allOrders.filter((order) => !order.status || OUTSTANDING_ORDER_STATUSES.includes(order.status));
+    const allOrders = await db.select().from(orders);
+    const outstanding = allOrders.filter((order) => !order.status || OUTSTANDING_ORDER_STATUSES.includes(order.status as (typeof OUTSTANDING_ORDER_STATUSES)[number]));
     for (const order of outstanding) {
       if (!order.providerOrderId) continue;
       try {
         const status = await getStatus(provider.apiUrl, provider.apiKey, order.providerOrderId);
-        await db.from(tableNames.orders).update({ status: mapProviderStatus(status.status), startCount: Number(status.start_count ?? order.startCount ?? 0), remains: Number(status.remains ?? order.remains ?? order.quantity) }).where(eq(orders.id, order.id));
+        await db.update(orders).set({ status: mapProviderStatus(status.status), startCount: Number(status.start_count ?? order.startCount ?? 0), remains: Number(status.remains ?? order.remains ?? order.quantity) }).where(eq(orders.id, order.id));
         processed += 1;
       } catch (error) {
         await audit({ actorUserId: options.actorUserId, action: "sync.order_failed", entityType: "order", entityId: String(order.id), details: { error: String(error) } });
       }
     }
   }
-  if (run) await db.from(tableNames.syncRuns).update({ ...syncResult(processed), finishedAt: new Date() }).where(eq(syncRuns.id, run.id));
+  if (run) await db.update(syncRuns).set({ ...syncResult(processed), finishedAt: new Date() }).where(eq(syncRuns.id, run.id));
   await audit({ actorUserId: options.actorUserId, action: `sync.${kind}.completed`, entityType: "sync_run", entityId: String(run?.id ?? "unknown"), details: { processed, taskUid: options.taskUid, trigger: options.actorUserId ? "admin" : "cron" } });
   return { runId: run?.id ?? null, processed };
 }

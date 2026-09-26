@@ -11,7 +11,7 @@ import { appRouter } from "./routers";
 import type { TrpcContext } from "./_core/context";
 
 const adminContext = (): TrpcContext => ({
-  user: { id: 1, openId: "admin", email: "admin@example.com", name: "Admin", loginMethod: "manus", role: "admin", createdAt: new Date(), updatedAt: new Date(), lastSignedIn: new Date() },
+  user: { id: 1, email: "admin@example.com", name: "Admin", loginMethod: "password", role: "admin", createdAt: new Date(), updatedAt: new Date(), lastSignedIn: new Date() },
   req: { protocol: "https", headers: {} } as TrpcContext["req"],
   res: {} as TrpcContext["res"],
 });

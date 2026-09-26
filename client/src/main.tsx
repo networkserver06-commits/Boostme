@@ -6,11 +6,9 @@ import { createRoot } from "react-dom/client";
 import superjson from "superjson";
 import App from "./App";
 import { startLogin } from "./const";
-import { refreshSupabaseSession } from "./lib/supabaseAuth";
 import "./index.css";
 
 const queryClient = new QueryClient();
-
 const redirectToLoginIfUnauthorized = (error: unknown) => {
   if (!(error instanceof TRPCClientError) || typeof window === "undefined") return;
   if (error.message === UNAUTHED_ERR_MSG && window.location.pathname !== "/auth") {
@@ -25,7 +23,6 @@ queryClient.getQueryCache().subscribe(event => {
     console.error("[API Query Error]", error);
   }
 });
-
 queryClient.getMutationCache().subscribe(event => {
   if (event.type === "updated" && event.action.type === "error") {
     const error = event.mutation.state.error;
@@ -35,20 +32,13 @@ queryClient.getMutationCache().subscribe(event => {
 });
 
 const trpcClient = trpc.createClient({
-  links: [
-    httpBatchLink({
-      url: "/api/trpc",
-      transformer: superjson,
-      async headers() {
-        const session = await refreshSupabaseSession();
-        const token = session?.access_token;
-        return token ? { Authorization: `Bearer ${token}` } : {};
-      },
-      fetch(input, init) {
-        return globalThis.fetch(input, { ...(init ?? {}), credentials: "omit" });
-      },
-    }),
-  ],
+  links: [httpBatchLink({
+    url: "/api/trpc",
+    transformer: superjson,
+    fetch(input, init) {
+      return globalThis.fetch(input, { ...(init ?? {}), credentials: "same-origin" });
+    },
+  })],
 });
 
 createRoot(document.getElementById("root")!).render(

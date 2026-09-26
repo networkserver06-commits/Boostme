@@ -1,4 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
+import { orders, profiles, syncRuns, walletTransactions, eq } from "./db";
+import { createTestDb } from "./testDb";
 import { refundOrder } from "./db";
 import { scheduledSyncHandler } from "./scheduled";
 
@@ -6,6 +8,7 @@ const response = () => {
   const result: { statusCode?: number; body?: unknown } = {};
   return { result, status(code: number) { result.statusCode = code; return this; }, json(body: unknown) { result.body = body; return body; } } as any;
 };
+const dbDependency = (db: Awaited<ReturnType<typeof createTestDb>>) => vi.fn().mockResolvedValue(db) as any;
 
 describe("refundOrder", () => {
   it("updates the profile, marks the order failed, and inserts a refund ledger entry", async () => {
@@ -31,36 +34,35 @@ describe("scheduledSyncHandler", () => {
     expect(res.result).toEqual({ statusCode: 403, body: { error: "cron-only" } });
   });
 
-  it("completes a provider order sync and updates the run count", async () => {
+  it("completes a provider order sync and persists the run count", async () => {
+    const db = await createTestDb();
+    await db.insert((await import("./db")).smmProviders).values({ name: "Provider", apiUrl: "https://provider.example", apiKey: "secret", isActive: 1 });
+    await db.insert(orders).values({ userId: 2, serviceId: 1, providerOrderId: "p-41", targetLink: "https://instagram.com/test", quantity: 1000, charge: "1.25", startCount: 0, remains: 1000, status: "pending" });
     const res = response();
-    const runUpdates: unknown[] = [];
-    const fakeDb = {
-      from: (table: string) => table === "smm_providers" ? { select: () => ({ where: () => ({ limit: async () => [{ id: 3, apiUrl: "https://provider.example", apiKey: "secret" }] }) }) } : table === "orders" ? { select: async () => [{ id: 41, providerOrderId: "p-41", quantity: 1000, startCount: 0, remains: 1000, status: "pending" }], update: () => ({ where: async () => undefined }) } : { insert: async () => [{ id: 12 }], update: () => ({ where: async () => { runUpdates.push({ status: "completed", itemsProcessed: 1 }); } }) },
-    };
-    await scheduledSyncHandler({ path: "/api/scheduled/sync-orders", originalUrl: "/api/scheduled/sync-orders" } as any, res, { authenticate: vi.fn().mockResolvedValue({ isCron: true, taskUid: "task-12" }), getDb: vi.fn().mockResolvedValue(fakeDb), fetchProviderStatus: vi.fn().mockImplementation(async (...args) => { return { status: "Completed", remains: "0", start_count: "10" }; }) });
-    expect(res.result.body).toEqual({ ok: true, runId: 12, processed: 1 });
-    expect(runUpdates.at(-1)).toMatchObject({ status: "completed", itemsProcessed: 1 });
+    await scheduledSyncHandler({ path: "/api/scheduled/sync-orders", originalUrl: "/api/scheduled/sync-orders" } as any, res, { authenticate: vi.fn().mockResolvedValue({ isCron: true, taskUid: "task-12" }), getDb: dbDependency(db), fetchProviderStatus: vi.fn().mockResolvedValue({ status: "Completed", remains: "0", start_count: "10" }) });
+    expect(res.result.body).toMatchObject({ ok: true, processed: 1 });
+    expect(await db.select().from(syncRuns)).toMatchObject([{ status: "completed", itemsProcessed: 1 }]);
+    expect(await db.select().from(orders)).toMatchObject([{ status: "completed" }]);
   });
 
   it("continues after provider polling errors and closes the run with zero processed", async () => {
+    const db = await createTestDb();
+    await db.insert((await import("./db")).smmProviders).values({ name: "Provider", apiUrl: "https://provider.example", apiKey: "secret", isActive: 1 });
+    await db.insert(orders).values({ userId: 2, serviceId: 1, providerOrderId: "p-42", targetLink: "https://instagram.com/test", quantity: 1000, charge: "1.25", startCount: 0, remains: 1000, status: "pending" });
     const res = response();
-    const runUpdates: unknown[] = [];
-    const fakeDb = {
-      from: (table: string) => table === "smm_providers" ? { select: () => ({ where: () => ({ limit: async () => [{ id: 3, apiUrl: "https://provider.example", apiKey: "secret" }] }) }) } : table === "orders" ? { select: async () => [{ id: 42, providerOrderId: "p-42", quantity: 1000, startCount: 0, remains: 1000, status: "pending" }], update: () => ({ where: async () => undefined }) } : { insert: async () => [{ id: 13 }], update: () => ({ where: async () => { runUpdates.push({ status: "completed", itemsProcessed: 0 }); } }) },
-    };
-    await scheduledSyncHandler({ path: "/api/scheduled/sync-orders", originalUrl: "/api/scheduled/sync-orders" } as any, res, { authenticate: vi.fn().mockResolvedValue({ isCron: true, taskUid: "task-13" }), getDb: vi.fn().mockResolvedValue(fakeDb), fetchProviderStatus: vi.fn().mockRejectedValue(new Error("provider timeout")) });
-    expect(res.result.body).toEqual({ ok: true, runId: 13, processed: 0 });
-    expect(runUpdates.at(-1)).toMatchObject({ status: "completed", itemsProcessed: 0 });
+    await scheduledSyncHandler({ path: "/api/scheduled/sync-orders", originalUrl: "/api/scheduled/sync-orders" } as any, res, { authenticate: vi.fn().mockResolvedValue({ isCron: true, taskUid: "task-13" }), getDb: dbDependency(db), fetchProviderStatus: vi.fn().mockRejectedValue(new Error("provider timeout")) });
+    expect(res.result.body).toMatchObject({ ok: true, processed: 0 });
+    expect(await db.select().from(syncRuns)).toMatchObject([{ status: "completed", itemsProcessed: 0 }]);
   });
 
-  it("creates and closes a visible sync run when no provider is configured", async () => {
+  it("records a failed sync run when no provider is configured", async () => {
+    vi.stubEnv("BASE_URL", "");
+    vi.stubEnv("API_KEY", "");
+    const db = await createTestDb();
     const res = response();
-    const runUpdates: unknown[] = [];
-    const fakeDb = {
-      from: (table: string) => table === "smm_providers" ? { select: () => ({ where: () => ({ limit: async () => [] }) }) } : { insert: async () => [{ id: 9 }], update: () => ({ where: async () => { runUpdates.push({ status: "failed", errorMessage: "No active provider configured" }); } }) },
-    };
-    await scheduledSyncHandler({ path: "/api/scheduled/sync-orders", originalUrl: "/api/scheduled/sync-orders" } as any, res, { authenticate: vi.fn().mockResolvedValue({ isCron: true, taskUid: "task-9" }), getDb: vi.fn().mockResolvedValue(fakeDb) });
+    await scheduledSyncHandler({ path: "/api/scheduled/sync-orders", originalUrl: "/api/scheduled/sync-orders" } as any, res, { authenticate: vi.fn().mockResolvedValue({ isCron: true, taskUid: "task-9" }), getDb: dbDependency(db) });
     expect(res.result.body).toEqual({ ok: true, skipped: "no-provider" });
-    expect(runUpdates[0]).toMatchObject({ status: "failed", errorMessage: "No active provider configured" });
+    expect(await db.select().from(syncRuns)).toMatchObject([{ status: "failed", errorMessage: "No active provider configured" }]);
+    vi.unstubAllEnvs();
   });
 });

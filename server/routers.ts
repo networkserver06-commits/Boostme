@@ -2,7 +2,8 @@ import { TRPCError } from "@trpc/server";
 import { z } from "zod";
 import { systemRouter } from "./_core/systemRouter";
 import { adminProcedure, protectedProcedure, publicProcedure, router } from "./_core/trpc";
-import { chargeWallet, getActiveServices, getDb, getOrCreateProfile, getUserOrders, getUserWallet, listAdminUsers, listProviders, listSyncRuns, recordAudit, refundOrder, orders, profiles, services, smmProviders, syncRuns, syncSchedules, users, walletTransactions, tableNames, eq, desc, sql } from "./db";
+import { chargeWallet, getActiveServices, getDb, getOrCreateProfile, getUserByEmail, getUserOrders, getUserWallet, listAdminUsers, listProviders, listSyncRuns, recordAudit, refundOrder, orders, profiles, services, smmProviders, syncRuns, syncSchedules, users, walletTransactions, eq, desc, sql } from "./db";
+import { clearAuthAttempts, consumeAuthAttempt, createSession, hashPassword, normalizeEmail, readSessionToken, revokeSession, verifyPassword } from "./_core/passwordAuth";
 import { fetchProviderServices, getProviderServiceId, mapCatalogService, submitProviderOrder } from "./provider";
 import { executeProviderSync } from "./scheduled";
 
@@ -20,6 +21,11 @@ const serviceInput = z.object({
   providerServiceId: z.string().optional(),
 });
 
+const publicUser = <T extends { passwordHash?: string | null }>(user: T) => {
+  const { passwordHash: _passwordHash, ...safeUser } = user;
+  return safeUser;
+};
+
 const adminOnly = protectedProcedure.use(({ ctx, next }) => {
   if (ctx.user.role !== "admin") throw new TRPCError({ code: "FORBIDDEN", message: "Administrator access required" });
   return next({ ctx });
@@ -29,7 +35,57 @@ export const appRouter = router({
   system: systemRouter,
   auth: router({
     me: publicProcedure.query(opts => opts.ctx.user),
-    logout: publicProcedure.mutation(() => ({ success: true } as const)),
+    signup: publicProcedure.input(z.object({ name: z.string().trim().min(1).max(120), email: z.string().trim().email().max(320), password: z.string().min(8).max(256) })).mutation(async ({ ctx, input }) => {
+      const db = await getDb();
+      if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Account service is not configured" });
+      const email = normalizeEmail(input.email);
+      if (!(await consumeAuthAttempt(email, ctx.req.ip || "unknown"))) throw new TRPCError({ code: "TOO_MANY_REQUESTS", message: "Too many account attempts. Wait 15 minutes and try again." });
+      const existing = await getUserByEmail(email);
+      if (existing) throw new TRPCError({ code: "CONFLICT", message: "An account with this email already exists. Sign in instead." });
+      const passwordHash = await hashPassword(input.password);
+      const isAdmin = Boolean(process.env.ADMIN_EMAIL?.trim()) && email === normalizeEmail(process.env.ADMIN_EMAIL!);
+      try {
+        const user = await db.transaction(async (tx) => {
+          const [created] = await tx.insert(users).values({
+            name: input.name.trim(), email, passwordHash, loginMethod: "password", role: isAdmin ? "admin" : "user",
+            lastSignedIn: new Date(),
+          }).returning();
+          if (!created) throw new Error("Account creation failed");
+          await tx.insert(profiles).values({ userId: created.id, email, balance: "0.00" });
+          return created;
+        });
+        await createSession(user.id, ctx.res);
+        await recordAudit({ actorUserId: user.id, action: "auth.account_created", entityType: "user", entityId: String(user.id), details: { admin: isAdmin } });
+        return { user: publicUser(user) };
+      } catch (error) {
+        if (error instanceof TRPCError) throw error;
+        const message = error instanceof Error ? error.message : "";
+        if (/unique|constraint/i.test(message)) throw new TRPCError({ code: "CONFLICT", message: "An account with this email already exists. Sign in instead." });
+        throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Unable to create account. Please try again." });
+      }
+    }),
+    signin: publicProcedure.input(z.object({ email: z.string().trim().email().max(320), password: z.string().min(1).max(256) })).mutation(async ({ ctx, input }) => {
+      const email = normalizeEmail(input.email);
+      if (!(await consumeAuthAttempt(email, ctx.req.ip || "unknown"))) throw new TRPCError({ code: "TOO_MANY_REQUESTS", message: "Too many sign-in attempts. Wait 15 minutes and try again." });
+      const user = await getUserByEmail(email);
+      if (!user || !(await verifyPassword(input.password, user.passwordHash))) {
+        throw new TRPCError({ code: "UNAUTHORIZED", message: "Email or password is incorrect." });
+      }
+      await clearAuthAttempts(email, ctx.req.ip || "unknown");
+      const isAdmin = Boolean(process.env.ADMIN_EMAIL?.trim()) && email === normalizeEmail(process.env.ADMIN_EMAIL!);
+      const db = await getDb();
+      if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Account service is not configured" });
+      const now = new Date();
+      const role = isAdmin ? "admin" : user.role;
+      await db.update(users).set({ lastSignedIn: now, updatedAt: now, role }).where(eq(users.id, user.id));
+      await createSession(user.id, ctx.res);
+      await recordAudit({ actorUserId: user.id, action: "auth.signed_in", entityType: "user", entityId: String(user.id) });
+      return { user: publicUser({ ...user, lastSignedIn: now, updatedAt: now, role }) };
+    }),
+    logout: publicProcedure.mutation(async ({ ctx }) => {
+      await revokeSession(readSessionToken(ctx.req), ctx.res);
+      return { success: true } as const;
+    }),
   }),
   public: router({
     services: publicProcedure.query(() => getActiveServices()),
@@ -49,7 +105,7 @@ export const appRouter = router({
       const profile = await getOrCreateProfile(ctx.user);
       const [userOrders, wallet] = await Promise.all([getUserOrders(ctx.user.id), getUserWallet(ctx.user.id)]);
       const spent = userOrders.reduce((sum, order) => sum + Number(order.charge), 0);
-      return { profile, orders: userOrders.slice(0, 5), wallet: wallet.slice(0, 6), metrics: { totalOrders: userOrders.length, pendingOrders: userOrders.filter(order => ['pending', 'in_progress'].includes(order.status)).length, totalSpent: spent } };
+      return { profile, orders: userOrders.slice(0, 5), wallet: wallet.slice(0, 6), metrics: { totalOrders: userOrders.length, pendingOrders: userOrders.filter(order => ["pending", "in_progress"].includes(order.status)).length, totalSpent: spent } };
     }),
     services: protectedProcedure.query(() => getActiveServices()),
     orders: protectedProcedure.query(({ ctx }) => getUserOrders(ctx.user.id)),
@@ -168,8 +224,10 @@ export const appRouter = router({
       if (!profile) throw new TRPCError({ code: "NOT_FOUND", message: "Wallet profile not found" });
       const nextBalance = Number(profile.balance) + input.amount;
       if (nextBalance < 0) throw new TRPCError({ code: "BAD_REQUEST", message: "Balance cannot become negative" });
-      await db.update(profiles).set({ balance: nextBalance.toFixed(2) }).where(eq(profiles.userId, input.userId));
-      await db.insert(walletTransactions).values({ userId: input.userId, amount: input.amount.toFixed(2), type: "adjustment", status: "completed", reference: `admin-${Date.now()}`, paymentMethod: "admin", balanceAfter: nextBalance.toFixed(2) });
+      await db.transaction(async tx => {
+        await tx.update(profiles).set({ balance: nextBalance.toFixed(2) }).where(eq(profiles.userId, input.userId));
+        await tx.insert(walletTransactions).values({ userId: input.userId, amount: input.amount.toFixed(2), type: "adjustment", status: "completed", reference: `admin-${Date.now()}`, paymentMethod: "admin", balanceAfter: nextBalance.toFixed(2) });
+      });
       await recordAudit({ actorUserId: ctx.user.id, action: "wallet.adjusted", entityType: "profile", entityId: String(input.userId), details: { ...input, nextBalance } });
       return { success: true, balance: nextBalance };
     }),
@@ -180,7 +238,7 @@ export const appRouter = router({
         await db.update(smmProviders).set(values).where(eq(smmProviders.id, input.id));
       } else {
         if (!input.apiKey) throw new TRPCError({ code: "BAD_REQUEST", message: "An API key is required for a new provider" });
-        await db.insert(smmProviders).values(input);
+        await db.insert(smmProviders).values({ name: input.name, apiUrl: input.apiUrl, apiKey: input.apiKey, isActive: input.isActive });
       }
       await recordAudit({ actorUserId: ctx.user.id, action: input.id ? "provider.updated" : "provider.created", entityType: "provider", entityId: input.id ? String(input.id) : undefined });
       return { success: true };
@@ -190,13 +248,13 @@ export const appRouter = router({
       const provider = (await db.select().from(smmProviders).where(eq(smmProviders.id, input.id)).limit(1))[0];
       if (!provider) throw new TRPCError({ code: "NOT_FOUND", message: "Provider not found" });
       if (provider.isActive) throw new TRPCError({ code: "BAD_REQUEST", message: "Pause the provider before removing it" });
-      await db.request(`${tableNames.smmProviders}?id=eq.${input.id}`, { method: "DELETE", headers: { Prefer: "return=minimal" } });
+      await db.delete(smmProviders).where(eq(smmProviders.id, input.id));
       await recordAudit({ actorUserId: ctx.user.id, action: "provider.removed", entityType: "provider", entityId: String(input.id), details: { name: provider.name } });
       return { success: true };
     }),
     toggleProvider: adminOnly.input(z.object({ id: z.number().int().positive(), isActive: z.boolean() })).mutation(async ({ ctx, input }) => {
       const db = await getDb(); if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database unavailable" });
-      await db.update(smmProviders).set({ isActive: input.isActive }).where(eq(smmProviders.id, input.id));
+      await db.update(smmProviders).set({ isActive: input.isActive ? 1 : 0 }).where(eq(smmProviders.id, input.id));
       await recordAudit({ actorUserId: ctx.user.id, action: input.isActive ? "provider.activated" : "provider.paused", entityType: "provider", entityId: String(input.id) });
       return { success: true, isActive: input.isActive };
     }),
@@ -220,8 +278,10 @@ export const appRouter = router({
       const profile = (await db.select().from(profiles).where(eq(profiles.userId, tx.userId)).limit(1))[0];
       if (!profile) throw new TRPCError({ code: "NOT_FOUND", message: "Wallet profile not found" });
       const nextBalance = Number(profile.balance) + Number(tx.amount);
-      await db.update(profiles).set({ balance: nextBalance.toFixed(2) }).where(eq(profiles.userId, tx.userId));
-      await db.update(walletTransactions).set({ status: "completed", balanceAfter: nextBalance.toFixed(2) }).where(eq(walletTransactions.id, input.transactionId));
+      await db.transaction(async transaction => {
+        await transaction.update(profiles).set({ balance: nextBalance.toFixed(2) }).where(eq(profiles.userId, tx.userId));
+        await transaction.update(walletTransactions).set({ status: "completed", balanceAfter: nextBalance.toFixed(2) }).where(eq(walletTransactions.id, input.transactionId));
+      });
       await recordAudit({ actorUserId: ctx.user.id, action: "wallet.deposit_completed", entityType: "wallet_transaction", entityId: String(input.transactionId) });
       return { success: true };
     }),
@@ -230,8 +290,8 @@ export const appRouter = router({
       const schedules = [{ kind: "catalog" as const, taskUid: "vercel-cron-catalog", cron: "*/30 * * * *" }, { kind: "orders" as const, taskUid: "vercel-cron-orders", cron: "*/10 * * * *" }];
       for (const schedule of schedules) {
         const existing = (await db.select().from(syncSchedules).where(eq(syncSchedules.kind, schedule.kind)).limit(1))[0];
-        if (existing) await db.update(syncSchedules).set({ taskUid: schedule.taskUid, cron: schedule.cron, isActive: true }).where(eq(syncSchedules.id, existing.id));
-        else await db.insert(syncSchedules).values({ ...schedule, isActive: true });
+        if (existing) await db.update(syncSchedules).set({ taskUid: schedule.taskUid, cron: schedule.cron, isActive: 1 }).where(eq(syncSchedules.id, existing.id));
+        else await db.insert(syncSchedules).values({ ...schedule, isActive: 1 });
       }
       await recordAudit({ actorUserId: ctx.user.id, action: "sync.schedules_provisioned", entityType: "vercel_cron", details: { schedules } });
       return { schedules };
