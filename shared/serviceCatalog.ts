@@ -76,7 +76,8 @@ function cleanCategory(value: string, platform: string) {
     const escaped = platform.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
     category = category.replace(new RegExp(`^${escaped}\\s*(?:[-:–—]+\\s*)?`, "i"), "").trim();
   }
-  return category.length > 36 ? `${category.slice(0, 33).trimEnd()}…` : category;
+  const characters = Array.from(category);
+  return characters.length > 36 ? `${characters.slice(0, 33).join("").trimEnd()}…` : category;
 }
 
 export function normalizeServicePresentation<T extends CatalogClassificationInput>(service: T): T & { platform: string; category: string } {

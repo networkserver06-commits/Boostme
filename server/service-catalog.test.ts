@@ -14,6 +14,12 @@ describe("service catalog presentation", () => {
     expect(normalizeServicePresentation({ platform: "Telgram", category: "Telegram - Members", name: "Telegram Members" })).toMatchObject({ platform: "Telegram", category: "Members" });
   });
 
+  it("truncates astral Unicode characters without creating invalid database text", () => {
+    const result = normalizeServicePresentation({ platform: "YouTube", category: "Subscribers 𝗕𝗲𝘀𝘁 & 𝗡𝗼𝗻 𝗗𝗿𝗼𝗽 with extra words", name: "YouTube Subscribers" });
+    expect(result.category).not.toContain("�");
+    expect(Array.from(result.category).length).toBeLessThanOrEqual(37);
+  });
+
   it("retains legitimate non-social categories without inventing a platform", () => {
     expect(normalizeServicePresentation({ platform: "SEO", category: "SEO", name: "Backlinks" })).toMatchObject({ platform: "SEO", category: "SEO" });
   });
