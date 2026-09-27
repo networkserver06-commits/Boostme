@@ -40,7 +40,7 @@ const platformRules: Array<[string, RegExp]> = [
 
 const genericPlatforms = new Set(["", "api", "general", "social", "default", "other", "provider"]);
 const customerNoisePlatforms = new Set(["9gag", "amazon", "android", "apple", "article", "binance", "coinmarketcap", "datpiff", "dolap", "ebay", "genius", "imdb", "lazada", "maroof", "medium", "odnoklassniki", "ok.ru", "pandatv", "retube", "reverbnation", "shazam", "shopee", "strawpoll", "sua", "tidal", "trading", "traffic", "trip", "truthsocial", "vk", "wattpad", "website", "yandex"]);
-const kenyaCustomerPlatforms = new Set(["tiktok", "facebook", "instagram", "x", "twitter", "whatsapp"]);
+const kenyaCustomerPlatforms = new Set(["tiktok", "facebook", "instagram", "x", "twitter", "whatsapp", "youtube"]);
 const genericCategory = /^(?:api(?:\s+rates?)?|general|social|default|other|provider)(?:\b|\s)|whats\s*app\s+us\b|contact\s+us\b/i;
 const serviceTypes: Array<[string, RegExp]> = [
   ["Page likes", /\bpage\s+likes?\b/i],
@@ -112,7 +112,7 @@ export function isCustomerVisiblePlatform(platform: string) {
   return kenyaCustomerPlatforms.has(normalized) && !customerNoisePlatforms.has(normalized);
 }
 
-const kenyaPlatformPriority = ["TikTok", "Facebook", "Instagram", "X", "WhatsApp"];
+const kenyaPlatformPriority = ["TikTok", "Facebook", "Instagram", "X", "WhatsApp", "YouTube"];
 
 export function compareCustomerPlatforms(a: string, b: string) {
   const priority = (value: string) => {

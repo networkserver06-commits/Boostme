@@ -22,11 +22,11 @@ describe("service catalog presentation", () => {
     expect(normalizeServicePresentation({ platform: "Instgram", category: "Api Rates", name: "Instgram Likes" })).toMatchObject({ platform: "Instagram", category: "Likes" });
     expect(isCustomerVisiblePlatform("Amazon")).toBe(false);
     expect(isCustomerVisiblePlatform("Instagram")).toBe(true);
-    expect(isCustomerVisiblePlatform("YouTube")).toBe(false);
+    expect(isCustomerVisiblePlatform("YouTube")).toBe(true);
     expect(isCustomerVisiblePlatform("Twitter")).toBe(true);
   });
 
   it("prioritizes the approved Kenyan customer platforms", () => {
-    expect(["WhatsApp", "Instagram", "TikTok", "Facebook", "X"].sort(compareCustomerPlatforms)).toEqual(["TikTok", "Facebook", "Instagram", "X", "WhatsApp"]);
+    expect(["YouTube", "WhatsApp", "Instagram", "TikTok", "Facebook", "X"].sort(compareCustomerPlatforms)).toEqual(["TikTok", "Facebook", "Instagram", "X", "WhatsApp", "YouTube"]);
   });
 });
