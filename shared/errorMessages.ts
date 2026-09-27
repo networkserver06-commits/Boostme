@@ -23,6 +23,11 @@ export function friendlyErrorMessage(error: unknown, fallback = "Please try agai
   if (code === "UNAUTHORIZED" || message === "UNAUTHORIZED") return "Your session has ended. Sign in again to continue.";
   if (code === "FORBIDDEN") return "You do not have permission to do that.";
   if (code === "TOO_MANY_REQUESTS") return "Too many attempts. Wait a moment, then try again.";
+  if (/target url must be a valid (.+) link/i.test(message)) return message.replace(/^Target URL must be a valid (.+) link$/i, "Use a valid $1 link for the selected service.");
+  if (/quantity must be between/i.test(message)) return `${message}. Check the service minimum and maximum.`;
+  if (/insufficient wallet balance/i.test(message)) return "Your wallet balance is too low for this order. Add funds, then try again.";
+  if (/leetec|m-pesa payment request failed|payment request failed/i.test(message)) return "The M-Pesa prompt could not be started. Confirm your number and try again.";
+  if (/provider fulfillment failed/i.test(message)) return "The service provider could not accept this order. Your wallet charge was refunded.";
   if (["BAD_REQUEST", "CONFLICT", "NOT_FOUND", "PRECONDITION_FAILED"].includes(code ?? "") && message) return message;
   if (code === "INTERNAL_SERVER_ERROR" || code === "SERVICE_UNAVAILABLE" || code === "TIMEOUT") return fallback;
   if (!message || message === "Error" || /internal server error|unexpected error|trpcclienterror/i.test(message)) return fallback;
