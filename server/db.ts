@@ -82,6 +82,7 @@ let _client: Client | null = null;
 let _db: TursoDb | null = null;
 let schemaPromise: Promise<void> | null = null;
 let catalogRefreshPromise: Promise<void> | null = null;
+const CATALOG_VERIFIED_WINDOW_MS = 5 * 60 * 1000;
 
 export function getTursoClient() {
   const url = process.env.TURSO_DATABASE_URL?.trim() || (process.env.NODE_ENV === "production" ? "" : process.env.NODE_ENV === "test" ? "file::memory:" : "file:./.data/boostme.db");
@@ -185,6 +186,8 @@ export async function getActiveServices() {
 
 async function refreshCatalogFromProvider(db: TursoDb) {
   if (catalogRefreshPromise) return catalogRefreshPromise;
+  const activeProvider = (await db.select().from(smmProviders).where(eq(smmProviders.isActive, 1)).limit(1))[0];
+  if (activeProvider?.lastSyncAt && Date.now() - activeProvider.lastSyncAt.getTime() < CATALOG_VERIFIED_WINDOW_MS) return;
   catalogRefreshPromise = (async () => {
     const providers = await db.select().from(smmProviders).where(eq(smmProviders.isActive, 1));
     for (const provider of providers) {
