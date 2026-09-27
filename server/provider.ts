@@ -1,7 +1,7 @@
 import { normalizeServicePresentation } from "../shared/serviceCatalog";
 import { formatTieredRetailRatePer1k } from "../shared/pricing";
 
-export type ProviderService = { service?: string | number; services?: string | number; name: string; category?: string; Category?: string; type?: string; rate: string | number; min: string | number; max: string | number };
+export type ProviderService = { service?: string | number; services?: string | number; name: string; category?: string; Category?: string; type?: string; currency?: string; currency_code?: string; currencyCode?: string; rate_currency?: string; rate: string | number; min: string | number; max: string | number };
 export type ProviderOrderStatus = { status: string; start_count?: string | number; remains?: string | number; charge?: string | number };
 
 export async function providerRequest<T>(apiUrl: string, apiKey: string, body: Record<string, string | number>) {
@@ -28,11 +28,27 @@ export function getProviderServiceId(item: ProviderService) {
   return String(item.service ?? item.services);
 }
 
+function isKesMarker(value: string) { return /^(kes|ksh|kshs|ksh\.)$/i.test(value.trim()); }
+function isNonKesMarker(value: string) { return /^(usd|\$|eur|€|gbp|£)$/i.test(value.trim()); }
+
+export function providerRateCurrency(item: ProviderService): "KES" | "UNSUPPORTED" {
+  const explicit = [item.currency, item.currency_code, item.currencyCode, item.rate_currency].find(Boolean)?.trim();
+  const rawRate = String(item.rate).trim();
+  const marker = explicit || rawRate.match(/^(KES|KSh|KSH|USD|EUR|GBP|[$€£])/i)?.[1];
+  if (!marker || isKesMarker(marker)) return "KES";
+  if (isNonKesMarker(marker)) return "UNSUPPORTED";
+  return "UNSUPPORTED";
+}
+
 export function mapCatalogService(item: ProviderService, providerId: number) {
   const category = item.category || item.Category || item.type || "General";
   const providerServiceId = getProviderServiceId(item);
-  const providerRate = Number(item.rate);
-  if (!Number.isFinite(providerRate) || providerRate < 0) throw new Error(`Provider service ${providerServiceId} has an invalid rate`);
+  if (providerRateCurrency(item) === "UNSUPPORTED") {
+    console.error(`[PROVIDER CURRENCY BLOCKED] ${providerServiceId} ${item.name}: unsupported non-KES rate`);
+    return { providerId, providerServiceId, name: item.name, platform: category.split(" ")[0] || "Social", category, wholesaleRatePer1k: "0.0000", retailRatePer1k: "0.0000", minQuantity: Number(item.min), maxQuantity: Number(item.max), isActive: 0 };
+  }
+  const providerRate = Number(String(item.rate).replace(/^(KES|KSh|KSH)\s*/i, "").replaceAll(",", ""));
+  if (!Number.isFinite(providerRate) || providerRate < 0) throw new Error(`Provider service ${providerServiceId} has an invalid KES rate`);
   const wholesaleRatePer1k = enforceProviderRateFloor(providerServiceId, item.name, providerRate);
   const imported = { providerId, providerServiceId, name: item.name, platform: category.split(" ")[0] || "Social", category, wholesaleRatePer1k: wholesaleRatePer1k.toFixed(4), retailRatePer1k: formatTieredRetailRatePer1k(wholesaleRatePer1k), minQuantity: Number(item.min), maxQuantity: Number(item.max), isActive: 1 };
   const normalized = normalizeServicePresentation(imported);

@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { cancelProviderOrder, enforceProviderRateFloor, fetchProviderServices, fetchProviderStatus, mapCatalogService, mapProviderStatus, submitProviderOrder } from "./provider";
+import { cancelProviderOrder, enforceProviderRateFloor, fetchProviderServices, fetchProviderStatus, mapCatalogService, mapProviderStatus, providerRateCurrency, submitProviderOrder } from "./provider";
 
 afterEach(() => vi.unstubAllGlobals());
 
@@ -34,6 +34,12 @@ describe("provider service mapping", () => {
 
   it("supports ShakerGain’s documented services and Category aliases", () => {
     expect(mapCatalogService({ services: "1", name: "Data Entry", Category: "Seo", rate: 1, min: "10", max: "100000", type: "Default" }, 8)).toMatchObject({ providerId: 8, providerServiceId: "1", platform: "Seo", category: "Seo", wholesaleRatePer1k: "1.0000", retailRatePer1k: "2.5000" });
+  });
+
+  it("accepts KES/KSh rates and blocks USD rates instead of treating dollars as KES", () => {
+    expect(providerRateCurrency({ service: "1", name: "KES service", currency: "KSh", rate: "41.26", min: "1", max: "100" })).toBe("KES");
+    expect(providerRateCurrency({ service: "2", name: "USD service", currency: "USD", rate: "41.26", min: "1", max: "100" })).toBe("UNSUPPORTED");
+    expect(mapCatalogService({ service: "2", name: "USD service", currency: "USD", rate: "41.26", min: "1", max: "100" }, 8)).toMatchObject({ wholesaleRatePer1k: "0.0000", retailRatePer1k: "0.0000", isActive: 0 });
   });
 });
 
