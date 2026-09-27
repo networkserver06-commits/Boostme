@@ -185,15 +185,22 @@ async function refreshCatalogIfStale(db: TursoDb) {
       try {
         const remote = await fetchProviderServices(provider.apiUrl, provider.apiKey);
         const remoteIds = new Set(remote.map(getProviderServiceId));
-        for (const item of remote) {
+        const mapped = await db.select().from(services).where(eq(services.providerId, provider.id));
+        const mappedByProviderId = new Map(mapped.filter((service) => service.providerServiceId).map((service) => [service.providerServiceId!, service]));
+        const client = getTursoClient();
+        if (!client) throw new Error("Database client unavailable");
+        const statements = remote.map((item) => {
           const providerServiceId = getProviderServiceId(item);
           const values = mapCatalogService(item, provider.id);
-          const existing = (await db.select().from(services).where(and(eq(services.providerId, provider.id), eq(services.providerServiceId, providerServiceId))).limit(1))[0];
-          if (existing) await db.update(services).set({ ...values, needsResync: 0 }).where(eq(services.id, existing.id));
-          else await db.insert(services).values({ ...values, needsResync: 0 });
-        }
-        const mapped = await db.select().from(services).where(eq(services.providerId, provider.id));
-        for (const service of mapped) if (service.providerServiceId && !remoteIds.has(service.providerServiceId)) await db.update(services).set({ isActive: 0, needsResync: 1 }).where(eq(services.id, service.id));
+          const existing = mappedByProviderId.get(providerServiceId);
+          return existing
+            ? { sql: "UPDATE services SET provider_id = ?, provider_service_id = ?, name = ?, platform = ?, category = ?, wholesale_rate_per1k = ?, retail_rate_per1k = ?, min_quantity = ?, max_quantity = ?, is_active = 1, needs_resync = 0 WHERE id = ?", args: [values.providerId, values.providerServiceId, values.name, values.platform, values.category, values.wholesaleRatePer1k, values.retailRatePer1k, values.minQuantity, values.maxQuantity, existing.id] }
+            : { sql: "INSERT INTO services (provider_id, provider_service_id, name, platform, category, wholesale_rate_per1k, retail_rate_per1k, min_quantity, max_quantity, is_active, needs_resync) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 1, 0)", args: [values.providerId, values.providerServiceId, values.name, values.platform, values.category, values.wholesaleRatePer1k, values.retailRatePer1k, values.minQuantity, values.maxQuantity] };
+        });
+        for (let index = 0; index < statements.length; index += 500) await client.batch(statements.slice(index, index + 500), "write");
+        const missing = mapped.filter((service) => service.providerServiceId && !remoteIds.has(service.providerServiceId));
+        const missingStatements = missing.map((service) => ({ sql: "UPDATE services SET is_active = 0, needs_resync = 1 WHERE id = ?", args: [service.id] }));
+        for (let index = 0; index < missingStatements.length; index += 500) await client.batch(missingStatements.slice(index, index + 500), "write");
         await db.update(smmProviders).set({ lastSyncAt: new Date() }).where(eq(smmProviders.id, provider.id));
       } catch (error) {
         console.error(`[CATALOG REFRESH FAILED] Provider ${provider.id}:`, error);
