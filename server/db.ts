@@ -168,7 +168,12 @@ export async function getActiveServices() {
 export async function getUserOrders(userId: number) {
   const db = await getDb();
   if (!db) return [];
-  return db.select().from(orders).where(eq(orders.userId, userId)).orderBy(desc(orders.createdAt));
+  const [rows, catalog] = await Promise.all([
+    db.select().from(orders).where(eq(orders.userId, userId)).orderBy(desc(orders.createdAt)),
+    db.select().from(services),
+  ]);
+  const serviceById = new Map(catalog.map((service) => [service.id, normalizeServicePresentation(service)]));
+  return rows.map((order) => ({ ...order, serviceName: serviceById.get(order.serviceId)?.name ?? `Service #${order.serviceId}`, servicePlatform: serviceById.get(order.serviceId)?.platform ?? "Other", serviceCategory: serviceById.get(order.serviceId)?.category ?? "Other services" }));
 }
 
 export async function getUserWallet(userId: number) {
