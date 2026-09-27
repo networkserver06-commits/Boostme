@@ -2,12 +2,13 @@ import { TRPCError } from "@trpc/server";
 import { z } from "zod";
 import { systemRouter } from "./_core/systemRouter";
 import { adminProcedure, protectedProcedure, publicProcedure, router } from "./_core/trpc";
-import { and, chargeWallet, getActiveServices, getDb, getOrCreateProfile, getUserByEmail, getUserOrders, getUserWallet, listAdminUsers, listProviders, listSyncRuns, recordAudit, refundOrder, orders, profiles, services, smmProviders, syncRuns, syncSchedules, users, walletTransactions, eq, desc, sql } from "./db";
+import { and, chargeWallet, getActiveServices, getDb, getOrCreateProfile, getUserByEmail, getUserOrders, getUserWallet, listAdminUsers, listProviders, listSyncRuns, recordAudit, refundOrder, settleDeposit, orders, profiles, services, smmProviders, syncRuns, syncSchedules, users, walletTransactions, eq, desc, sql } from "./db";
 import { clearAuthAttempts, consumeAuthAttempt, createSession, hashPassword, normalizeEmail, readSessionToken, revokeSession, verifyPassword } from "./_core/passwordAuth";
 import { cancelProviderOrder, fetchProviderServices, fetchProviderStatus, getProviderServiceId, mapCatalogService, mapProviderStatus, submitProviderOrder } from "./provider";
 import { normalizeServicePresentation } from "../shared/serviceCatalog";
 import { summarizeProfit } from "../shared/finance";
 import { executeProviderSync } from "./scheduled";
+import { createLeeTecStkPush, findLeeTecTransaction } from "./leetec";
 
 const serviceInput = z.object({
   name: z.string().min(3),
@@ -182,13 +183,27 @@ export const appRouter = router({
       await recordAudit({ actorUserId: ctx.user.id, action: "order.canceled", entityType: "order", entityId: String(order.id), details: { providerOrderId: order.providerOrderId } });
       return (await db.select().from(orders).where(eq(orders.id, order.id)).limit(1))[0];
     }),
-    requestDeposit: protectedProcedure.input(z.object({ amount: z.number().positive(), phone: z.string().min(9) })).mutation(async ({ ctx, input }) => {
+    requestDeposit: protectedProcedure.input(z.object({ amount: z.number().int().min(50).max(150000), phone: z.string().min(9) })).mutation(async ({ ctx, input }) => {
       const db = await getDb();
       if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database unavailable" });
       const profile = await getOrCreateProfile(ctx.user);
-      await db.insert(walletTransactions).values({ userId: ctx.user.id, amount: input.amount.toFixed(2), type: "deposit", status: "pending", reference: `deposit-${Date.now()}`, paymentMethod: "M-Pesa", balanceAfter: profile?.balance ?? "0.00" });
-      await recordAudit({ actorUserId: ctx.user.id, action: "wallet.deposit_requested", entityType: "wallet", details: { amount: input.amount, phone: input.phone } });
-      return { status: "pending" as const };
+      const reference = `OG-${ctx.user.id}-${Date.now()}`;
+      await db.insert(walletTransactions).values({ userId: ctx.user.id, amount: input.amount.toFixed(2), type: "deposit", status: "pending", reference, paymentMethod: "M-Pesa / LeeTec", balanceAfter: profile?.balance ?? "0.00" });
+      try {
+        const response = await createLeeTecStkPush({ phoneNumber: input.phone, amount: input.amount, accountReference: reference });
+        await recordAudit({ actorUserId: ctx.user.id, action: "wallet.deposit_requested", entityType: "wallet", entityId: reference, details: { amount: input.amount, phoneLast4: input.phone.replace(/\D/g, "").slice(-4), gateway: "leetec", response } });
+        return { status: "pending" as const, reference, message: String(response.message ?? "M-Pesa prompt sent. Complete it on your phone.") };
+      } catch (error) {
+        await settleDeposit({ userId: ctx.user.id, reference, status: "FAILED" });
+        throw new TRPCError({ code: "BAD_GATEWAY", message: error instanceof Error ? error.message : "LeeTec payment request failed" });
+      }
+    }),
+    checkDeposit: protectedProcedure.input(z.object({ reference: z.string().min(6).max(80) })).mutation(async ({ ctx, input }) => {
+      const result = await findLeeTecTransaction(input.reference);
+      const settled = result.status === "PENDING" ? null : await settleDeposit({ userId: ctx.user.id, reference: input.reference, status: result.status });
+      if (settled?.status === "completed") await recordAudit({ actorUserId: ctx.user.id, action: "wallet.deposit_completed", entityType: "wallet", entityId: input.reference, details: { gateway: "leetec", transaction: result.transaction } });
+      if (settled?.status === "failed") await recordAudit({ actorUserId: ctx.user.id, action: "wallet.deposit_failed", entityType: "wallet", entityId: input.reference, details: { gateway: "leetec", transaction: result.transaction } });
+      return { status: result.status.toLowerCase() as "pending" | "success" | "failed", reference: input.reference, balanceAfter: settled?.balanceAfter ?? null };
     }),
   }),
   admin: router({

@@ -182,6 +182,26 @@ export async function getUserWallet(userId: number) {
   return db.select().from(walletTransactions).where(eq(walletTransactions.userId, userId)).orderBy(desc(walletTransactions.createdAt));
 }
 
+export async function settleDeposit(input: { userId: number; reference: string; status: "SUCCESS" | "FAILED" }) {
+  const db = await getDb();
+  if (!db) throw new Error("Turso database unavailable");
+  return db.transaction(async (tx) => {
+    const transaction = (await tx.select().from(walletTransactions).where(and(eq(walletTransactions.userId, input.userId), eq(walletTransactions.reference, input.reference))).limit(1))[0];
+    if (!transaction) throw new Error("Deposit request not found");
+    if (transaction.status !== "pending") return transaction;
+    if (input.status === "FAILED") {
+      await tx.update(walletTransactions).set({ status: "failed" }).where(eq(walletTransactions.id, transaction.id));
+      return { ...transaction, status: "failed" as const };
+    }
+    const profile = (await tx.select().from(profiles).where(eq(profiles.userId, input.userId)).limit(1))[0];
+    if (!profile) throw new Error("Wallet profile not found");
+    const nextBalance = applyWalletDelta(Number(profile.balance), Number(transaction.amount)).toFixed(2);
+    await tx.update(profiles).set({ balance: nextBalance }).where(eq(profiles.userId, input.userId));
+    await tx.update(walletTransactions).set({ status: "completed", balanceAfter: nextBalance }).where(eq(walletTransactions.id, transaction.id));
+    return { ...transaction, status: "completed" as const, balanceAfter: nextBalance };
+  });
+}
+
 export function applyWalletDelta(current: number, delta: number) {
   const next = Number((current + delta).toFixed(2));
   if (next < 0) throw new Error("Balance cannot become negative");
