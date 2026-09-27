@@ -1,5 +1,5 @@
 import type { Request, Response } from "express";
-import { ensureEnvironmentProvider, desc, eq, getDb, orders, recordAudit, services, smmProviders, syncRuns } from "./db";
+import { and, ensureEnvironmentProvider, desc, eq, getDb, orders, recordAudit, services, smmProviders, syncRuns } from "./db";
 import { fetchProviderServices, fetchProviderStatus, getProviderServiceId, mapCatalogService, mapProviderStatus } from "./provider";
 
 export const OUTSTANDING_ORDER_STATUSES = ["pending", "in_progress", "partial"] as const;
@@ -27,7 +27,7 @@ export async function executeProviderSync(kind: SyncKind, options: { taskUid?: s
   if (kind === "catalog") {
     const catalog = await getServices(provider.apiUrl, provider.apiKey);
     for (const item of catalog) {
-      const existing = (await db.select().from(services).where(eq(services.providerServiceId, getProviderServiceId(item))).limit(1))[0];
+      const existing = (await db.select().from(services).where(and(eq(services.providerId, provider.id), eq(services.providerServiceId, getProviderServiceId(item)))).limit(1))[0];
       const values = mapCatalogService(item, provider.id, 150);
       if (existing) await db.update(services).set(values).where(eq(services.id, existing.id)); else await db.insert(services).values(values);
       processed += 1;
@@ -39,7 +39,9 @@ export async function executeProviderSync(kind: SyncKind, options: { taskUid?: s
     for (const order of outstanding) {
       if (!order.providerOrderId) continue;
       try {
-        const status = await getStatus(provider.apiUrl, provider.apiKey, order.providerOrderId);
+        const orderProvider = order.providerId === provider.id ? provider : order.providerId ? (await db.select().from(smmProviders).where(eq(smmProviders.id, order.providerId)).limit(1))[0] : provider;
+        if (!orderProvider) continue;
+        const status = await getStatus(orderProvider.apiUrl, orderProvider.apiKey, order.providerOrderId);
         await db.update(orders).set({ status: mapProviderStatus(status.status), startCount: Number(status.start_count ?? order.startCount ?? 0), remains: Number(status.remains ?? order.remains ?? order.quantity) }).where(eq(orders.id, order.id));
         processed += 1;
       } catch (error) {
@@ -53,7 +55,7 @@ export async function executeProviderSync(kind: SyncKind, options: { taskUid?: s
 }
 
 async function authenticateVercelCron(req: Request): Promise<CronUser> {
-  const expected = process.env.JWT_SECRET;
+  const expected = process.env.CRON_SECRET;
   const authorization = req.headers.authorization;
   const token = authorization?.startsWith("Bearer ") ? authorization.slice(7) : "";
   if (!expected || token !== expected) throw new Error("Unauthorized scheduled request");

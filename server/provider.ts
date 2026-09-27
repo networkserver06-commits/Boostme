@@ -4,7 +4,7 @@ export type ProviderService = { service?: string | number; services?: string | n
 export type ProviderOrderStatus = { status: string; start_count?: string | number; remains?: string | number; charge?: string | number };
 
 export async function providerRequest<T>(apiUrl: string, apiKey: string, body: Record<string, string | number>) {
-  const response = await fetch(apiUrl, { method: "POST", headers: { "content-type": "application/x-www-form-urlencoded", accept: "application/json" }, body: new URLSearchParams({ key: apiKey, ...Object.fromEntries(Object.entries(body).map(([key, value]) => [key, String(value)])) }) });
+  const response = await fetch(apiUrl, { method: "POST", headers: { "content-type": "application/x-www-form-urlencoded", accept: "application/json" }, body: new URLSearchParams({ key: apiKey, ...Object.fromEntries(Object.entries(body).map(([key, value]) => [key, String(value)])) }), signal: AbortSignal.timeout(15_000) });
   if (!response.ok) throw new Error(`Provider responded with HTTP ${response.status}`);
   const data = await response.json() as T | { error?: string };
   if (typeof data === "object" && data && "error" in data && data.error) throw new Error(data.error);
@@ -25,6 +25,7 @@ export function mapCatalogService(item: ProviderService, providerId: number, mar
 }
 export async function submitProviderOrder(apiUrl: string, apiKey: string, input: { service: string; link: string; quantity: number }) { return providerRequest<{ order: string }>(apiUrl, apiKey, { action: "add", ...input }); }
 export async function fetchProviderStatus(apiUrl: string, apiKey: string, order: string) { return providerRequest<ProviderOrderStatus>(apiUrl, apiKey, { action: "status", order }); }
+export async function cancelProviderOrder(apiUrl: string, apiKey: string, orders: string) { return providerRequest<unknown>(apiUrl, apiKey, { action: "cancel", orders }); }
 
 export function mapProviderStatus(status: string): "pending" | "in_progress" | "completed" | "canceled" | "partial" | "failed" {
   const normalized = status.toLowerCase().replaceAll(" ", "_");

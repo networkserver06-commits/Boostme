@@ -2,10 +2,11 @@ import { TRPCError } from "@trpc/server";
 import { z } from "zod";
 import { systemRouter } from "./_core/systemRouter";
 import { adminProcedure, protectedProcedure, publicProcedure, router } from "./_core/trpc";
-import { chargeWallet, getActiveServices, getDb, getOrCreateProfile, getUserByEmail, getUserOrders, getUserWallet, listAdminUsers, listProviders, listSyncRuns, recordAudit, refundOrder, orders, profiles, services, smmProviders, syncRuns, syncSchedules, users, walletTransactions, eq, desc, sql } from "./db";
+import { and, chargeWallet, getActiveServices, getDb, getOrCreateProfile, getUserByEmail, getUserOrders, getUserWallet, listAdminUsers, listProviders, listSyncRuns, recordAudit, refundOrder, orders, profiles, services, smmProviders, syncRuns, syncSchedules, users, walletTransactions, eq, desc, sql } from "./db";
 import { clearAuthAttempts, consumeAuthAttempt, createSession, hashPassword, normalizeEmail, readSessionToken, revokeSession, verifyPassword } from "./_core/passwordAuth";
-import { fetchProviderServices, getProviderServiceId, mapCatalogService, submitProviderOrder } from "./provider";
+import { cancelProviderOrder, fetchProviderServices, fetchProviderStatus, getProviderServiceId, mapCatalogService, mapProviderStatus, submitProviderOrder } from "./provider";
 import { normalizeServicePresentation } from "../shared/serviceCatalog";
+import { summarizeProfit } from "../shared/finance";
 import { executeProviderSync } from "./scheduled";
 
 const serviceInput = z.object({
@@ -130,9 +131,9 @@ export const appRouter = router({
       if (allowed && !allowed.some((item) => host === item || host.endsWith(`.${item}`))) throw new TRPCError({ code: "BAD_REQUEST", message: `Target URL must be a valid ${servicePlatform} link` });
       if (input.quantity < service.minQuantity || input.quantity > service.maxQuantity) throw new TRPCError({ code: "BAD_REQUEST", message: `Quantity must be between ${service.minQuantity.toLocaleString()} and ${service.maxQuantity.toLocaleString()}` });
       const charge = Number((Number(service.retailRatePer1k) * input.quantity / 1000).toFixed(2));
+      const provider = service.providerId ? (await db.select().from(smmProviders).where(eq(smmProviders.id, service.providerId)).limit(1))[0] : undefined;
       try {
-        const orderId = await chargeWallet({ userId: ctx.user.id, serviceId: input.serviceId, targetLink: input.targetLink, quantity: input.quantity, charge });
-        const provider = service.providerId ? (await db.select().from(smmProviders).where(eq(smmProviders.id, service.providerId)).limit(1))[0] : undefined;
+        const orderId = await chargeWallet({ userId: ctx.user.id, serviceId: input.serviceId, providerId: provider?.id, targetLink: input.targetLink, quantity: input.quantity, charge });
         if (provider && service.providerServiceId) {
           let providerOrder: { order: string } | undefined;
           let lastError: unknown;
@@ -152,6 +153,35 @@ export const appRouter = router({
         throw new TRPCError({ code: "BAD_REQUEST", message: error instanceof Error ? error.message : "Unable to create order" });
       }
     }),
+    refreshOrderStatus: protectedProcedure.input(z.object({ orderId: z.number().int().positive() })).mutation(async ({ ctx, input }) => {
+      const db = await getDb();
+      if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database unavailable" });
+      const order = (await db.select().from(orders).where(eq(orders.id, input.orderId)).limit(1))[0];
+      if (!order || order.userId !== ctx.user.id) throw new TRPCError({ code: "NOT_FOUND", message: "Order not found" });
+      if (!order.providerOrderId || !order.providerId || ["completed", "canceled", "failed"].includes(order.status)) return order;
+      const provider = (await db.select().from(smmProviders).where(eq(smmProviders.id, order.providerId)).limit(1))[0];
+      if (!provider) throw new TRPCError({ code: "BAD_GATEWAY", message: "The order provider is no longer available" });
+      const remote = await fetchProviderStatus(provider.apiUrl, provider.apiKey, order.providerOrderId);
+      const status = mapProviderStatus(remote.status);
+      await db.update(orders).set({ status, startCount: Number(remote.start_count ?? order.startCount ?? 0), remains: Number(remote.remains ?? order.remains ?? order.quantity) }).where(eq(orders.id, order.id));
+      await recordAudit({ actorUserId: ctx.user.id, action: "order.status_refreshed", entityType: "order", entityId: String(order.id), details: { status, providerStatus: remote.status } });
+      return (await db.select().from(orders).where(eq(orders.id, order.id)).limit(1))[0] ?? order;
+    }),
+    cancelOrder: protectedProcedure.input(z.object({ orderId: z.number().int().positive() })).mutation(async ({ ctx, input }) => {
+      const db = await getDb();
+      if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database unavailable" });
+      const order = (await db.select().from(orders).where(eq(orders.id, input.orderId)).limit(1))[0];
+      if (!order || order.userId !== ctx.user.id) throw new TRPCError({ code: "NOT_FOUND", message: "Order not found" });
+      if (!["pending", "in_progress", "partial"].includes(order.status)) throw new TRPCError({ code: "BAD_REQUEST", message: "Only active orders can be canceled" });
+      if (order.providerOrderId && order.providerId) {
+        const provider = (await db.select().from(smmProviders).where(eq(smmProviders.id, order.providerId)).limit(1))[0];
+        if (!provider) throw new TRPCError({ code: "BAD_GATEWAY", message: "The order provider is no longer available" });
+        try { await cancelProviderOrder(provider.apiUrl, provider.apiKey, order.providerOrderId); } catch (error) { throw new TRPCError({ code: "BAD_GATEWAY", message: `Provider cancellation failed: ${error instanceof Error ? error.message : "try again"}` }); }
+      }
+      await refundOrder({ userId: ctx.user.id, orderId: order.id, amount: Number(order.charge), reason: "Order canceled by customer", status: "canceled" });
+      await recordAudit({ actorUserId: ctx.user.id, action: "order.canceled", entityType: "order", entityId: String(order.id), details: { providerOrderId: order.providerOrderId } });
+      return (await db.select().from(orders).where(eq(orders.id, order.id)).limit(1))[0];
+    }),
     requestDeposit: protectedProcedure.input(z.object({ amount: z.number().positive(), phone: z.string().min(9) })).mutation(async ({ ctx, input }) => {
       const db = await getDb();
       if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database unavailable" });
@@ -164,15 +194,19 @@ export const appRouter = router({
   admin: router({
     metrics: adminOnly.query(async () => {
       const db = await getDb();
-      if (!db) return { users: 0, orders: 0, revenue: 0, walletLiability: 0, activeServices: 0, failedSyncs: 0 };
-      const [userCount, orderRows, profileRows, serviceCount, failedRows] = await Promise.all([
+      if (!db) return { users: 0, orders: 0, revenue: 0, grossRevenue: 0, providerCost: 0, refunds: 0, netRevenue: 0, profit: 0, marginPercent: 0, walletLiability: 0, activeServices: 0, failedSyncs: 0 };
+      const [userCount, orderRows, profileRows, serviceRows, serviceCount, failedRows, refundRows] = await Promise.all([
         db.select({ count: sql<number>`count(*)` }).from(users),
         db.select().from(orders),
         db.select().from(profiles),
+        db.select().from(services),
         db.select({ count: sql<number>`count(*)` }).from(services).where(eq(services.isActive, 1)),
         db.select({ count: sql<number>`count(*)` }).from(syncRuns).where(eq(syncRuns.status, "failed")),
+        db.select({ amount: walletTransactions.amount }).from(walletTransactions).where(eq(walletTransactions.type, "refund")),
       ]);
-      return { users: Number(userCount[0]?.count ?? 0), orders: orderRows.length, revenue: orderRows.reduce((sum, order) => sum + Number(order.charge), 0), walletLiability: profileRows.reduce((sum, profile) => sum + Number(profile.balance), 0), activeServices: Number(serviceCount[0]?.count ?? 0), failedSyncs: Number(failedRows[0]?.count ?? 0) };
+      const serviceById = new Map(serviceRows.map((service) => [service.id, service]));
+      const profit = summarizeProfit({ orders: orderRows.map((order) => ({ ...order, wholesaleRatePer1k: serviceById.get(order.serviceId)?.wholesaleRatePer1k ?? 0, retailRatePer1k: serviceById.get(order.serviceId)?.retailRatePer1k ?? 0 })), refunds: refundRows.map((row) => row.amount) });
+      return { users: Number(userCount[0]?.count ?? 0), orders: orderRows.length, revenue: profit.grossRevenue, ...profit, walletLiability: profileRows.reduce((sum, profile) => sum + Number(profile.balance), 0), activeServices: Number(serviceCount[0]?.count ?? 0), failedSyncs: Number(failedRows[0]?.count ?? 0) };
     }),
     users: adminOnly.query(() => listAdminUsers()),
     orders: adminOnly.query(async () => { const db = await getDb(); return db ? db.select().from(orders).orderBy(desc(orders.createdAt)).limit(100) : []; }),
@@ -200,7 +234,7 @@ export const appRouter = router({
         const providerServiceId = getProviderServiceId(item);
         try {
           const values = mapCatalogService(item, provider.id, input.markupPercent);
-          const existing = (await db.select().from(services).where(eq(services.providerServiceId, providerServiceId)).limit(1))[0];
+          const existing = (await db.select().from(services).where(and(eq(services.providerId, provider.id), eq(services.providerServiceId, providerServiceId))).limit(1))[0];
           if (existing) await db.update(services).set(values).where(eq(services.id, existing.id)); else await db.insert(services).values(values);
           synced += 1;
         } catch (error) {
@@ -216,6 +250,8 @@ export const appRouter = router({
     syncRuns: adminOnly.query(() => listSyncRuns()),
     upsertService: adminOnly.input(serviceInput.extend({ id: z.number().int().positive().optional(), isActive: z.number().int().min(0).max(1).optional() })).mutation(async ({ ctx, input }) => {
       const db = await getDb(); if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database unavailable" });
+      if (input.retailRatePer1k < input.wholesaleRatePer1k) throw new TRPCError({ code: "BAD_REQUEST", message: "Retail price cannot be lower than provider cost" });
+      if (input.maxQuantity < input.minQuantity) throw new TRPCError({ code: "BAD_REQUEST", message: "Maximum quantity must be at least the minimum quantity" });
       const values = { name: input.name, platform: input.platform, category: input.category, description: input.description, retailRatePer1k: input.retailRatePer1k.toFixed(4), wholesaleRatePer1k: input.wholesaleRatePer1k.toFixed(4), minQuantity: input.minQuantity, maxQuantity: input.maxQuantity, tags: input.tags, providerId: input.providerId, providerServiceId: input.providerServiceId, isActive: input.isActive ?? 1 };
       if (input.id) await db.update(services).set(values).where(eq(services.id, input.id)); else await db.insert(services).values(values);
       await recordAudit({ actorUserId: ctx.user.id, action: input.id ? "service.updated" : "service.created", entityType: "service", entityId: input.id ? String(input.id) : undefined });
@@ -296,7 +332,7 @@ export const appRouter = router({
     }),
     provisionSyncSchedules: adminOnly.mutation(async ({ ctx }) => {
       const db = await getDb(); if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database unavailable" });
-      const schedules = [{ kind: "catalog" as const, taskUid: "vercel-cron-catalog", cron: "*/30 * * * *" }, { kind: "orders" as const, taskUid: "vercel-cron-orders", cron: "*/10 * * * *" }];
+      const schedules = [{ kind: "catalog" as const, taskUid: "vercel-cron-catalog", cron: "0 3 * * *" }, { kind: "orders" as const, taskUid: "vercel-cron-orders", cron: "30 3 * * *" }];
       for (const schedule of schedules) {
         const existing = (await db.select().from(syncSchedules).where(eq(syncSchedules.kind, schedule.kind)).limit(1))[0];
         if (existing) await db.update(syncSchedules).set({ taskUid: schedule.taskUid, cron: schedule.cron, isActive: 1 }).where(eq(syncSchedules.id, existing.id));

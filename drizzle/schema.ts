@@ -57,6 +57,7 @@ export const orders = sqliteTable("orders", {
   id: integer("id").primaryKey({ autoIncrement: true }),
   userId: integer("user_id").notNull(),
   serviceId: integer("service_id").notNull(),
+  providerId: integer("provider_id"),
   providerOrderId: text("provider_order_id"),
   targetLink: text("target_link").notNull(),
   quantity: integer("quantity").notNull(),

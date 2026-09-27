@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { fetchProviderServices, fetchProviderStatus, mapCatalogService, mapProviderStatus, submitProviderOrder } from "./provider";
+import { cancelProviderOrder, fetchProviderServices, fetchProviderStatus, mapCatalogService, mapProviderStatus, submitProviderOrder } from "./provider";
 
 afterEach(() => vi.unstubAllGlobals());
 
@@ -45,5 +45,14 @@ describe("provider REST adapter", () => {
     vi.stubGlobal("fetch", fetchMock);
     await expect(fetchProviderServices("https://provider.example/api", "secret")).resolves.toHaveLength(1);
     await expect(fetchProviderStatus("https://provider.example/api", "secret", "p-123")).resolves.toMatchObject({ status: "Completed" });
+  });
+
+  it("sends provider cancellation requests with the external order id", async () => {
+    const fetchMock = vi.fn().mockResolvedValue({ ok: true, json: async () => ({ success: true }) });
+    vi.stubGlobal("fetch", fetchMock);
+    await cancelProviderOrder("https://provider.example/api", "secret", "p-123");
+    const body = String(fetchMock.mock.calls[0]?.[1]?.body);
+    expect(body).toContain("action=cancel");
+    expect(body).toContain("orders=p-123");
   });
 });
