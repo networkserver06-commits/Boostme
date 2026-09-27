@@ -73,7 +73,9 @@ export async function executeProviderSync(kind: SyncKind, options: { taskUid?: s
 }
 
 async function authenticateVercelCron(req: Request): Promise<CronUser> {
-  const expected = process.env.CRON_SECRET;
+  // Existing production projects use JWT_SECRET; retain CRON_SECRET as the preferred
+  // dedicated value while allowing the documented deployment configuration to work.
+  const expected = process.env.CRON_SECRET || process.env.JWT_SECRET;
   const authorization = req.headers.authorization;
   const token = authorization?.startsWith("Bearer ") ? authorization.slice(7) : "";
   if (!expected || token !== expected) throw new Error("Unauthorized scheduled request");
