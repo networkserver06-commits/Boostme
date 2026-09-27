@@ -35,8 +35,9 @@ export async function executeProviderSync(kind: SyncKind, options: { taskUid?: s
         liveProviderServiceIds.add(providerServiceId);
         const existing = localByProviderServiceId.get(providerServiceId);
         const values = mapCatalogService(item, provider.id);
-        if (existing) await db.update(services).set({ ...values, needsResync: 0 }).where(eq(services.id, existing.id));
-        else await db.insert(services).values({ ...values, needsResync: 0 });
+        const safe = Number(values.wholesaleRatePer1k) > 0 && Number(values.retailRatePer1k) > 0;
+        if (existing) await db.update(services).set({ ...values, isActive: safe ? 1 : 0, needsResync: safe ? 0 : 1 }).where(eq(services.id, existing.id));
+        else await db.insert(services).values({ ...values, isActive: safe ? 1 : 0, needsResync: safe ? 0 : 1 });
         processed += 1;
       }
       // A mapped service absent from the live provider catalog cannot be priced safely.

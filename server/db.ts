@@ -180,7 +180,7 @@ export async function getActiveServices() {
       service.retailRatePer1k = safeRetail;
     }
   }
-  return rows.map(normalizeServicePresentation).filter((service) => Number(service.retailRatePer1k) >= Number(service.wholesaleRatePer1k) && isCustomerVisiblePlatform(service.platform)).sort((a, b) => compareCustomerPlatforms(a.platform, b.platform) || a.category.localeCompare(b.category) || a.id - b.id);
+  return rows.map(normalizeServicePresentation).filter((service) => Number(service.wholesaleRatePer1k) > 0 && Number(service.retailRatePer1k) > 0 && Number(service.retailRatePer1k) >= Number(service.wholesaleRatePer1k) && isCustomerVisiblePlatform(service.platform)).sort((a, b) => compareCustomerPlatforms(a.platform, b.platform) || a.category.localeCompare(b.category) || a.id - b.id);
 }
 
 async function refreshCatalogFromProvider(db: TursoDb) {
@@ -199,9 +199,10 @@ async function refreshCatalogFromProvider(db: TursoDb) {
           const providerServiceId = getProviderServiceId(item);
           const values = mapCatalogService(item, provider.id);
           const existing = mappedByProviderId.get(providerServiceId);
+          const safe = Number(values.wholesaleRatePer1k) > 0 && Number(values.retailRatePer1k) > 0;
           return existing
-            ? { sql: "UPDATE services SET provider_id = ?, provider_service_id = ?, name = ?, platform = ?, category = ?, wholesale_rate_per1k = ?, retail_rate_per1k = ?, min_quantity = ?, max_quantity = ?, is_active = 1, needs_resync = 0 WHERE id = ?", args: [values.providerId, values.providerServiceId, values.name, values.platform, values.category, values.wholesaleRatePer1k, values.retailRatePer1k, values.minQuantity, values.maxQuantity, existing.id] }
-            : { sql: "INSERT INTO services (provider_id, provider_service_id, name, platform, category, wholesale_rate_per1k, retail_rate_per1k, min_quantity, max_quantity, is_active, needs_resync) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 1, 0)", args: [values.providerId, values.providerServiceId, values.name, values.platform, values.category, values.wholesaleRatePer1k, values.retailRatePer1k, values.minQuantity, values.maxQuantity] };
+            ? { sql: "UPDATE services SET provider_id = ?, provider_service_id = ?, name = ?, platform = ?, category = ?, wholesale_rate_per1k = ?, retail_rate_per1k = ?, min_quantity = ?, max_quantity = ?, is_active = ?, needs_resync = ? WHERE id = ?", args: [values.providerId, values.providerServiceId, values.name, values.platform, values.category, values.wholesaleRatePer1k, values.retailRatePer1k, values.minQuantity, values.maxQuantity, safe ? 1 : 0, safe ? 0 : 1, existing.id] }
+            : { sql: "INSERT INTO services (provider_id, provider_service_id, name, platform, category, wholesale_rate_per1k, retail_rate_per1k, min_quantity, max_quantity, is_active, needs_resync) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)", args: [values.providerId, values.providerServiceId, values.name, values.platform, values.category, values.wholesaleRatePer1k, values.retailRatePer1k, values.minQuantity, values.maxQuantity, safe ? 1 : 0, safe ? 0 : 1] };
         });
         for (let index = 0; index < statements.length; index += 50) await client.batch(statements.slice(index, index + 50), "write");
         const missing = mapped.filter((service) => service.providerServiceId && !remoteIds.has(service.providerServiceId));
