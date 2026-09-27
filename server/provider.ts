@@ -15,9 +15,10 @@ export async function providerRequest<T>(apiUrl: string, apiKey: string, body: R
 export async function fetchProviderServices(apiUrl: string, apiKey: string) { return providerRequest<ProviderService[]>(apiUrl, apiKey, { action: "services" }); }
 
 const PROVIDER_RATE_FLOORS_PER_1K: Record<string, number> = { "26949": 41.2269 };
+const PROVIDER_RATE_NAME_FLOORS: Array<{ pattern: RegExp; floor: number }> = [{ pattern: /instagram\s*-\s*followers.*working.*flag\s*off/i, floor: 484 }];
 
 export function enforceProviderRateFloor(providerServiceId: string, name: string, rate: number) {
-  const floor = PROVIDER_RATE_FLOORS_PER_1K[providerServiceId];
+  const floor = PROVIDER_RATE_FLOORS_PER_1K[providerServiceId] ?? PROVIDER_RATE_NAME_FLOORS.find(({ pattern }) => pattern.test(name))?.floor;
   if (floor == null) return rate;
   console.warn(`[PROVIDER RATE FLOOR] ${providerServiceId} ${name}: KES ${rate} -> at least KES ${floor} per 1k`);
   return Math.max(rate, floor);

@@ -23,6 +23,11 @@ describe("provider service mapping", () => {
     expect(mapCatalogService({ service: "26949", name: "TikTok Likes", category: "TikTok Likes", rate: "0.3537", min: "1000", max: "500000" }, 1)).toMatchObject({ wholesaleRatePer1k: "41.2269", retailRatePer1k: "57.7177" });
   });
 
+  it("protects the confirmed Instagram Working / Flag OFF service rate", () => {
+    expect(enforceProviderRateFloor("247", "Instagram - Followers [ Working ] [ Flag OFF ✅ ]", 5.3063)).toBe(484);
+    expect(mapCatalogService({ service: "247", name: "Instagram - Followers [ Working ] [ Flag OFF ✅ ]", category: "Instagram Followers", rate: "5.3063", min: "10", max: "1000000" }, 1)).toMatchObject({ wholesaleRatePer1k: "484.0000", retailRatePer1k: "677.6000" });
+  });
+
   it("normalizes a remote service and applies the low-cost tier multiplier", () => {
     expect(mapCatalogService({ service: "7", name: "Reels views", category: "Instagram Views", rate: "12.5", min: "100", max: "50000" }, 3)).toMatchObject({ providerId: 3, providerServiceId: "7", platform: "Instagram", wholesaleRatePer1k: "12.5000", retailRatePer1k: "31.2500", minQuantity: 100, maxQuantity: 50000, isActive: 1 });
   });
