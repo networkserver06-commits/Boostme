@@ -82,8 +82,6 @@ let _client: Client | null = null;
 let _db: TursoDb | null = null;
 let schemaPromise: Promise<void> | null = null;
 let catalogRefreshPromise: Promise<void> | null = null;
-let catalogRefreshedAt = 0;
-const CATALOG_REFRESH_INTERVAL_MS = 5 * 60 * 1000;
 
 export function getTursoClient() {
   const url = process.env.TURSO_DATABASE_URL?.trim() || (process.env.NODE_ENV === "production" ? "" : process.env.NODE_ENV === "test" ? "file::memory:" : "file:./.data/boostme.db");
@@ -171,7 +169,7 @@ export async function recordAudit(input: { actorUserId?: number; action: string;
 export async function getActiveServices() {
   const db = await getDb();
   if (!db) return [];
-  await refreshCatalogIfStale(db);
+  await refreshCatalogFromProvider(db);
   const rows = await db.select().from(services).where(and(eq(services.isActive, 1), eq(services.needsResync, 0))).orderBy(asc(services.id));
   for (const service of rows) {
     const safeWholesale = enforceProviderRateFloor(service.providerServiceId ?? "", service.name, Number(service.wholesaleRatePer1k));
@@ -185,9 +183,8 @@ export async function getActiveServices() {
   return rows.map(normalizeServicePresentation).filter((service) => Number(service.retailRatePer1k) >= Number(service.wholesaleRatePer1k) && isCustomerVisiblePlatform(service.platform)).sort((a, b) => compareCustomerPlatforms(a.platform, b.platform) || a.category.localeCompare(b.category) || a.id - b.id);
 }
 
-async function refreshCatalogIfStale(db: TursoDb) {
+async function refreshCatalogFromProvider(db: TursoDb) {
   if (catalogRefreshPromise) return catalogRefreshPromise;
-  if (Date.now() - catalogRefreshedAt < CATALOG_REFRESH_INTERVAL_MS) return;
   catalogRefreshPromise = (async () => {
     const providers = await db.select().from(smmProviders).where(eq(smmProviders.isActive, 1));
     for (const provider of providers) {
@@ -216,7 +213,6 @@ async function refreshCatalogIfStale(db: TursoDb) {
         await db.update(services).set({ needsResync: 1 }).where(eq(services.providerId, provider.id));
       }
     }
-    catalogRefreshedAt = Date.now();
   })().finally(() => { catalogRefreshPromise = null; });
   return catalogRefreshPromise;
 }
