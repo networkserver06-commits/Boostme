@@ -1,5 +1,6 @@
 const routePreloaders: Record<string, () => Promise<unknown>> = {
   "/dashboard": () => import("@/pages/Dashboard"),
+  "/dashboard/new-order": () => import("@/pages/Dashboard"),
   "/dashboard/orders": () => import("@/pages/Dashboard"),
   "/dashboard/wallet": () => import("@/pages/Dashboard"),
   "/dashboard/services": () => import("@/pages/Services"),
