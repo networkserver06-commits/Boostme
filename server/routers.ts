@@ -8,7 +8,7 @@ import { cancelProviderOrder, fetchProviderServices, fetchProviderStatus, getPro
 import { normalizeServicePresentation } from "../shared/serviceCatalog";
 import { summarizeProfit } from "../shared/finance";
 import { executeProviderSync } from "./scheduled";
-import { createLeeTecStkPush, findLeeTecTransaction } from "./leetec";
+import { createLeeTecStkPush, findLeeTecTransaction, summarizeLeeTecResponse } from "./leetec";
 
 const serviceInput = z.object({
   name: z.string().min(3),
@@ -192,7 +192,7 @@ export const appRouter = router({
       try {
         const response = await createLeeTecStkPush({ phoneNumber: input.phone, amount: input.amount, accountReference: reference });
         await recordAudit({ actorUserId: ctx.user.id, action: "wallet.deposit_requested", entityType: "wallet", entityId: reference, details: { amount: input.amount, phoneLast4: input.phone.replace(/\D/g, "").slice(-4), gateway: "leetec", response } });
-        return { status: "pending" as const, reference, message: String(response.message ?? "M-Pesa prompt sent. Complete it on your phone.") };
+        return { status: "pending" as const, reference, message: String(response.message ?? "M-Pesa prompt sent. Complete it on your phone."), gatewayResponse: summarizeLeeTecResponse(response) };
       } catch (error) {
         await settleDeposit({ userId: ctx.user.id, reference, status: "FAILED" });
         throw new TRPCError({ code: "BAD_GATEWAY", message: error instanceof Error ? error.message : "LeeTec payment request failed" });
@@ -203,7 +203,7 @@ export const appRouter = router({
       const settled = result.status === "PENDING" ? null : await settleDeposit({ userId: ctx.user.id, reference: input.reference, status: result.status });
       if (settled?.status === "completed") await recordAudit({ actorUserId: ctx.user.id, action: "wallet.deposit_completed", entityType: "wallet", entityId: input.reference, details: { gateway: "leetec", transaction: result.transaction } });
       if (settled?.status === "failed") await recordAudit({ actorUserId: ctx.user.id, action: "wallet.deposit_failed", entityType: "wallet", entityId: input.reference, details: { gateway: "leetec", transaction: result.transaction } });
-      return { status: result.status.toLowerCase() as "pending" | "success" | "failed", reference: input.reference, balanceAfter: settled?.balanceAfter ?? null };
+      return { status: result.status.toLowerCase() as "pending" | "success" | "failed", reference: input.reference, balanceAfter: settled?.balanceAfter ?? null, gatewayResponse: result.response };
     }),
   }),
   admin: router({

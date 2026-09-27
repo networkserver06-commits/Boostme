@@ -1,6 +1,7 @@
 const defaultBaseUrl = "https://leetec.online";
 
 type LeeTecResponse = Record<string, unknown>;
+export type LeeTecResponseSummary = { status?: string; message?: string; transactionId?: string; checkoutRequestId?: string; merchantRequestId?: string; receipt?: string };
 
 function getConfig() {
   const apiKey = process.env.LEETEC_API_KEY?.trim();
@@ -45,6 +46,20 @@ export function normalizePaymentStatus(value: unknown) {
   return "PENDING" as const;
 }
 
+export function summarizeLeeTecResponse(value: unknown): LeeTecResponseSummary {
+  const root = value && typeof value === "object" ? value as Record<string, unknown> : {};
+  const nested = root.data && typeof root.data === "object" ? root.data as Record<string, unknown> : {};
+  const read = (...keys: string[]) => { for (const key of keys) { const result = root[key] ?? nested[key]; if (result != null && String(result).trim()) return String(result); } return undefined; };
+  return {
+    status: read("status", "paymentStatus", "payment_status"),
+    message: read("message", "customerMessage", "customer_message", "responseDescription", "response_description"),
+    transactionId: read("transactionId", "transaction_id", "id"),
+    checkoutRequestId: read("checkoutRequestId", "checkout_request_id"),
+    merchantRequestId: read("merchantRequestId", "merchant_request_id"),
+    receipt: read("receipt", "mpesaReceiptNumber", "mpesa_receipt_number"),
+  };
+}
+
 export async function createLeeTecStkPush(input: { phoneNumber: string; amount: number; accountReference: string }) {
   return leetecRequest("/api/v1/stkpush", { method: "POST", body: JSON.stringify({ phoneNumber: normalizeKenyanPhone(input.phoneNumber), amount: Math.round(input.amount), accountReference: input.accountReference, transactionDesc: "Orbit Growth wallet top-up" }) });
 }
@@ -57,5 +72,5 @@ export async function findLeeTecTransaction(accountReference: string) {
     const row = item as Record<string, unknown>;
     return [row.accountReference, row.account_reference, row.reference, row.transactionDesc, row.transaction_desc].some((value) => String(value ?? "") === accountReference);
   }) as Record<string, unknown> | undefined;
-  return match ? { status: normalizePaymentStatus(match.status ?? match.paymentStatus ?? match.payment_status), transaction: match } : { status: "PENDING" as const, transaction: null };
+  return match ? { status: normalizePaymentStatus(match.status ?? match.paymentStatus ?? match.payment_status), transaction: match, response: summarizeLeeTecResponse(match) } : { status: "PENDING" as const, transaction: null, response: summarizeLeeTecResponse(body) };
 }
