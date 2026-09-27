@@ -80,7 +80,7 @@ export default function Dashboard() {
   const platforms = useMemo(() => Array.from(new Set((services.data ?? []).map((service) => service.platform).filter(isCustomerVisiblePlatform))).sort(compareCustomerPlatforms), [services.data]);
   const visiblePlatforms = useMemo(() => platforms.filter((item) => !searchTerm || item.toLowerCase().includes(searchTerm) || searchableServices.some((service) => service.platform === item)), [platforms, searchTerm, searchableServices]);
   const platformServices = useMemo(() => searchableServices.filter((service) => !platform || service.platform === platform), [searchableServices, platform]);
-  const categoryPriority = (value: string) => { const item = value.toLowerCase(); return item.includes("cheap") ? 0 : item.includes("speed") ? 1 : item.includes("non drop") ? 2 : item.includes("organic") ? 3 : item.includes("best") ? 4 : 5; };
+  const categoryPriority = (value: string) => { const item = value.toLowerCase(); return item.includes("like") ? 0 : item.includes("follower") ? 1 : item.includes("view") ? 2 : item.includes("subscriber") ? 3 : item.includes("comment") ? 4 : item.includes("share") ? 5 : item.includes("cheap") ? 6 : item.includes("speed") ? 7 : item.includes("non drop") ? 8 : item.includes("organic") ? 9 : item.includes("best") ? 10 : 11; };
   const categoryOptions = useMemo(() => {
     const seen = new Map<string, { key: string; platform: string; category: string; label: string }>();
     platformServices.forEach((service) => {
