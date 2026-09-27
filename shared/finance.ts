@@ -50,6 +50,25 @@ export function calculateOrderEconomics(order: OrderEconomics) {
   };
 }
 
+/** Calculates from values captured at checkout; historical orders must not be re-priced from today's catalog. */
+export function calculateRecordedOrderEconomics(input: { quantity: number; charge: number | string; wholesaleCostKes?: number | string | null; retailPaidKes?: number | string | null; status?: string | null }) {
+  const quantity = Math.max(0, Math.trunc(Number(input.quantity) || 0));
+  const charge = Number(input.retailPaidKes ?? input.charge) || 0;
+  const providerCost = Number(input.wholesaleCostKes) || 0;
+  const realized = !["canceled", "failed"].includes(input.status ?? "");
+  const profit = Number((charge - providerCost).toFixed(2));
+  return {
+    quantity,
+    billed: Number((Number(input.charge) || 0).toFixed(2)),
+    revenue: Number((realized ? charge : 0).toFixed(2)),
+    providerCost: Number((realized ? providerCost : 0).toFixed(2)),
+    profit: Number((realized ? profit : 0).toFixed(2)),
+    estimatedProfit: profit,
+    marginPercent: charge > 0 ? Number((profit / charge * 100).toFixed(2)) : 0,
+    isLoss: realized && profit < 0,
+  };
+}
+
 export function summarizeProfit(input: { orders: OrderEconomics[]; refunds?: Array<number | string> }) {
   const rows = input.orders.map(calculateOrderEconomics);
   const grossRevenueCents = rows.reduce((sum, row) => sum + cents(row.billed), 0);

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { calculateCheckoutEconomics, calculateOrderEconomics, calculateServiceEconomics, summarizeProfit } from "./finance";
+import { calculateCheckoutEconomics, calculateOrderEconomics, calculateRecordedOrderEconomics, calculateServiceEconomics, summarizeProfit } from "./finance";
 
 describe("finance calculations", () => {
 	it("applies the KSh 10 floor and rejects unsafe margins", () => {
@@ -20,7 +20,12 @@ describe("finance calculations", () => {
     expect(summarizeProfit({ orders: [{ quantity: 1000, charge: 35, retailRatePer1k: 35, wholesaleRatePer1k: 12.5, status: "completed" }], refunds: [5] })).toMatchObject({ grossRevenue: 35, providerCost: 12.5, refunds: 5, netRevenue: 30, profit: 17.5, marginPercent: 50 });
   });
 
-  it("does not turn a fully refunded cancellation into a loss", () => {
-    expect(summarizeProfit({ orders: [{ quantity: 1000, charge: 35, retailRatePer1k: 35, wholesaleRatePer1k: 12.5, status: "canceled" }], refunds: [35] })).toMatchObject({ grossRevenue: 35, providerCost: 0, netRevenue: 0, profit: 0 });
+	it("does not turn a fully refunded cancellation into a loss", () => {
+		expect(summarizeProfit({ orders: [{ quantity: 1000, charge: 35, retailRatePer1k: 35, wholesaleRatePer1k: 12.5, status: "canceled" }], refunds: [35] })).toMatchObject({ grossRevenue: 35, providerCost: 0, netRevenue: 0, profit: 0 });
+	});
+
+  it("uses the wholesale and retail values captured at checkout", () => {
+    expect(calculateRecordedOrderEconomics({ quantity: 1000, charge: "0.88", retailPaidKes: 0.88, wholesaleCostKes: 41.26, status: "completed" })).toMatchObject({ revenue: 0.88, providerCost: 41.26, profit: -40.38, marginPercent: -4588.64, isLoss: true });
+    expect(calculateRecordedOrderEconomics({ quantity: 1000, charge: "57.76", retailPaidKes: 57.76, wholesaleCostKes: 41.26, status: "completed" })).toMatchObject({ profit: 16.5, isLoss: false });
   });
 });

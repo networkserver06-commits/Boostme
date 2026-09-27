@@ -6,7 +6,7 @@ import { and, chargeWallet, getActiveServices, getDb, getOrCreateProfile, getUse
 import { clearAuthAttempts, consumeAuthAttempt, createSession, hashPassword, normalizeEmail, readSessionToken, revokeSession, verifyPassword } from "./_core/passwordAuth";
 import { cancelProviderOrder, fetchProviderServices, fetchProviderStatus, getProviderServiceId, mapCatalogService, mapProviderStatus, submitProviderOrder } from "./provider";
 import { normalizeServicePresentation } from "../shared/serviceCatalog";
-import { calculateCheckoutEconomics, summarizeProfit } from "../shared/finance";
+import { calculateCheckoutEconomics, calculateRecordedOrderEconomics, summarizeProfit } from "../shared/finance";
 import { formatTieredRetailRatePer1k } from "../shared/pricing";
 import { executeProviderSync } from "./scheduled";
 import { createLeeTecStkPush, findLeeTecTransaction, normalizePaymentStatus, summarizeLeeTecResponse } from "./leetec";
@@ -250,11 +250,35 @@ export const appRouter = router({
         db.select({ amount: walletTransactions.amount }).from(walletTransactions).where(eq(walletTransactions.type, "refund")),
       ]);
       const serviceById = new Map(serviceRows.map((service) => [service.id, service]));
-      const profit = summarizeProfit({ orders: orderRows.map((order) => ({ ...order, wholesaleRatePer1k: serviceById.get(order.serviceId)?.wholesaleRatePer1k ?? 0, retailRatePer1k: serviceById.get(order.serviceId)?.retailRatePer1k ?? 0 })), refunds: refundRows.map((row) => row.amount) });
+      const profit = summarizeProfit({ orders: orderRows.map((order) => {
+        const fallback = serviceById.get(order.serviceId);
+        const capturedWholesale = order.wholesaleCostKes != null ? Number(order.wholesaleCostKes) / Math.max(order.quantity, 1) * 1000 : Number(fallback?.wholesaleRatePer1k ?? 0);
+        const capturedRetail = order.retailPaidKes != null ? Number(order.retailPaidKes) / Math.max(order.quantity, 1) * 1000 : Number(fallback?.retailRatePer1k ?? 0);
+        return { ...order, wholesaleRatePer1k: capturedWholesale, retailRatePer1k: capturedRetail };
+      }), refunds: refundRows.map((row) => row.amount) });
       return { users: Number(userCount[0]?.count ?? 0), orders: orderRows.length, revenue: profit.grossRevenue, ...profit, walletLiability: profileRows.reduce((sum, profile) => sum + Number(profile.balance), 0), activeServices: Number(serviceCount[0]?.count ?? 0), failedSyncs: Number(failedRows[0]?.count ?? 0) };
     }),
     users: adminOnly.query(() => listAdminUsers()),
-    orders: adminOnly.query(async () => { const db = await getDb(); return db ? db.select().from(orders).orderBy(desc(orders.createdAt)).limit(100) : []; }),
+    orders: adminOnly.query(async () => {
+      const db = await getDb();
+      if (!db) return [];
+      const [orderRows, serviceRows, providerRows, userRows] = await Promise.all([
+        db.select().from(orders).orderBy(desc(orders.createdAt)).limit(200),
+        db.select().from(services),
+        db.select().from(smmProviders),
+        db.select({ id: users.id, name: users.name, email: users.email }).from(users),
+      ]);
+      const serviceById = new Map(serviceRows.map((service) => [service.id, service]));
+      const providerById = new Map(providerRows.map((provider) => [provider.id, provider]));
+      const userById = new Map(userRows.map((user) => [user.id, user]));
+      return orderRows.map((order) => {
+        const service = serviceById.get(order.serviceId);
+        const provider = order.providerId ? providerById.get(order.providerId) : undefined;
+        const customer = userById.get(order.userId);
+        const economics = calculateRecordedOrderEconomics(order);
+        return { ...order, serviceName: service?.name ?? `Service #${order.serviceId}`, platform: service ? normalizeServicePresentation(service).platform : "Other", providerName: provider?.name ?? "Unassigned", providerServiceId: service?.providerServiceId ?? null, customerName: customer?.name ?? "Unknown customer", customerEmail: customer?.email ?? "", ...economics };
+      });
+    }),
     walletActivity: adminOnly.query(async () => { const db = await getDb(); return db ? db.select().from(walletTransactions).orderBy(desc(walletTransactions.createdAt)).limit(100) : []; }),
     services: adminOnly.query(async () => { const db = await getDb(); const rows = db ? await db.select().from(services).orderBy(desc(services.createdAt)) : []; return rows.map(normalizeServicePresentation); }),
     providers: adminOnly.query(() => listProviders()),
