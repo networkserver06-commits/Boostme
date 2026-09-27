@@ -92,9 +92,9 @@ export function normalizeServicePresentation<T extends CatalogClassificationInpu
   const nameType = serviceTypes.find(([, pattern]) => pattern.test(name))?.[0];
   const categoryType = serviceTypes.find(([, pattern]) => pattern.test(rawCategory))?.[0];
   const cleanedCategory = cleanCategory(rawCategory, platform);
-  const category = nameType
-    ?? categoryType
-    ?? (genericCategory.test(rawCategory) ? "Other services" : cleanedCategory || rawCategory || "Other services");
+  const category = genericCategory.test(rawCategory)
+    ? nameType ?? categoryType ?? "Other services"
+    : cleanedCategory || nameType || categoryType || rawCategory || "Other services";
 
   return { ...service, platform, category };
 }
