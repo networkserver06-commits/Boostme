@@ -11,6 +11,7 @@ export function createApp(): Express {
   app.use(express.urlencoded({ limit: "50mb", extended: true }));
   app.get("/api/scheduled/sync-catalog", (req, res) => { void scheduledSyncHandler(req, res); });
   app.get("/api/scheduled/sync-orders", (req, res) => { void scheduledSyncHandler(req, res); });
+  app.use("/api/trpc", (req, res, next) => { res.setHeader("Cache-Control", "no-store, no-cache, must-revalidate, proxy-revalidate"); res.setHeader("Pragma", "no-cache"); next(); });
   app.use(
     "/api/trpc",
     createExpressMiddleware({
