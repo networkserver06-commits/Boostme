@@ -197,10 +197,10 @@ async function refreshCatalogIfStale(db: TursoDb) {
             ? { sql: "UPDATE services SET provider_id = ?, provider_service_id = ?, name = ?, platform = ?, category = ?, wholesale_rate_per1k = ?, retail_rate_per1k = ?, min_quantity = ?, max_quantity = ?, is_active = 1, needs_resync = 0 WHERE id = ?", args: [values.providerId, values.providerServiceId, values.name, values.platform, values.category, values.wholesaleRatePer1k, values.retailRatePer1k, values.minQuantity, values.maxQuantity, existing.id] }
             : { sql: "INSERT INTO services (provider_id, provider_service_id, name, platform, category, wholesale_rate_per1k, retail_rate_per1k, min_quantity, max_quantity, is_active, needs_resync) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 1, 0)", args: [values.providerId, values.providerServiceId, values.name, values.platform, values.category, values.wholesaleRatePer1k, values.retailRatePer1k, values.minQuantity, values.maxQuantity] };
         });
-        for (let index = 0; index < statements.length; index += 500) await client.batch(statements.slice(index, index + 500), "write");
+        for (let index = 0; index < statements.length; index += 50) await client.batch(statements.slice(index, index + 50), "write");
         const missing = mapped.filter((service) => service.providerServiceId && !remoteIds.has(service.providerServiceId));
         const missingStatements = missing.map((service) => ({ sql: "UPDATE services SET is_active = 0, needs_resync = 1 WHERE id = ?", args: [service.id] }));
-        for (let index = 0; index < missingStatements.length; index += 500) await client.batch(missingStatements.slice(index, index + 500), "write");
+        for (let index = 0; index < missingStatements.length; index += 50) await client.batch(missingStatements.slice(index, index + 50), "write");
         await db.update(smmProviders).set({ lastSyncAt: new Date() }).where(eq(smmProviders.id, provider.id));
       } catch (error) {
         console.error(`[CATALOG REFRESH FAILED] Provider ${provider.id}:`, error);
