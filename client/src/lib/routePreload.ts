@@ -1,4 +1,7 @@
 const routePreloaders: Record<string, () => Promise<unknown>> = {
+  "/how-to-use": () => import("@/pages/InfoPage"),
+  "/terms": () => import("@/pages/InfoPage"),
+  "/about": () => import("@/pages/InfoPage"),
   "/dashboard": () => import("@/pages/Dashboard"),
   "/dashboard/new-order": () => import("@/pages/Dashboard"),
   "/dashboard/orders": () => import("@/pages/Dashboard"),

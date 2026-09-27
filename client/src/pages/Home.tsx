@@ -78,7 +78,7 @@ export default function Home() {
           <div className="hidden items-center gap-8 text-[13px] font-medium text-slate-400 md:flex">
             <a href="#catalog" className="hover:text-white">Service catalog</a>
             <a href="#how-it-works" className="hover:text-white">How it works</a>
-            <a href="#pricing" className="hover:text-white">Pricing</a>
+            <a href="#pricing" className="hover:text-white">Pricing</a><Link href="/how-to-use" className="hover:text-white">How to use</Link><Link href="/about" className="hover:text-white">About</Link>
           </div>
           <div className="hidden items-center gap-3 md:flex">
             <button onClick={() => startLogin()} className="rounded-lg px-3 py-2 text-sm font-medium text-slate-300 hover:text-white">Sign in</button>
@@ -91,7 +91,7 @@ export default function Home() {
         {menuOpen && <div id="mobile-menu" className="border-t border-white/[.07] bg-[#0b111c] px-5 py-4 md:hidden"><div className="mx-auto grid max-w-7xl gap-1 text-sm text-slate-300">
           <a href="#catalog" onClick={closeMenu} className="rounded-lg px-3 py-3 hover:bg-white/5">Service catalog</a>
           <a href="#how-it-works" onClick={closeMenu} className="rounded-lg px-3 py-3 hover:bg-white/5">How it works</a>
-          <a href="#pricing" onClick={closeMenu} className="rounded-lg px-3 py-3 hover:bg-white/5">Pricing</a>
+          <a href="#pricing" onClick={closeMenu} className="rounded-lg px-3 py-3 hover:bg-white/5">Pricing</a><Link href="/how-to-use" onClick={closeMenu} className="rounded-lg px-3 py-3 hover:bg-white/5">How to use</Link><Link href="/terms" onClick={closeMenu} className="rounded-lg px-3 py-3 hover:bg-white/5">Terms of service</Link><Link href="/about" onClick={closeMenu} className="rounded-lg px-3 py-3 hover:bg-white/5">About</Link>
           <div className="mt-2 grid grid-cols-2 gap-2"><button onClick={() => startLogin()} className="rounded-lg border border-white/10 px-3 py-3 font-medium">Sign in</button><button onClick={() => startSignup()} className="rounded-lg bg-blue-500 px-3 py-3 font-semibold text-white">Create account <ArrowUpRight className="ml-1 inline h-4 w-4" /></button></div>
         </div></div>}
       </header>
@@ -177,7 +177,7 @@ export default function Home() {
         <div className="mx-auto flex max-w-7xl flex-col gap-5 px-5 py-7 text-xs text-slate-500 sm:flex-row sm:items-center sm:justify-between lg:px-8">
           <Link href="/" className="inline-flex items-center gap-2.5 font-semibold text-slate-200"><span className="grid h-7 w-7 place-items-center rounded-lg bg-blue-500"><Sparkles className="h-3.5 w-3.5" /></span> orbit growth</Link>
           <span>Pricing and availability reflect the active service catalog. Wallet requests may require review.</span>
-          <button onClick={() => startLogin()} className="inline-flex items-center gap-1 font-medium text-slate-300 hover:text-white">Sign in <ChevronDown className="h-3.5 w-3.5 -rotate-90" /></button>
+          <div className="flex flex-wrap items-center gap-4"><Link href="/how-to-use" className="hover:text-white">How to use</Link><Link href="/terms" className="hover:text-white">Terms</Link><Link href="/about" className="hover:text-white">About</Link><button onClick={() => startLogin()} className="inline-flex items-center gap-1 font-medium text-slate-300 hover:text-white">Sign in <ChevronDown className="h-3.5 w-3.5 -rotate-90" /></button></div>
         </div>
       </footer>
     </div>

@@ -9,7 +9,7 @@ import { showErrorToast } from "@/lib/toasts";
 import { toast } from "sonner";
 import { useIsMobile } from "@/hooks/useMobile";
 import { cn } from "@/lib/utils";
-import { ArrowUpRight, CircleUserRound, CreditCard, Home, LayoutDashboard, LogOut, Menu, PlusCircle, Settings2, ShoppingBag, Sparkles, Store, WalletCards, X } from "lucide-react";
+import { ArrowUpRight, BookOpen, CircleUserRound, CreditCard, FileText, Home, Info, LayoutDashboard, LogOut, Menu, PlusCircle, Settings2, ShoppingBag, Sparkles, Store, WalletCards, X } from "lucide-react";
 import { CSSProperties, useEffect, useRef, useState } from "react";
 import { useLocation } from "wouter";
 import { DashboardLayoutSkeleton } from "./DashboardLayoutSkeleton";
@@ -17,11 +17,13 @@ import { Button } from "./ui/button";
 
 const accountItems = [
   { icon: LayoutDashboard, label: "Home", path: "/dashboard" },
-  { icon: PlusCircle, label: "Place order", path: "/dashboard/new-order" },
   { icon: Store, label: "Services", path: "/dashboard/services" },
   { icon: ShoppingBag, label: "Orders", path: "/dashboard/orders" },
   { icon: CreditCard, label: "Wallet", path: "/dashboard/wallet" },
   { icon: CircleUserRound, label: "Account details", path: "/dashboard/account" },
+  { icon: BookOpen, label: "How to use", path: "/how-to-use" },
+  { icon: FileText, label: "Terms of service", path: "/terms" },
+  { icon: Info, label: "About", path: "/about" },
 ];
 const adminItems = [{ icon: Settings2, label: "Admin console", path: "/admin" }];
 const SIDEBAR_WIDTH_KEY = "sidebar-width";
