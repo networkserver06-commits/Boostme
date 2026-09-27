@@ -118,7 +118,7 @@ export default function Dashboard() {
     onError: (error) => toast.error("Order not placed", { description: friendlyErrorMessage(error, "Review the service, link, quantity, and wallet balance, then try again."), duration: 6500, closeButton: true }),
   });
   const requestDeposit = trpc.dashboard.requestDeposit.useMutation({
-    onSuccess: (data) => { setDepositReference(data.reference); setDepositStatus(data.status); setDepositResponse(data.gatewayResponse ?? {}); setDepositLastChecked(new Date()); toast.success("M-Pesa prompt sent", { description: data.message }); void wallet.refetch(); setPhone(""); },
+    onSuccess: (data) => { setDepositReference(data.reference); setDepositStatus(data.status); setDepositResponse(data.gatewayResponse ?? {}); setDepositLastChecked(new Date()); toast.success("M-Pesa prompt sent", { description: data.message }); void overview.refetch(); void wallet.refetch(); setPhone(""); },
     onError: (error) => toast.error("Top-up request failed", { description: friendlyErrorMessage(error, "Check the details and your connection, then try again."), duration: 6500 }),
   });
   const checkDeposit = trpc.dashboard.checkDeposit.useMutation({

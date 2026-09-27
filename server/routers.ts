@@ -8,7 +8,7 @@ import { cancelProviderOrder, fetchProviderServices, fetchProviderStatus, getPro
 import { normalizeServicePresentation } from "../shared/serviceCatalog";
 import { calculateCheckoutEconomics, summarizeProfit } from "../shared/finance";
 import { executeProviderSync } from "./scheduled";
-import { createLeeTecStkPush, findLeeTecTransaction, summarizeLeeTecResponse } from "./leetec";
+import { createLeeTecStkPush, findLeeTecTransaction, normalizePaymentStatus, summarizeLeeTecResponse } from "./leetec";
 
 const MIN_DEPOSIT_KES = 10;
 
@@ -196,14 +196,23 @@ export const appRouter = router({
       const profile = await getOrCreateProfile(ctx.user);
       const reference = `OG-${ctx.user.id}-${Date.now()}`;
       await db.insert(walletTransactions).values({ userId: ctx.user.id, amount: input.amount.toFixed(2), type: "deposit", status: "pending", reference, paymentMethod: "M-Pesa / LeeTec", balanceAfter: profile?.balance ?? "0.00" });
+      let response: Awaited<ReturnType<typeof createLeeTecStkPush>>;
       try {
-        const response = await createLeeTecStkPush({ phoneNumber: input.phone, amount: input.amount, accountReference: reference });
-        await recordAudit({ actorUserId: ctx.user.id, action: "wallet.deposit_requested", entityType: "wallet", entityId: reference, details: { amount: input.amount, phoneLast4: input.phone.replace(/\D/g, "").slice(-4), gateway: "leetec", response } });
-        return { status: "pending" as const, reference, message: String(response.message ?? "M-Pesa prompt sent. Complete it on your phone."), gatewayResponse: summarizeLeeTecResponse(response) };
+        response = await createLeeTecStkPush({ phoneNumber: input.phone, amount: input.amount, accountReference: reference });
       } catch (error) {
         await settleDeposit({ userId: ctx.user.id, reference, status: "FAILED" });
         throw new TRPCError({ code: "BAD_GATEWAY", message: error instanceof Error ? error.message : "LeeTec payment request failed" });
       }
+      const gatewayResponse = summarizeLeeTecResponse(response);
+      const gatewayStatus = normalizePaymentStatus(gatewayResponse.status);
+      if (gatewayStatus === "FAILED") {
+        await settleDeposit({ userId: ctx.user.id, reference, status: "FAILED" });
+        await recordAudit({ actorUserId: ctx.user.id, action: "wallet.deposit_failed", entityType: "wallet", entityId: reference, details: { amount: input.amount, gateway: "leetec", response } });
+        throw new TRPCError({ code: "BAD_GATEWAY", message: gatewayResponse.message ?? "LeeTec rejected the M-Pesa deposit request" });
+      }
+      // An STK-push success acknowledges the prompt, not the payment. Credit only after checkDeposit confirms it.
+      await recordAudit({ actorUserId: ctx.user.id, action: "wallet.deposit_requested", entityType: "wallet", entityId: reference, details: { amount: input.amount, phoneLast4: input.phone.replace(/\D/g, "").slice(-4), gateway: "leetec", response } });
+      return { status: "pending" as const, reference, message: String(gatewayResponse.message ?? "M-Pesa prompt sent. Complete it on your phone."), gatewayResponse };
     }),
     checkDeposit: protectedProcedure.input(z.object({ reference: z.string().min(6).max(80) })).mutation(async ({ ctx, input }) => {
       const result = await findLeeTecTransaction(input.reference);
