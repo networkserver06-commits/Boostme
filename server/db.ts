@@ -191,7 +191,6 @@ async function refreshCatalogIfStale(db: TursoDb) {
   catalogRefreshPromise = (async () => {
     const providers = await db.select().from(smmProviders).where(eq(smmProviders.isActive, 1));
     for (const provider of providers) {
-      if (provider.lastSyncAt && Date.now() - provider.lastSyncAt.getTime() < CATALOG_REFRESH_INTERVAL_MS) continue;
       try {
         const remote = await fetchProviderServices(provider.apiUrl, provider.apiKey);
         const remoteIds = new Set(remote.map(getProviderServiceId));
