@@ -5,7 +5,7 @@ import { and, asc, desc, eq, isNull, sql } from "drizzle-orm";
 import { drizzle, type LibSQLDatabase } from "drizzle-orm/libsql";
 import { ENV } from "./_core/env";
 import * as schema from "../drizzle/schema";
-import { normalizeServicePresentation } from "../shared/serviceCatalog";
+import { compareCustomerPlatforms, isCustomerVisiblePlatform, normalizeServicePresentation } from "../shared/serviceCatalog";
 
 export type DbRow = Record<string, any>;
 export type TursoDb = LibSQLDatabase<typeof schema.drizzleSchema>;
@@ -161,8 +161,8 @@ export async function recordAudit(input: { actorUserId?: number; action: string;
 export async function getActiveServices() {
   const db = await getDb();
   if (!db) return [];
-  const rows = await db.select().from(services).where(eq(services.isActive, 1)).orderBy(asc(services.platform), asc(services.category), asc(services.id));
-  return rows.map(normalizeServicePresentation);
+  const rows = await db.select().from(services).where(eq(services.isActive, 1)).orderBy(asc(services.id));
+  return rows.map(normalizeServicePresentation).filter((service) => isCustomerVisiblePlatform(service.platform)).sort((a, b) => compareCustomerPlatforms(a.platform, b.platform) || a.category.localeCompare(b.category) || a.id - b.id);
 }
 
 export async function getUserOrders(userId: number) {

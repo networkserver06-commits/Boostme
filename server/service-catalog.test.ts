@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { normalizeServicePresentation } from "../shared/serviceCatalog";
+import { compareCustomerPlatforms, isCustomerVisiblePlatform, normalizeServicePresentation } from "../shared/serviceCatalog";
 
 describe("service catalog presentation", () => {
   it("derives social platform and category from API-labelled offer names", () => {
@@ -16,5 +16,15 @@ describe("service catalog presentation", () => {
 
   it("retains legitimate non-social categories without inventing a platform", () => {
     expect(normalizeServicePresentation({ platform: "SEO", category: "SEO", name: "Backlinks" })).toMatchObject({ platform: "SEO", category: "SEO" });
+  });
+
+  it("normalizes provider misspellings and filters catalog noise for customers", () => {
+    expect(normalizeServicePresentation({ platform: "Instgram", category: "Api Rates", name: "Instgram Likes" })).toMatchObject({ platform: "Instagram", category: "Likes" });
+    expect(isCustomerVisiblePlatform("Amazon")).toBe(false);
+    expect(isCustomerVisiblePlatform("Instagram")).toBe(true);
+  });
+
+  it("prioritizes the most-used Kenyan platforms", () => {
+    expect(["YouTube", "Instagram", "TikTok", "Facebook"].sort(compareCustomerPlatforms)).toEqual(["TikTok", "Facebook", "Instagram", "YouTube"]);
   });
 });

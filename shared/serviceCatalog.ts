@@ -6,12 +6,12 @@ export type CatalogClassificationInput = {
 };
 
 const platformRules: Array<[string, RegExp]> = [
-  ["Instagram", /\b(?:instagram|insta|ig)\b/i],
+  ["Instagram", /\b(?:instagram|insta|ig|instgram)\b/i],
   ["TikTok", /\btik\s*-?\s*tok\b/i],
   ["YouTube", /\b(?:youtube|you\s*tube|yt)\b/i],
   ["Facebook", /\b(?:facebook|meta|fb)\b/i],
   ["WhatsApp", /\bwhats\s*app\b/i],
-  ["Telegram", /\btelegram\b/i],
+  ["Telegram", /\b(?:telegram|telgram)\b/i],
   ["Threads", /\bthreads?\b/i],
   ["X", /\b(?:twitter|x\.com)\b/i],
   ["Snapchat", /\bsnapchat\b/i],
@@ -39,6 +39,7 @@ const platformRules: Array<[string, RegExp]> = [
 ];
 
 const genericPlatforms = new Set(["", "api", "general", "social", "default", "other", "provider"]);
+const customerNoisePlatforms = new Set(["9gag", "amazon", "android", "apple", "article", "binance", "coinmarketcap", "datpiff", "dolap", "ebay", "genius", "imdb", "lazada", "maroof", "medium", "odnoklassniki", "ok.ru", "pandatv", "retube", "reverbnation", "shazam", "shopee", "strawpoll", "sua", "tidal", "trading", "traffic", "trip", "truthsocial", "vk", "wattpad", "website", "yandex"]);
 const genericCategory = /^(?:api(?:\s+rates?)?|general|social|default|other|provider)(?:\b|\s)|whats\s*app\s+us\b|contact\s+us\b/i;
 const serviceTypes: Array<[string, RegExp]> = [
   ["Page likes", /\bpage\s+likes?\b/i],
@@ -103,4 +104,18 @@ export function normalizeServiceType(name: string, category: string) {
   return serviceTypes.find(([, pattern]) => pattern.test(name))?.[0]
     ?? serviceTypes.find(([, pattern]) => pattern.test(category))?.[0]
     ?? "Other services";
+}
+
+export function isCustomerVisiblePlatform(platform: string) {
+  return !customerNoisePlatforms.has(platform.trim().toLowerCase());
+}
+
+const kenyaPlatformPriority = ["TikTok", "Facebook", "Instagram", "YouTube", "WhatsApp", "Telegram", "X", "LinkedIn", "Snapchat", "Pinterest", "Reddit"];
+
+export function compareCustomerPlatforms(a: string, b: string) {
+  const priority = (value: string) => {
+    const index = kenyaPlatformPriority.findIndex((item) => item.toLowerCase() === value.toLowerCase());
+    return index === -1 ? kenyaPlatformPriority.length : index;
+  };
+  return priority(a) - priority(b) || a.localeCompare(b);
 }
