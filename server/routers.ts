@@ -6,9 +6,11 @@ import { and, chargeWallet, getActiveServices, getDb, getOrCreateProfile, getUse
 import { clearAuthAttempts, consumeAuthAttempt, createSession, hashPassword, normalizeEmail, readSessionToken, revokeSession, verifyPassword } from "./_core/passwordAuth";
 import { cancelProviderOrder, fetchProviderServices, fetchProviderStatus, getProviderServiceId, mapCatalogService, mapProviderStatus, submitProviderOrder } from "./provider";
 import { normalizeServicePresentation } from "../shared/serviceCatalog";
-import { summarizeProfit } from "../shared/finance";
+import { calculateCheckoutEconomics, summarizeProfit } from "../shared/finance";
 import { executeProviderSync } from "./scheduled";
 import { createLeeTecStkPush, findLeeTecTransaction, summarizeLeeTecResponse } from "./leetec";
+
+const MIN_DEPOSIT_KES = 10;
 
 const serviceInput = z.object({
   name: z.string().min(3),
@@ -131,10 +133,15 @@ export const appRouter = router({
       const allowed = validHosts[servicePlatform];
       if (allowed && !allowed.some((item) => host === item || host.endsWith(`.${item}`))) throw new TRPCError({ code: "BAD_REQUEST", message: `Target URL must be a valid ${servicePlatform} link` });
       if (input.quantity < service.minQuantity || input.quantity > service.maxQuantity) throw new TRPCError({ code: "BAD_REQUEST", message: `Quantity must be between ${service.minQuantity.toLocaleString()} and ${service.maxQuantity.toLocaleString()}` });
-      const charge = Number((Number(service.retailRatePer1k) * input.quantity / 1000).toFixed(2));
+      const { wholesaleCostForQty, finalRetailCharged, estimatedProfit, isValid } = calculateCheckoutEconomics({ quantity: input.quantity, retailRatePer1k: service.retailRatePer1k, wholesaleRatePer1k: service.wholesaleRatePer1k });
+      if (!isValid) {
+        console.error(`[CRITICAL LOSS PREVENTED] Service ID: ${service.id}, Wholesale: ${wholesaleCostForQty}, Retail: ${finalRetailCharged}`);
+        throw new TRPCError({ code: "BAD_REQUEST", message: "Pricing error detected. Order halted to prevent loss." });
+      }
+      const charge = finalRetailCharged;
       const provider = service.providerId ? (await db.select().from(smmProviders).where(eq(smmProviders.id, service.providerId)).limit(1))[0] : undefined;
       try {
-        const orderId = await chargeWallet({ userId: ctx.user.id, serviceId: input.serviceId, providerId: provider?.id, targetLink: input.targetLink, quantity: input.quantity, charge });
+        const orderId = await chargeWallet({ userId: ctx.user.id, serviceId: input.serviceId, providerId: provider?.id, targetLink: input.targetLink, quantity: input.quantity, charge, wholesaleCostKes: wholesaleCostForQty, retailPaidKes: finalRetailCharged, netProfitKes: estimatedProfit });
         if (provider && service.providerServiceId) {
           let providerOrder: { order: string } | undefined;
           let lastError: unknown;
@@ -147,7 +154,7 @@ export const appRouter = router({
           }
           await db.update(orders).set({ providerOrderId: providerOrder.order, status: "in_progress" }).where(eq(orders.id, orderId));
         }
-        await recordAudit({ actorUserId: ctx.user.id, action: "order.created", entityType: "order", entityId: String(orderId), details: { serviceId: input.serviceId, charge, providerSubmitted: Boolean(provider) } });
+        await recordAudit({ actorUserId: ctx.user.id, action: "order.created", entityType: "order", entityId: String(orderId), details: { serviceId: input.serviceId, charge, wholesaleCostKes: wholesaleCostForQty, netProfitKes: estimatedProfit, providerSubmitted: Boolean(provider) } });
         return { orderId, charge };
       } catch (error) {
         if (error instanceof TRPCError) throw error;
@@ -183,7 +190,7 @@ export const appRouter = router({
       await recordAudit({ actorUserId: ctx.user.id, action: "order.canceled", entityType: "order", entityId: String(order.id), details: { providerOrderId: order.providerOrderId } });
       return (await db.select().from(orders).where(eq(orders.id, order.id)).limit(1))[0];
     }),
-    requestDeposit: protectedProcedure.input(z.object({ amount: z.number().int().min(50).max(150000), phone: z.string().min(9) })).mutation(async ({ ctx, input }) => {
+    requestDeposit: protectedProcedure.input(z.object({ amount: z.number().int().min(MIN_DEPOSIT_KES).max(150000), phone: z.string().min(9) })).mutation(async ({ ctx, input }) => {
       const db = await getDb();
       if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database unavailable" });
       const profile = await getOrCreateProfile(ctx.user);

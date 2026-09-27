@@ -37,7 +37,7 @@ const schemaStatements = [
   )`,
   `CREATE TABLE IF NOT EXISTS orders (
     id INTEGER PRIMARY KEY AUTOINCREMENT, user_id INTEGER NOT NULL, service_id INTEGER NOT NULL, provider_id INTEGER, provider_order_id TEXT,
-    target_link TEXT NOT NULL, quantity INTEGER NOT NULL, charge TEXT NOT NULL, start_count INTEGER, remains INTEGER,
+    target_link TEXT NOT NULL, quantity INTEGER NOT NULL, charge TEXT NOT NULL, wholesale_cost_kes REAL, retail_paid_kes REAL, net_profit_kes REAL, start_count INTEGER, remains INTEGER,
     status TEXT NOT NULL DEFAULT 'pending', error_message TEXT, created_at INTEGER NOT NULL DEFAULT (unixepoch() * 1000),
     updated_at INTEGER NOT NULL DEFAULT (unixepoch() * 1000)
   )`,
@@ -93,7 +93,9 @@ export function getTursoClient() {
 
 export async function initializeTursoSchema(client: Client) {
   await client.batch(schemaStatements.map((sql) => ({ sql })), "write");
-  try { await client.execute("ALTER TABLE orders ADD COLUMN provider_id INTEGER"); } catch { /* Existing databases already have the column. */ }
+  for (const column of ["provider_id INTEGER", "wholesale_cost_kes REAL", "retail_paid_kes REAL", "net_profit_kes REAL"]) {
+    try { await client.execute(`ALTER TABLE orders ADD COLUMN ${column}`); } catch { /* Existing databases already have the column. */ }
+  }
   await client.execute("CREATE INDEX IF NOT EXISTS orders_provider_idx ON orders(provider_id, provider_order_id)");
 }
 
@@ -208,7 +210,7 @@ export function applyWalletDelta(current: number, delta: number) {
   return next;
 }
 
-export async function chargeWallet(input: { userId: number; serviceId: number; providerId?: number | null; targetLink: string; quantity: number; charge: number }) {
+export async function chargeWallet(input: { userId: number; serviceId: number; providerId?: number | null; targetLink: string; quantity: number; charge: number; wholesaleCostKes: number; retailPaidKes: number; netProfitKes: number }) {
   const db = await getDb();
   if (!db) throw new Error("Turso database unavailable");
   return db.transaction(async (tx) => {
@@ -216,7 +218,7 @@ export async function chargeWallet(input: { userId: number; serviceId: number; p
     if (!profile || Number(profile.balance) < input.charge) throw new Error("Insufficient wallet balance");
     const nextBalance = applyWalletDelta(Number(profile.balance), -input.charge);
     await tx.update(profiles).set({ balance: nextBalance.toFixed(2) }).where(eq(profiles.userId, input.userId));
-    const [created] = await tx.insert(orders).values({ userId: input.userId, serviceId: input.serviceId, providerId: input.providerId ?? null, targetLink: input.targetLink, quantity: input.quantity, charge: input.charge.toFixed(2), status: "pending" }).returning({ id: orders.id });
+    const [created] = await tx.insert(orders).values({ userId: input.userId, serviceId: input.serviceId, providerId: input.providerId ?? null, targetLink: input.targetLink, quantity: input.quantity, charge: input.charge.toFixed(2), wholesaleCostKes: input.wholesaleCostKes, retailPaidKes: input.retailPaidKes, netProfitKes: input.netProfitKes, status: "pending" }).returning({ id: orders.id });
     if (!created) throw new Error("Unable to create order");
     await tx.insert(walletTransactions).values({ userId: input.userId, amount: (-input.charge).toFixed(2), type: "order_charge", status: "completed", reference: `order-${created.id}`, paymentMethod: "wallet", balanceAfter: nextBalance.toFixed(2) });
     return created.id;

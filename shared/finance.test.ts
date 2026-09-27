@@ -1,7 +1,13 @@
 import { describe, expect, it } from "vitest";
-import { calculateOrderEconomics, calculateServiceEconomics, summarizeProfit } from "./finance";
+import { calculateCheckoutEconomics, calculateOrderEconomics, calculateServiceEconomics, summarizeProfit } from "./finance";
 
 describe("finance calculations", () => {
+	it("applies the KSh 10 floor and rejects unsafe margins", () => {
+		expect(calculateCheckoutEconomics({ quantity: 50, retailRatePer1k: 5, wholesaleRatePer1k: 1 })).toMatchObject({ retailAmountCalculated: 0.25, finalRetailCharged: 10, wholesaleCostForQty: 0.05, estimatedProfit: 9.95, isValid: true });
+		expect(calculateCheckoutEconomics({ quantity: 1000, retailRatePer1k: 10, wholesaleRatePer1k: 10 })).toMatchObject({ isValid: false });
+		expect(calculateCheckoutEconomics({ quantity: 1000, retailRatePer1k: 10.99, wholesaleRatePer1k: 10 })).toMatchObject({ isValid: false });
+	});
+
   it("calculates revenue, provider cost, profit, and margin per 1k", () => {
     expect(calculateServiceEconomics({ quantity: 1000, retailRatePer1k: "35.00", wholesaleRatePer1k: "12.50" })).toMatchObject({ revenue: 35, providerCost: 12.5, profit: 22.5, marginPercent: 64.29 });
   });

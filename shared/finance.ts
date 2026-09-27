@@ -27,6 +27,15 @@ export function calculateServiceEconomics(input: ServiceEconomicsInput) {
   };
 }
 
+export function calculateCheckoutEconomics(input: { quantity: number; retailRatePer1k: number | string; wholesaleRatePer1k: number | string }) {
+  const quantity = Math.max(0, Math.trunc(input.quantity));
+  const wholesaleCostForQty = Number((quantity / 1000 * (Number(input.wholesaleRatePer1k) || 0)).toFixed(2));
+  const retailAmountCalculated = Number((quantity / 1000 * (Number(input.retailRatePer1k) || 0)).toFixed(2));
+  const finalRetailCharged = Math.max(retailAmountCalculated, 10);
+  const estimatedProfit = Number((finalRetailCharged - wholesaleCostForQty).toFixed(2));
+  return { wholesaleCostForQty, retailAmountCalculated, finalRetailCharged, estimatedProfit, isValid: Number.isFinite(wholesaleCostForQty) && Number.isFinite(finalRetailCharged) && finalRetailCharged > wholesaleCostForQty && estimatedProfit >= 1 };
+}
+
 export function calculateOrderEconomics(order: OrderEconomics) {
   const service = calculateServiceEconomics(order);
   const chargeCents = cents(Number(order.charge));
