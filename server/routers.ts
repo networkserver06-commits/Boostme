@@ -4,7 +4,7 @@ import { systemRouter } from "./_core/systemRouter";
 import { adminProcedure, protectedProcedure, publicProcedure, router } from "./_core/trpc";
 import { and, chargeWallet, getActiveServices, getDb, getOrCreateProfile, getUserByEmail, getUserOrders, getUserWallet, listAdminUsers, listProviders, listSyncRuns, recordAudit, refundOrder, settleDeposit, orders, profiles, services, smmProviders, syncRuns, syncSchedules, users, walletTransactions, eq, desc, sql } from "./db";
 import { clearAuthAttempts, consumeAuthAttempt, createSession, hashPassword, normalizeEmail, readSessionToken, revokeSession, verifyPassword } from "./_core/passwordAuth";
-import { cancelProviderOrder, fetchProviderServices, fetchProviderStatus, getProviderServiceId, mapCatalogService, mapProviderStatus, submitProviderOrder } from "./provider";
+import { cancelProviderOrder, enforceProviderRateFloor, fetchProviderServices, fetchProviderStatus, getProviderServiceId, mapCatalogService, mapProviderStatus, submitProviderOrder } from "./provider";
 import { normalizeServicePresentation } from "../shared/serviceCatalog";
 import { calculateCheckoutEconomics, calculateRecordedOrderEconomics, summarizeProfit } from "../shared/finance";
 import { formatTieredRetailRatePer1k } from "../shared/pricing";
@@ -129,6 +129,13 @@ export const appRouter = router({
       if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database unavailable" });
       const service = (await db.select().from(services).where(eq(services.id, input.serviceId)).limit(1))[0];
       if (!service || service.isActive !== 1) throw new TRPCError({ code: "NOT_FOUND", message: "Service is not available" });
+      const safeWholesaleRate = enforceProviderRateFloor(service.providerServiceId ?? "", service.name, Number(service.wholesaleRatePer1k));
+      if (safeWholesaleRate > Number(service.wholesaleRatePer1k)) {
+        const safeRetailRate = formatTieredRetailRatePer1k(safeWholesaleRate);
+        await db.update(services).set({ wholesaleRatePer1k: safeWholesaleRate.toFixed(4), retailRatePer1k: safeRetailRate, needsResync: 0 }).where(eq(services.id, service.id));
+        service.wholesaleRatePer1k = safeWholesaleRate.toFixed(4);
+        service.retailRatePer1k = safeRetailRate;
+      }
       if (service.needsResync === 1) throw new TRPCError({ code: "BAD_REQUEST", message: "Pricing update in progress for this service. Please try again in a few minutes or select another package." });
       const host = new URL(input.targetLink).hostname.toLowerCase();
       const servicePlatform = normalizeServicePresentation(service).platform;

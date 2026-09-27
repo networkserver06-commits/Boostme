@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { cancelProviderOrder, fetchProviderServices, fetchProviderStatus, mapCatalogService, mapProviderStatus, submitProviderOrder } from "./provider";
+import { cancelProviderOrder, enforceProviderRateFloor, fetchProviderServices, fetchProviderStatus, mapCatalogService, mapProviderStatus, submitProviderOrder } from "./provider";
 
 afterEach(() => vi.unstubAllGlobals());
 
@@ -18,6 +18,11 @@ describe("provider status mapping", () => {
 });
 
 describe("provider service mapping", () => {
+  it("does not allow the known 26949 service below its provider floor", () => {
+    expect(enforceProviderRateFloor("26949", "TikTok Likes", 0.3537)).toBe(41.2269);
+    expect(mapCatalogService({ service: "26949", name: "TikTok Likes", category: "TikTok Likes", rate: "0.3537", min: "1000", max: "500000" }, 1)).toMatchObject({ wholesaleRatePer1k: "41.2269", retailRatePer1k: "57.7177" });
+  });
+
   it("normalizes a remote service and applies the low-cost tier multiplier", () => {
     expect(mapCatalogService({ service: "7", name: "Reels views", category: "Instagram Views", rate: "12.5", min: "100", max: "50000" }, 3)).toMatchObject({ providerId: 3, providerServiceId: "7", platform: "Instagram", wholesaleRatePer1k: "12.5000", retailRatePer1k: "31.2500", minQuantity: 100, maxQuantity: 50000, isActive: 1 });
   });

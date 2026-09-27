@@ -14,15 +14,26 @@ export async function providerRequest<T>(apiUrl: string, apiKey: string, body: R
 
 export async function fetchProviderServices(apiUrl: string, apiKey: string) { return providerRequest<ProviderService[]>(apiUrl, apiKey, { action: "services" }); }
 
+const PROVIDER_RATE_FLOORS_PER_1K: Record<string, number> = { "26949": 41.2269 };
+
+export function enforceProviderRateFloor(providerServiceId: string, name: string, rate: number) {
+  const floor = PROVIDER_RATE_FLOORS_PER_1K[providerServiceId];
+  if (floor == null) return rate;
+  console.warn(`[PROVIDER RATE FLOOR] ${providerServiceId} ${name}: KES ${rate} -> at least KES ${floor} per 1k`);
+  return Math.max(rate, floor);
+}
+
 export function getProviderServiceId(item: ProviderService) {
   return String(item.service ?? item.services);
 }
 
 export function mapCatalogService(item: ProviderService, providerId: number) {
   const category = item.category || item.Category || item.type || "General";
-  const wholesaleRatePer1k = Number(item.rate);
-  if (!Number.isFinite(wholesaleRatePer1k) || wholesaleRatePer1k < 0) throw new Error(`Provider service ${getProviderServiceId(item)} has an invalid rate`);
-  const imported = { providerId, providerServiceId: getProviderServiceId(item), name: item.name, platform: category.split(" ")[0] || "Social", category, wholesaleRatePer1k: wholesaleRatePer1k.toFixed(4), retailRatePer1k: formatTieredRetailRatePer1k(wholesaleRatePer1k), minQuantity: Number(item.min), maxQuantity: Number(item.max), isActive: 1 };
+  const providerServiceId = getProviderServiceId(item);
+  const providerRate = Number(item.rate);
+  if (!Number.isFinite(providerRate) || providerRate < 0) throw new Error(`Provider service ${providerServiceId} has an invalid rate`);
+  const wholesaleRatePer1k = enforceProviderRateFloor(providerServiceId, item.name, providerRate);
+  const imported = { providerId, providerServiceId, name: item.name, platform: category.split(" ")[0] || "Social", category, wholesaleRatePer1k: wholesaleRatePer1k.toFixed(4), retailRatePer1k: formatTieredRetailRatePer1k(wholesaleRatePer1k), minQuantity: Number(item.min), maxQuantity: Number(item.max), isActive: 1 };
   const normalized = normalizeServicePresentation(imported);
   return { ...imported, platform: normalized.platform, category: normalized.category };
 }

@@ -6,7 +6,8 @@ import { drizzle, type LibSQLDatabase } from "drizzle-orm/libsql";
 import { ENV } from "./_core/env";
 import * as schema from "../drizzle/schema";
 import { compareCustomerPlatforms, isCustomerVisiblePlatform, normalizeServicePresentation } from "../shared/serviceCatalog";
-import { fetchProviderServices, getProviderServiceId, mapCatalogService } from "./provider";
+import { formatTieredRetailRatePer1k } from "../shared/pricing";
+import { enforceProviderRateFloor, fetchProviderServices, getProviderServiceId, mapCatalogService } from "./provider";
 
 export type DbRow = Record<string, any>;
 export type TursoDb = LibSQLDatabase<typeof schema.drizzleSchema>;
@@ -172,6 +173,15 @@ export async function getActiveServices() {
   if (!db) return [];
   await refreshCatalogIfStale(db);
   const rows = await db.select().from(services).where(and(eq(services.isActive, 1), eq(services.needsResync, 0))).orderBy(asc(services.id));
+  for (const service of rows) {
+    const safeWholesale = enforceProviderRateFloor(service.providerServiceId ?? "", service.name, Number(service.wholesaleRatePer1k));
+    if (safeWholesale > Number(service.wholesaleRatePer1k)) {
+      const safeRetail = formatTieredRetailRatePer1k(safeWholesale);
+      await db.update(services).set({ wholesaleRatePer1k: safeWholesale.toFixed(4), retailRatePer1k: safeRetail, needsResync: 0 }).where(eq(services.id, service.id));
+      service.wholesaleRatePer1k = safeWholesale.toFixed(4);
+      service.retailRatePer1k = safeRetail;
+    }
+  }
   return rows.map(normalizeServicePresentation).filter((service) => Number(service.retailRatePer1k) >= Number(service.wholesaleRatePer1k) && isCustomerVisiblePlatform(service.platform)).sort((a, b) => compareCustomerPlatforms(a.platform, b.platform) || a.category.localeCompare(b.category) || a.id - b.id);
 }
 
