@@ -135,6 +135,33 @@ export const appRouter = router({
         await db.update(services).set({ wholesaleRatePer1k: safeWholesaleRate.toFixed(4), retailRatePer1k: safeRetailRate, needsResync: 0 }).where(eq(services.id, service.id));
         service.wholesaleRatePer1k = safeWholesaleRate.toFixed(4);
         service.retailRatePer1k = safeRetailRate;
+        service.needsResync = 0;
+      }
+      const storedWholesaleCost = Number(((input.quantity / 1000) * Number(service.wholesaleRatePer1k)).toFixed(2));
+      const storedCustomerCharge = Math.max(Number(((input.quantity / 1000) * Number(service.retailRatePer1k)).toFixed(2)), MINIMUM_ORDER_CHARGE_KES);
+      if (!Number.isFinite(storedWholesaleCost) || !Number.isFinite(storedCustomerCharge) || storedCustomerCharge < storedWholesaleCost) {
+        console.error(`[CRITICAL LOSS BLOCKED] Service: ${service.id}, Charge: KES ${storedCustomerCharge}, Cost: KES ${storedWholesaleCost}`);
+        await db.update(services).set({ needsResync: 1 }).where(eq(services.id, service.id));
+        await recordAudit({ actorUserId: ctx.user.id, action: "service.loss_blocked", entityType: "service", entityId: String(service.id), details: { quantity: input.quantity, customerCharge: storedCustomerCharge, orderWholesaleCost: storedWholesaleCost } });
+        throw new TRPCError({ code: "BAD_REQUEST", message: "Pricing update in progress for this service. Please try again in a few minutes or select another package." });
+      }
+      const provider = service.providerId ? (await db.select().from(smmProviders).where(eq(smmProviders.id, service.providerId)).limit(1))[0] : undefined;
+      if (provider && service.providerServiceId) {
+        try {
+          const liveService = (await fetchProviderServices(provider.apiUrl, provider.apiKey)).find((item) => getProviderServiceId(item) === service.providerServiceId);
+          if (!liveService) throw new Error(`Provider service ${service.providerServiceId} is no longer available`);
+          const liveMapped = mapCatalogService(liveService, provider.id);
+          if (Number(liveMapped.wholesaleRatePer1k) !== Number(service.wholesaleRatePer1k) || liveMapped.retailRatePer1k !== service.retailRatePer1k) {
+            await db.update(services).set({ wholesaleRatePer1k: liveMapped.wholesaleRatePer1k, retailRatePer1k: liveMapped.retailRatePer1k, needsResync: 0 }).where(eq(services.id, service.id));
+            service.wholesaleRatePer1k = liveMapped.wholesaleRatePer1k;
+            service.retailRatePer1k = liveMapped.retailRatePer1k;
+            service.needsResync = 0;
+          } else if (service.needsResync === 1) { await db.update(services).set({ needsResync: 0 }).where(eq(services.id, service.id)); service.needsResync = 0; }
+        } catch (error) {
+          await db.update(services).set({ needsResync: 1 }).where(eq(services.id, service.id));
+          console.error(`[LIVE RATE CHECK BLOCKED] Service: ${service.id}`, error);
+          throw new TRPCError({ code: "BAD_GATEWAY", message: "Live provider pricing could not be verified. The order was not charged; please try again shortly." });
+        }
       }
       if (service.needsResync === 1) throw new TRPCError({ code: "BAD_REQUEST", message: "Pricing update in progress for this service. Please try again in a few minutes or select another package." });
       const host = new URL(input.targetLink).hostname.toLowerCase();
@@ -160,7 +187,6 @@ export const appRouter = router({
         throw new TRPCError({ code: "BAD_REQUEST", message: "Pricing update in progress for this service. Please try again in a few minutes or select another package." });
       }
       const charge = finalRetailCharged;
-      const provider = service.providerId ? (await db.select().from(smmProviders).where(eq(smmProviders.id, service.providerId)).limit(1))[0] : undefined;
       try {
         const orderId = await chargeWallet({ userId: ctx.user.id, serviceId: input.serviceId, providerId: provider?.id, targetLink: input.targetLink, quantity: input.quantity, charge, wholesaleCostKes: wholesaleCostForQty, retailPaidKes: finalRetailCharged, netProfitKes: estimatedProfit });
         if (provider && service.providerServiceId) {
