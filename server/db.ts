@@ -6,6 +6,7 @@ import { drizzle, type LibSQLDatabase } from "drizzle-orm/libsql";
 import { ENV } from "./_core/env";
 import * as schema from "../drizzle/schema";
 import { compareCustomerPlatforms, isCustomerVisiblePlatform, normalizeServicePresentation } from "../shared/serviceCatalog";
+import { fetchProviderServices, getProviderServiceId, mapCatalogService } from "./provider";
 
 export type DbRow = Record<string, any>;
 export type TursoDb = LibSQLDatabase<typeof schema.drizzleSchema>;
@@ -79,6 +80,9 @@ const schemaStatements = [
 let _client: Client | null = null;
 let _db: TursoDb | null = null;
 let schemaPromise: Promise<void> | null = null;
+let catalogRefreshPromise: Promise<void> | null = null;
+let catalogRefreshedAt = 0;
+const CATALOG_REFRESH_INTERVAL_MS = 5 * 60 * 1000;
 
 export function getTursoClient() {
   const url = process.env.TURSO_DATABASE_URL?.trim() || (process.env.NODE_ENV === "production" ? "" : process.env.NODE_ENV === "test" ? "file::memory:" : "file:./.data/boostme.db");
@@ -166,8 +170,39 @@ export async function recordAudit(input: { actorUserId?: number; action: string;
 export async function getActiveServices() {
   const db = await getDb();
   if (!db) return [];
-  const rows = await db.select().from(services).where(eq(services.isActive, 1)).orderBy(asc(services.id));
-  return rows.map(normalizeServicePresentation).filter((service) => isCustomerVisiblePlatform(service.platform)).sort((a, b) => compareCustomerPlatforms(a.platform, b.platform) || a.category.localeCompare(b.category) || a.id - b.id);
+  await refreshCatalogIfStale(db);
+  const rows = await db.select().from(services).where(and(eq(services.isActive, 1), eq(services.needsResync, 0))).orderBy(asc(services.id));
+  return rows.map(normalizeServicePresentation).filter((service) => Number(service.retailRatePer1k) >= Number(service.wholesaleRatePer1k) && isCustomerVisiblePlatform(service.platform)).sort((a, b) => compareCustomerPlatforms(a.platform, b.platform) || a.category.localeCompare(b.category) || a.id - b.id);
+}
+
+async function refreshCatalogIfStale(db: TursoDb) {
+  if (catalogRefreshPromise) return catalogRefreshPromise;
+  if (Date.now() - catalogRefreshedAt < CATALOG_REFRESH_INTERVAL_MS) return;
+  catalogRefreshPromise = (async () => {
+    const providers = await db.select().from(smmProviders).where(eq(smmProviders.isActive, 1));
+    for (const provider of providers) {
+      if (provider.lastSyncAt && Date.now() - provider.lastSyncAt.getTime() < CATALOG_REFRESH_INTERVAL_MS) continue;
+      try {
+        const remote = await fetchProviderServices(provider.apiUrl, provider.apiKey);
+        const remoteIds = new Set(remote.map(getProviderServiceId));
+        for (const item of remote) {
+          const providerServiceId = getProviderServiceId(item);
+          const values = mapCatalogService(item, provider.id);
+          const existing = (await db.select().from(services).where(and(eq(services.providerId, provider.id), eq(services.providerServiceId, providerServiceId))).limit(1))[0];
+          if (existing) await db.update(services).set({ ...values, needsResync: 0 }).where(eq(services.id, existing.id));
+          else await db.insert(services).values({ ...values, needsResync: 0 });
+        }
+        const mapped = await db.select().from(services).where(eq(services.providerId, provider.id));
+        for (const service of mapped) if (service.providerServiceId && !remoteIds.has(service.providerServiceId)) await db.update(services).set({ isActive: 0, needsResync: 1 }).where(eq(services.id, service.id));
+        await db.update(smmProviders).set({ lastSyncAt: new Date() }).where(eq(smmProviders.id, provider.id));
+      } catch (error) {
+        console.error(`[CATALOG REFRESH FAILED] Provider ${provider.id}:`, error);
+        await db.update(services).set({ needsResync: 1 }).where(eq(services.providerId, provider.id));
+      }
+    }
+    catalogRefreshedAt = Date.now();
+  })().finally(() => { catalogRefreshPromise = null; });
+  return catalogRefreshPromise;
 }
 
 export async function getUserOrders(userId: number) {
