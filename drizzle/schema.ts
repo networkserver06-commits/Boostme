@@ -50,8 +50,9 @@ export const services = sqliteTable("services", {
   maxQuantity: integer("max_quantity").notNull().default(100000),
   tags: text("tags"),
   isActive: integer("is_active").notNull().default(1),
+  needsResync: integer("needs_resync").notNull().default(0),
   createdAt: createdAt(),
-}, (table) => ({ activeIdx: index("services_active_idx").on(table.isActive), providerServiceIdx: index("services_provider_service_idx").on(table.providerId, table.providerServiceId) }));
+}, (table) => ({ activeIdx: index("services_active_idx").on(table.isActive), resyncIdx: index("services_needs_resync_idx").on(table.needsResync), providerServiceIdx: index("services_provider_service_idx").on(table.providerId, table.providerServiceId) }));
 
 export const orders = sqliteTable("orders", {
   id: integer("id").primaryKey({ autoIncrement: true }),

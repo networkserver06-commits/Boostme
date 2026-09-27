@@ -7,10 +7,12 @@ import { clearAuthAttempts, consumeAuthAttempt, createSession, hashPassword, nor
 import { cancelProviderOrder, fetchProviderServices, fetchProviderStatus, getProviderServiceId, mapCatalogService, mapProviderStatus, submitProviderOrder } from "./provider";
 import { normalizeServicePresentation } from "../shared/serviceCatalog";
 import { calculateCheckoutEconomics, summarizeProfit } from "../shared/finance";
+import { formatTieredRetailRatePer1k } from "../shared/pricing";
 import { executeProviderSync } from "./scheduled";
 import { createLeeTecStkPush, findLeeTecTransaction, normalizePaymentStatus, summarizeLeeTecResponse } from "./leetec";
 
 const MIN_DEPOSIT_KES = 10;
+const MINIMUM_ORDER_CHARGE_KES = 10;
 
 const serviceInput = z.object({
   name: z.string().min(3),
@@ -127,16 +129,28 @@ export const appRouter = router({
       if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database unavailable" });
       const service = (await db.select().from(services).where(eq(services.id, input.serviceId)).limit(1))[0];
       if (!service || service.isActive !== 1) throw new TRPCError({ code: "NOT_FOUND", message: "Service is not available" });
+      if (service.needsResync === 1) throw new TRPCError({ code: "BAD_REQUEST", message: "Pricing update in progress for this service. Please try again in a few minutes or select another package." });
       const host = new URL(input.targetLink).hostname.toLowerCase();
       const servicePlatform = normalizeServicePresentation(service).platform;
       const validHosts: Record<string, string[]> = { Instagram: ["instagram.com"], TikTok: ["tiktok.com"], YouTube: ["youtube.com", "youtu.be"], Facebook: ["facebook.com", "fb.watch", "fb.me"], X: ["x.com", "twitter.com"], WhatsApp: ["whatsapp.com", "wa.me"], Telegram: ["t.me", "telegram.me"] };
       const allowed = validHosts[servicePlatform];
       if (allowed && !allowed.some((item) => host === item || host.endsWith(`.${item}`))) throw new TRPCError({ code: "BAD_REQUEST", message: `Target URL must be a valid ${servicePlatform} link` });
       if (input.quantity < service.minQuantity || input.quantity > service.maxQuantity) throw new TRPCError({ code: "BAD_REQUEST", message: `Quantity must be between ${service.minQuantity.toLocaleString()} and ${service.maxQuantity.toLocaleString()}` });
+      // Mandatory pre-flight loss check. The floor reflects the actual wallet charge, not merely the displayed rate.
+      const orderWholesaleCost = Number(((input.quantity / 1000) * Number(service.wholesaleRatePer1k)).toFixed(2));
+      const customerCharge = Math.max(Number(((input.quantity / 1000) * Number(service.retailRatePer1k)).toFixed(2)), MINIMUM_ORDER_CHARGE_KES);
+      if (!Number.isFinite(orderWholesaleCost) || !Number.isFinite(customerCharge) || customerCharge < orderWholesaleCost) {
+        console.error(`[CRITICAL LOSS BLOCKED] Service: ${service.id}, Charge: KES ${customerCharge}, Cost: KES ${orderWholesaleCost}`);
+        await db.update(services).set({ needsResync: 1 }).where(eq(services.id, service.id));
+        await recordAudit({ actorUserId: ctx.user.id, action: "service.loss_blocked", entityType: "service", entityId: String(service.id), details: { quantity: input.quantity, customerCharge, orderWholesaleCost } });
+        throw new TRPCError({ code: "BAD_REQUEST", message: "Pricing update in progress for this service. Please try again in a few minutes or select another package." });
+      }
       const { wholesaleCostForQty, finalRetailCharged, estimatedProfit, isValid } = calculateCheckoutEconomics({ quantity: input.quantity, retailRatePer1k: service.retailRatePer1k, wholesaleRatePer1k: service.wholesaleRatePer1k });
       if (!isValid) {
-        console.error(`[CRITICAL LOSS PREVENTED] Service ID: ${service.id}, Wholesale: ${wholesaleCostForQty}, Retail: ${finalRetailCharged}`);
-        throw new TRPCError({ code: "BAD_REQUEST", message: "Pricing error detected. Order halted to prevent loss." });
+        console.error(`[CRITICAL LOSS BLOCKED] Service: ${service.id}, Charge: KES ${finalRetailCharged}, Cost: KES ${wholesaleCostForQty}`);
+        await db.update(services).set({ needsResync: 1 }).where(eq(services.id, service.id));
+        await recordAudit({ actorUserId: ctx.user.id, action: "service.loss_blocked", entityType: "service", entityId: String(service.id), details: { quantity: input.quantity, customerCharge: finalRetailCharged, orderWholesaleCost: wholesaleCostForQty } });
+        throw new TRPCError({ code: "BAD_REQUEST", message: "Pricing update in progress for this service. Please try again in a few minutes or select another package." });
       }
       const charge = finalRetailCharged;
       const provider = service.providerId ? (await db.select().from(smmProviders).where(eq(smmProviders.id, service.providerId)).limit(1))[0] : undefined;
@@ -264,9 +278,9 @@ export const appRouter = router({
       for (const item of selected) {
         const providerServiceId = getProviderServiceId(item);
         try {
-          const values = mapCatalogService(item, provider.id, input.markupPercent);
+          const values = mapCatalogService(item, provider.id);
           const existing = (await db.select().from(services).where(and(eq(services.providerId, provider.id), eq(services.providerServiceId, providerServiceId))).limit(1))[0];
-          if (existing) await db.update(services).set(values).where(eq(services.id, existing.id)); else await db.insert(services).values(values);
+          if (existing) await db.update(services).set({ ...values, needsResync: 0 }).where(eq(services.id, existing.id)); else await db.insert(services).values({ ...values, needsResync: 0 });
           synced += 1;
         } catch (error) {
           const failure = { providerServiceId, error: error instanceof Error ? error.message : String(error) };
@@ -275,15 +289,15 @@ export const appRouter = router({
         }
       }
       await db.update(smmProviders).set({ lastSyncAt: new Date() }).where(eq(smmProviders.id, provider.id));
-      await recordAudit({ actorUserId: ctx.user.id, action: "provider.services_synced", entityType: "provider", entityId: String(provider.id), details: { selected: input.serviceIds.length, synced, failures, markupPercent: input.markupPercent } });
+      await recordAudit({ actorUserId: ctx.user.id, action: "provider.services_synced", entityType: "provider", entityId: String(provider.id), details: { selected: input.serviceIds.length, synced, failures, pricingPolicy: "tiered-v1" } });
       return { synced, requested: input.serviceIds.length, failures };
     }),
     syncRuns: adminOnly.query(() => listSyncRuns()),
     upsertService: adminOnly.input(serviceInput.extend({ id: z.number().int().positive().optional(), isActive: z.number().int().min(0).max(1).optional() })).mutation(async ({ ctx, input }) => {
       const db = await getDb(); if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database unavailable" });
-      if (input.retailRatePer1k < input.wholesaleRatePer1k) throw new TRPCError({ code: "BAD_REQUEST", message: "Retail price cannot be lower than provider cost" });
+      if (!Number.isFinite(input.wholesaleRatePer1k) || input.wholesaleRatePer1k < 0) throw new TRPCError({ code: "BAD_REQUEST", message: "Wholesale price must be a valid non-negative amount" });
       if (input.maxQuantity < input.minQuantity) throw new TRPCError({ code: "BAD_REQUEST", message: "Maximum quantity must be at least the minimum quantity" });
-      const values = { name: input.name, platform: input.platform, category: input.category, description: input.description, retailRatePer1k: input.retailRatePer1k.toFixed(4), wholesaleRatePer1k: input.wholesaleRatePer1k.toFixed(4), minQuantity: input.minQuantity, maxQuantity: input.maxQuantity, tags: input.tags, providerId: input.providerId, providerServiceId: input.providerServiceId, isActive: input.isActive ?? 1 };
+      const values = { name: input.name, platform: input.platform, category: input.category, description: input.description, retailRatePer1k: formatTieredRetailRatePer1k(input.wholesaleRatePer1k), wholesaleRatePer1k: input.wholesaleRatePer1k.toFixed(4), minQuantity: input.minQuantity, maxQuantity: input.maxQuantity, tags: input.tags, providerId: input.providerId, providerServiceId: input.providerServiceId, isActive: input.isActive ?? 1, needsResync: 0 };
       if (input.id) await db.update(services).set(values).where(eq(services.id, input.id)); else await db.insert(services).values(values);
       await recordAudit({ actorUserId: ctx.user.id, action: input.id ? "service.updated" : "service.created", entityType: "service", entityId: input.id ? String(input.id) : undefined });
       return { success: true };

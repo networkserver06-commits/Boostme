@@ -25,6 +25,22 @@ describe("Turso-backed provider synchronization", () => {
     expect(await db.select().from(syncRuns)).toMatchObject([{ status: "completed", itemsProcessed: 1 }]);
   });
 
+  it("replaces corrupted rates using the tier engine and disables missing mapped services", async () => {
+    const db = await createTestDb();
+    const provider = await seedProvider(db);
+    const [mapped] = await db.insert(services).values({ providerId: provider.id, providerServiceId: "42", name: "TikTok Likes", platform: "TikTok", category: "Likes", wholesaleRatePer1k: "0.8800", retailRatePer1k: "0.8800", minQuantity: 100, maxQuantity: 100000, isActive: 1 }).returning();
+    const [missing] = await db.insert(services).values({ providerId: provider.id, providerServiceId: "removed-99", name: "Removed service", platform: "TikTok", category: "Likes", wholesaleRatePer1k: "2.0000", retailRatePer1k: "5.0000", minQuantity: 100, maxQuantity: 100000, isActive: 1 }).returning();
+
+    await executeProviderSync("catalog", {
+      getDb: dbDependency(db),
+      fetchProviderServices: vi.fn().mockResolvedValue([{ service: "42", name: "TikTok Likes", category: "TikTok Likes", rate: "41.26", min: "100", max: "100000" }]),
+      recordAudit: vi.fn() as any,
+    });
+
+    expect(await db.select().from(services).where(eq(services.id, mapped.id))).toMatchObject([{ wholesaleRatePer1k: "41.2600", retailRatePer1k: "57.7640", needsResync: 0, isActive: 1 }]);
+    expect(await db.select().from(services).where(eq(services.id, missing.id))).toMatchObject([{ needsResync: 1, isActive: 0 }]);
+  });
+
   it("records a visible failed run and skips when no provider is configured", async () => {
     vi.stubEnv("BASE_URL", "");
     vi.stubEnv("API_KEY", "");

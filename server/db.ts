@@ -33,6 +33,7 @@ const schemaStatements = [
     platform TEXT NOT NULL, category TEXT NOT NULL, description TEXT, wholesale_rate_per1k TEXT NOT NULL DEFAULT '0.0000',
     retail_rate_per1k TEXT NOT NULL DEFAULT '0.0000', min_quantity INTEGER NOT NULL DEFAULT 100,
     max_quantity INTEGER NOT NULL DEFAULT 100000, tags TEXT, is_active INTEGER NOT NULL DEFAULT 1,
+    needs_resync INTEGER NOT NULL DEFAULT 0,
     created_at INTEGER NOT NULL DEFAULT (unixepoch() * 1000)
   )`,
   `CREATE TABLE IF NOT EXISTS orders (
@@ -96,7 +97,9 @@ export async function initializeTursoSchema(client: Client) {
   for (const column of ["provider_id INTEGER", "wholesale_cost_kes REAL", "retail_paid_kes REAL", "net_profit_kes REAL"]) {
     try { await client.execute(`ALTER TABLE orders ADD COLUMN ${column}`); } catch { /* Existing databases already have the column. */ }
   }
+  try { await client.execute("ALTER TABLE services ADD COLUMN needs_resync INTEGER NOT NULL DEFAULT 0"); } catch { /* Existing databases already have the column. */ }
   await client.execute("CREATE INDEX IF NOT EXISTS orders_provider_idx ON orders(provider_id, provider_order_id)");
+  await client.execute("CREATE INDEX IF NOT EXISTS services_needs_resync_idx ON services(needs_resync)");
 }
 
 export function setTursoClientForTesting(client: Client | null) {

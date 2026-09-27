@@ -24,34 +24,52 @@ export async function executeProviderSync(kind: SyncKind, options: { taskUid?: s
     return { runId: run?.id ?? null, processed: 0, skipped: "no-provider" as const };
   }
   let processed = 0;
-  if (kind === "catalog") {
-    const catalog = await getServices(provider.apiUrl, provider.apiKey);
-    for (const item of catalog) {
-      const existing = (await db.select().from(services).where(and(eq(services.providerId, provider.id), eq(services.providerServiceId, getProviderServiceId(item)))).limit(1))[0];
-      const values = mapCatalogService(item, provider.id, 150);
-      if (existing) await db.update(services).set(values).where(eq(services.id, existing.id)); else await db.insert(services).values(values);
-      processed += 1;
-    }
-    await db.update(smmProviders).set({ lastSyncAt: new Date() }).where(eq(smmProviders.id, provider.id));
-  } else {
-    const allOrders = await db.select().from(orders);
-    const outstanding = allOrders.filter((order) => !order.status || OUTSTANDING_ORDER_STATUSES.includes(order.status as (typeof OUTSTANDING_ORDER_STATUSES)[number]));
-    for (const order of outstanding) {
-      if (!order.providerOrderId) continue;
-      try {
-        const orderProvider = order.providerId === provider.id ? provider : order.providerId ? (await db.select().from(smmProviders).where(eq(smmProviders.id, order.providerId)).limit(1))[0] : provider;
-        if (!orderProvider) continue;
-        const status = await getStatus(orderProvider.apiUrl, orderProvider.apiKey, order.providerOrderId);
-        await db.update(orders).set({ status: mapProviderStatus(status.status), startCount: Number(status.start_count ?? order.startCount ?? 0), remains: Number(status.remains ?? order.remains ?? order.quantity) }).where(eq(orders.id, order.id));
+  try {
+    if (kind === "catalog") {
+      const catalog = await getServices(provider.apiUrl, provider.apiKey);
+      const localCatalog = await db.select().from(services).where(eq(services.providerId, provider.id));
+      const localByProviderServiceId = new Map(localCatalog.filter((service) => service.providerServiceId).map((service) => [service.providerServiceId!, service]));
+      const liveProviderServiceIds = new Set<string>();
+      for (const item of catalog) {
+        const providerServiceId = getProviderServiceId(item);
+        liveProviderServiceIds.add(providerServiceId);
+        const existing = localByProviderServiceId.get(providerServiceId);
+        const values = mapCatalogService(item, provider.id);
+        if (existing) await db.update(services).set({ ...values, needsResync: 0 }).where(eq(services.id, existing.id));
+        else await db.insert(services).values({ ...values, needsResync: 0 });
         processed += 1;
-      } catch (error) {
-        await audit({ actorUserId: options.actorUserId, action: "sync.order_failed", entityType: "order", entityId: String(order.id), details: { error: String(error) } });
+      }
+      // A mapped service absent from the live provider catalog cannot be priced safely.
+      for (const service of localCatalog) {
+        if (service.providerServiceId && !liveProviderServiceIds.has(service.providerServiceId)) {
+          await db.update(services).set({ isActive: 0, needsResync: 1 }).where(eq(services.id, service.id));
+        }
+      }
+      await db.update(smmProviders).set({ lastSyncAt: new Date() }).where(eq(smmProviders.id, provider.id));
+    } else {
+      const allOrders = await db.select().from(orders);
+      const outstanding = allOrders.filter((order) => !order.status || OUTSTANDING_ORDER_STATUSES.includes(order.status as (typeof OUTSTANDING_ORDER_STATUSES)[number]));
+      for (const order of outstanding) {
+        if (!order.providerOrderId) continue;
+        try {
+          const orderProvider = order.providerId === provider.id ? provider : order.providerId ? (await db.select().from(smmProviders).where(eq(smmProviders.id, order.providerId)).limit(1))[0] : provider;
+          if (!orderProvider) continue;
+          const status = await getStatus(orderProvider.apiUrl, orderProvider.apiKey, order.providerOrderId);
+          await db.update(orders).set({ status: mapProviderStatus(status.status), startCount: Number(status.start_count ?? order.startCount ?? 0), remains: Number(status.remains ?? order.remains ?? order.quantity) }).where(eq(orders.id, order.id));
+          processed += 1;
+        } catch (error) {
+          await audit({ actorUserId: options.actorUserId, action: "sync.order_failed", entityType: "order", entityId: String(order.id), details: { error: String(error) } });
+        }
       }
     }
+    if (run) await db.update(syncRuns).set({ ...syncResult(processed), finishedAt: new Date() }).where(eq(syncRuns.id, run.id));
+    await audit({ actorUserId: options.actorUserId, action: `sync.${kind}.completed`, entityType: "sync_run", entityId: String(run?.id ?? "unknown"), details: { processed, taskUid: options.taskUid, trigger: options.actorUserId ? "admin" : "cron" } });
+    return { runId: run?.id ?? null, processed };
+  } catch (error) {
+    if (run) await db.update(syncRuns).set({ ...syncResult(processed, error), finishedAt: new Date() }).where(eq(syncRuns.id, run.id));
+    await audit({ actorUserId: options.actorUserId, action: `sync.${kind}.failed`, entityType: "sync_run", entityId: String(run?.id ?? "unknown"), details: { processed, taskUid: options.taskUid, error: String(error) } });
+    throw error;
   }
-  if (run) await db.update(syncRuns).set({ ...syncResult(processed), finishedAt: new Date() }).where(eq(syncRuns.id, run.id));
-  await audit({ actorUserId: options.actorUserId, action: `sync.${kind}.completed`, entityType: "sync_run", entityId: String(run?.id ?? "unknown"), details: { processed, taskUid: options.taskUid, trigger: options.actorUserId ? "admin" : "cron" } });
-  return { runId: run?.id ?? null, processed };
 }
 
 async function authenticateVercelCron(req: Request): Promise<CronUser> {

@@ -1,4 +1,5 @@
 import { normalizeServicePresentation } from "../shared/serviceCatalog";
+import { formatTieredRetailRatePer1k } from "../shared/pricing";
 
 export type ProviderService = { service?: string | number; services?: string | number; name: string; category?: string; Category?: string; type?: string; rate: string | number; min: string | number; max: string | number };
 export type ProviderOrderStatus = { status: string; start_count?: string | number; remains?: string | number; charge?: string | number };
@@ -17,9 +18,11 @@ export function getProviderServiceId(item: ProviderService) {
   return String(item.service ?? item.services);
 }
 
-export function mapCatalogService(item: ProviderService, providerId: number, markupPercent: number) {
+export function mapCatalogService(item: ProviderService, providerId: number) {
   const category = item.category || item.Category || item.type || "General";
-  const imported = { providerId, providerServiceId: getProviderServiceId(item), name: item.name, platform: category.split(" ")[0] || "Social", category, wholesaleRatePer1k: Number(item.rate).toFixed(4), retailRatePer1k: (Number(item.rate) * (1 + markupPercent / 100)).toFixed(4), minQuantity: Number(item.min), maxQuantity: Number(item.max), isActive: 1 };
+  const wholesaleRatePer1k = Number(item.rate);
+  if (!Number.isFinite(wholesaleRatePer1k) || wholesaleRatePer1k < 0) throw new Error(`Provider service ${getProviderServiceId(item)} has an invalid rate`);
+  const imported = { providerId, providerServiceId: getProviderServiceId(item), name: item.name, platform: category.split(" ")[0] || "Social", category, wholesaleRatePer1k: wholesaleRatePer1k.toFixed(4), retailRatePer1k: formatTieredRetailRatePer1k(wholesaleRatePer1k), minQuantity: Number(item.min), maxQuantity: Number(item.max), isActive: 1 };
   const normalized = normalizeServicePresentation(imported);
   return { ...imported, platform: normalized.platform, category: normalized.category };
 }
