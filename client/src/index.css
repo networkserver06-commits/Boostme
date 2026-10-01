@@ -57,3 +57,8 @@ button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible
 .flex { min-height: 0; min-width: 0; }
 #root { min-height: 100vh; }
 @media (prefers-reduced-motion: reduce) { *, *::before, *::after { scroll-behavior: auto !important; transition-duration: 0.01ms !important; animation-duration: 0.01ms !important; animation-iteration-count: 1 !important; } }
+
+[data-theme="light"] [class~="text-white"] { color: var(--foreground) !important; }
+[data-theme="light"] [class~="text-slate-300"], [data-theme="light"] [class~="text-slate-400"] { color: oklch(0.36 0.03 255) !important; }
+[data-theme="light"] [class~="text-slate-500"], [data-theme="light"] [class~="text-slate-600"] { color: oklch(0.48 0.035 255) !important; }
+[data-theme="light"] [class~="bg-blue-500"][class~="text-white"], [data-theme="light"] [class~="bg-cyan-300"][class~="text-white"] { color: white !important; }
