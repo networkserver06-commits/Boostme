@@ -55,21 +55,25 @@ export function calculateOrderEconomics(order: OrderEconomics) {
 }
 
 /** Calculates from values captured at checkout; historical orders must not be re-priced from today's catalog. */
-export function calculateRecordedOrderEconomics(input: { quantity: number; charge: number | string; wholesaleCostKes?: number | string | null; retailPaidKes?: number | string | null; status?: string | null }) {
+export function calculateRecordedOrderEconomics(input: { quantity: number; charge: number | string; wholesaleCostKes?: number | string | null; retailPaidKes?: number | string | null; refundAmount?: number | string | null; status?: string | null }) {
   const quantity = Math.max(0, Math.trunc(Number(input.quantity) || 0));
   const charge = Math.max(0, Number(input.retailPaidKes ?? input.charge) || 0);
   const providerCost = Math.max(0, Number(input.wholesaleCostKes) || 0);
+  const refund = Math.min(charge, Math.max(0, Number(input.refundAmount) || 0));
   const status = String(input.status ?? "").trim().toLowerCase();
   const realized = !["canceled", "cancelled", "failed"].includes(status);
-  const profit = Number((charge - providerCost).toFixed(2));
+  const netRevenue = Math.max(0, charge - refund);
+  const profit = Number((netRevenue - providerCost).toFixed(2));
   return {
     quantity,
-    billed: Number((Number(input.charge) || 0).toFixed(2)),
+    billed: Number((Math.max(0, Number(input.charge) || 0)).toFixed(2)),
     revenue: Number((realized ? charge : 0).toFixed(2)),
+    refund: Number(refund.toFixed(2)),
+    netRevenue: Number((realized ? netRevenue : 0).toFixed(2)),
     providerCost: Number((realized ? providerCost : 0).toFixed(2)),
     profit: Number((realized ? profit : 0).toFixed(2)),
     estimatedProfit: profit,
-    marginPercent: charge > 0 ? Number((profit / charge * 100).toFixed(2)) : 0,
+    marginPercent: netRevenue > 0 ? Number((profit / netRevenue * 100).toFixed(2)) : 0,
     isLoss: realized && profit < 0,
   };
 }

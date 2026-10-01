@@ -280,7 +280,7 @@ export const appRouter = router({
         db.select().from(services),
         db.select({ count: sql<number>`count(*)` }).from(services).where(eq(services.isActive, 1)),
         db.select({ count: sql<number>`count(*)` }).from(syncRuns).where(eq(syncRuns.status, "failed")),
-        db.select({ amount: walletTransactions.amount }).from(walletTransactions).where(eq(walletTransactions.type, "refund")),
+        db.select({ amount: walletTransactions.amount, status: walletTransactions.status }).from(walletTransactions).where(eq(walletTransactions.type, "refund")),
       ]);
       const serviceById = new Map(serviceRows.map((service) => [service.id, service]));
       const profit = summarizeProfit({ orders: orderRows.map((order) => {
@@ -288,7 +288,7 @@ export const appRouter = router({
         const capturedWholesale = order.wholesaleCostKes != null ? Number(order.wholesaleCostKes) / Math.max(order.quantity, 1) * 1000 : Number(fallback?.wholesaleRatePer1k ?? 0);
         const capturedRetail = order.retailPaidKes != null ? Number(order.retailPaidKes) / Math.max(order.quantity, 1) * 1000 : Number(fallback?.retailRatePer1k ?? 0);
         return { ...order, wholesaleRatePer1k: capturedWholesale, retailRatePer1k: capturedRetail };
-      }), refunds: refundRows.map((row) => row.amount) });
+      }), refunds: refundRows.filter((row) => row.status === "completed").map((row) => row.amount) });
       return { users: Number(userCount[0]?.count ?? 0), orders: orderRows.length, revenue: profit.grossRevenue, ...profit, walletLiability: profileRows.reduce((sum, profile) => sum + Number(profile.balance), 0), activeServices: Number(serviceCount[0]?.count ?? 0), failedSyncs: Number(failedRows[0]?.count ?? 0) };
     }),
     profitability: adminOnly.query(async () => {
@@ -321,20 +321,23 @@ export const appRouter = router({
     orders: adminOnly.query(async () => {
       const db = await getDb();
       if (!db) return [];
-      const [orderRows, serviceRows, providerRows, userRows] = await Promise.all([
+      const [orderRows, serviceRows, providerRows, userRows, refundRows] = await Promise.all([
         db.select().from(orders).orderBy(desc(orders.createdAt)).limit(200),
         db.select().from(services),
         db.select().from(smmProviders),
         db.select({ id: users.id, name: users.name, email: users.email }).from(users),
+        db.select({ amount: walletTransactions.amount, reference: walletTransactions.reference, status: walletTransactions.status }).from(walletTransactions).where(eq(walletTransactions.type, "refund")),
       ]);
       const serviceById = new Map(serviceRows.map((service) => [service.id, service]));
       const providerById = new Map(providerRows.map((provider) => [provider.id, provider]));
       const userById = new Map(userRows.map((user) => [user.id, user]));
+      const refundByOrder = new Map<number, number>();
+      for (const refund of refundRows) { if (refund.status !== "completed") continue; const match = refund.reference.match(/^refund-(\d+)$/); if (match) refundByOrder.set(Number(match[1]), (refundByOrder.get(Number(match[1])) ?? 0) + Math.max(0, Number(refund.amount) || 0)); }
       return orderRows.map((order) => {
         const service = serviceById.get(order.serviceId);
         const provider = order.providerId ? providerById.get(order.providerId) : undefined;
         const customer = userById.get(order.userId);
-        const economics = calculateRecordedOrderEconomics(order);
+        const economics = calculateRecordedOrderEconomics({ ...order, refundAmount: refundByOrder.get(order.id) ?? 0 });
         return { ...order, serviceName: service?.name ?? `Service #${order.serviceId}`, platform: service ? normalizeServicePresentation(service).platform : "Other", providerName: provider?.name ?? "Unassigned", providerServiceId: service?.providerServiceId ?? null, customerName: customer?.name ?? "Unknown customer", customerEmail: customer?.email ?? "", ...economics };
       });
     }),
