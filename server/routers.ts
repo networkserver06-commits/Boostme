@@ -6,7 +6,7 @@ import { and, chargeWallet, getActiveServices, getDb, getOrCreateProfile, getUse
 import { clearAuthAttempts, consumeAuthAttempt, createSession, hashPassword, normalizeEmail, readSessionToken, revokeSession, verifyPassword } from "./_core/passwordAuth";
 import { cancelProviderOrder, enforceProviderRateFloor, fetchProviderServices, fetchProviderStatus, getProviderServiceId, mapCatalogService, mapProviderStatus, submitProviderOrder } from "./provider";
 import { normalizeServicePresentation } from "../shared/serviceCatalog";
-import { calculateCheckoutEconomics, calculateRecordedOrderEconomics, summarizeProfit } from "../shared/finance";
+import { calculateCheckoutEconomics, calculateRecordedOrderEconomics, calculateServiceEconomics, summarizeProfit } from "../shared/finance";
 import { formatTieredRetailRatePer1k } from "../shared/pricing";
 import { executeProviderSync } from "./scheduled";
 import { createLeeTecStkPush, findLeeTecTransaction, normalizePaymentStatus, summarizeLeeTecResponse } from "./leetec";
@@ -290,6 +290,32 @@ export const appRouter = router({
         return { ...order, wholesaleRatePer1k: capturedWholesale, retailRatePer1k: capturedRetail };
       }), refunds: refundRows.map((row) => row.amount) });
       return { users: Number(userCount[0]?.count ?? 0), orders: orderRows.length, revenue: profit.grossRevenue, ...profit, walletLiability: profileRows.reduce((sum, profile) => sum + Number(profile.balance), 0), activeServices: Number(serviceCount[0]?.count ?? 0), failedSyncs: Number(failedRows[0]?.count ?? 0) };
+    }),
+    profitability: adminOnly.query(async () => {
+      const db = await getDb();
+      if (!db) return { totals: { services: 0, orders: 0, billedRevenue: 0, grossRevenue: 0, refunds: 0, netRevenue: 0, providerCost: 0, profit: 0, marginPercent: 0 }, services: [] };
+      const [serviceRows, orderRows, refundRows] = await Promise.all([
+        db.select().from(services).orderBy(desc(services.createdAt)),
+        db.select().from(orders),
+        db.select({ amount: walletTransactions.amount, reference: walletTransactions.reference, status: walletTransactions.status }).from(walletTransactions).where(eq(walletTransactions.type, "refund")),
+      ]);
+      const serviceById = new Map(serviceRows.map((service) => [service.id, service]));
+      const economicsOrders = orderRows.map((order) => {
+        const service = serviceById.get(order.serviceId);
+        const capturedWholesale = order.wholesaleCostKes != null ? Number(order.wholesaleCostKes) / Math.max(order.quantity, 1) * 1000 : Number(service?.wholesaleRatePer1k ?? 0);
+        const capturedRetail = order.retailPaidKes != null ? Number(order.retailPaidKes) / Math.max(order.quantity, 1) * 1000 : Number(service?.retailRatePer1k ?? 0);
+        return { ...order, wholesaleRatePer1k: capturedWholesale, retailRatePer1k: capturedRetail };
+      });
+      const refundByOrder = new Map<number, number>();
+      for (const refund of refundRows) { if (refund.status !== "completed") continue; const match = refund.reference.match(/^refund-(\d+)$/); if (match) refundByOrder.set(Number(match[1]), (refundByOrder.get(Number(match[1])) ?? 0) + Math.max(0, Number(refund.amount) || 0)); }
+      const rows = serviceRows.map((service) => {
+        const related = economicsOrders.filter((order) => order.serviceId === service.id);
+        const summary = summarizeProfit({ orders: related, refunds: related.map((order) => refundByOrder.get(order.id) ?? 0) });
+        const projected = calculateServiceEconomics({ quantity: 1000, retailRatePer1k: service.retailRatePer1k, wholesaleRatePer1k: service.wholesaleRatePer1k });
+        return { id: service.id, name: service.name, platform: service.platform, category: service.category, isActive: service.isActive, retailRatePer1k: Number(service.retailRatePer1k), wholesaleRatePer1k: Number(service.wholesaleRatePer1k), markupPercent: projected.providerCost > 0 ? Number((projected.profit / projected.providerCost * 100).toFixed(2)) : 0, projectedProfitPer1k: projected.profit, projectedMarginPercent: projected.marginPercent, orders: related.length, completedOrders: related.filter((order) => order.status === "completed").length, ...summary };
+      }).sort((a, b) => b.profit - a.profit || b.orders - a.orders);
+      const totals = summarizeProfit({ orders: economicsOrders, refunds: refundRows.filter((row) => row.status === "completed").map((row) => row.amount) });
+      return { totals: { services: serviceRows.length, orders: orderRows.length, ...totals }, services: rows };
     }),
     users: adminOnly.query(() => listAdminUsers()),
     orders: adminOnly.query(async () => {
