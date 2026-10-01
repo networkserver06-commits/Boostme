@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { cancelProviderOrder, enforceProviderRateFloor, fetchProviderServices, fetchProviderStatus, mapCatalogService, mapProviderStatus, providerRateCurrency, submitProviderOrder } from "./provider";
+import { cancelProviderOrder, enforceProviderRateFloor, fetchProviderServices, fetchProviderStatus, getProviderPricingContext, mapCatalogService, mapProviderStatus, providerRateCurrency, submitProviderOrder } from "./provider";
 
 afterEach(() => vi.unstubAllGlobals());
 
@@ -33,7 +33,13 @@ describe("provider service mapping", () => {
   });
 
   it("supports ShakerGain’s documented services and Category aliases", () => {
-    expect(mapCatalogService({ services: "1", name: "Data Entry", Category: "Seo", rate: 1, min: "10", max: "100000", type: "Default" }, 8)).toMatchObject({ providerId: 8, providerServiceId: "1", platform: "Seo", category: "Seo", wholesaleRatePer1k: "1.0000", retailRatePer1k: "3.0000" });
+    const context = getProviderPricingContext("ShakerGain", "https://shakergainske.com/api/v2");
+    expect(context.currency).toBe("USD");
+    expect(mapCatalogService({ services: "1", name: "Data Entry", Category: "Seo", rate: 1, min: "10", max: "100000", type: "Default" }, 8, context)).toMatchObject({ providerId: 8, providerServiceId: "1", platform: "Seo", category: "Seo", wholesaleRatePer1k: "130.0000", retailRatePer1k: "182.0000" });
+  });
+
+  it("converts a ShakerGain API rate to the exact KES wholesale equivalent", () => {
+    expect(mapCatalogService({ service: "27503", name: "Instagram Followers | Emergency", category: "Instagram Followers", rate: "0.07253846", min: "10", max: "100000", type: "Default" }, 8, { currency: "USD", usdToKes: 130 })).toMatchObject({ wholesaleRatePer1k: "9.4300", retailRatePer1k: "23.5750" });
   });
 
   it("accepts KES/KSh rates and blocks USD rates instead of treating dollars as KES", () => {

@@ -1,6 +1,6 @@
 import type { Request, Response } from "express";
 import { and, ensureEnvironmentProvider, desc, eq, getDb, orders, recordAudit, services, smmProviders, syncRuns } from "./db";
-import { fetchProviderServices, fetchProviderStatus, getProviderServiceId, mapCatalogService, mapProviderStatus } from "./provider";
+import { fetchProviderServices, fetchProviderStatus, getProviderPricingContext, getProviderServiceId, mapCatalogService, mapProviderStatus } from "./provider";
 
 export const OUTSTANDING_ORDER_STATUSES = ["pending", "in_progress", "partial"] as const;
 export const isAuthorizedCron = (user: { isCron?: boolean; taskUid?: string }) => Boolean(user.isCron && user.taskUid);
@@ -34,7 +34,7 @@ export async function executeProviderSync(kind: SyncKind, options: { taskUid?: s
         const providerServiceId = getProviderServiceId(item);
         liveProviderServiceIds.add(providerServiceId);
         const existing = localByProviderServiceId.get(providerServiceId);
-        const values = mapCatalogService(item, provider.id);
+        const values = mapCatalogService(item, provider.id, getProviderPricingContext(provider.name, provider.apiUrl));
         const safe = Number(values.wholesaleRatePer1k) > 0 && Number(values.retailRatePer1k) > 0;
         if (existing) await db.update(services).set({ ...values, isActive: safe ? 1 : 0, needsResync: safe ? 0 : 1 }).where(eq(services.id, existing.id));
         else await db.insert(services).values({ ...values, isActive: safe ? 1 : 0, needsResync: safe ? 0 : 1 });

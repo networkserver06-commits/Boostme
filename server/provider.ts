@@ -2,6 +2,7 @@ import { normalizeServicePresentation } from "../shared/serviceCatalog";
 import { formatTieredRetailRatePer1k } from "../shared/pricing";
 
 export type ProviderService = { service?: string | number; services?: string | number; name: string; category?: string; Category?: string; type?: string; currency?: string; currency_code?: string; currencyCode?: string; rate_currency?: string; rate: string | number; min: string | number; max: string | number };
+export type ProviderPricingContext = { currency?: "KES" | "USD"; usdToKes?: number };
 export type ProviderOrderStatus = { status: string; start_count?: string | number; remains?: string | number; charge?: string | number };
 
 export async function providerRequest<T>(apiUrl: string, apiKey: string, body: Record<string, string | number>) {
@@ -40,15 +41,29 @@ export function providerRateCurrency(item: ProviderService): "KES" | "UNSUPPORTE
   return "UNSUPPORTED";
 }
 
-export function mapCatalogService(item: ProviderService, providerId: number) {
+export function getProviderPricingContext(providerName: string, apiUrl: string): Required<ProviderPricingContext> {
+  const isShakerGain = /shakergainske\.com/i.test(`${providerName} ${apiUrl}`);
+  const configuredUsdToKes = Number(process.env.SHAKERGAIN_USD_TO_KES ?? 130);
+  return { currency: isShakerGain ? "USD" : "KES", usdToKes: Number.isFinite(configuredUsdToKes) && configuredUsdToKes > 0 ? configuredUsdToKes : 130 };
+}
+
+function parseProviderRate(rawRate: string | number, currency: "KES" | "USD", usdToKes: number) {
+  const numericRate = Number(String(rawRate).replace(/^(KES|KSh|KSH|USD|\$)\s*/i, "").replaceAll(",", ""));
+  if (!Number.isFinite(numericRate) || numericRate < 0) return null;
+  return currency === "USD" ? numericRate * usdToKes : numericRate;
+}
+
+export function mapCatalogService(item: ProviderService, providerId: number, context: ProviderPricingContext = {}) {
   const category = item.category || item.Category || item.type || "General";
   const providerServiceId = getProviderServiceId(item);
-  if (providerRateCurrency(item) === "UNSUPPORTED") {
+  const explicitCurrency = [item.currency, item.currency_code, item.currencyCode, item.rate_currency].find(Boolean)?.trim().toUpperCase();
+  const currency = context.currency ?? (explicitCurrency === "KES" || explicitCurrency === "KSH" || explicitCurrency === "KSHS" ? "KES" : explicitCurrency === "USD" || explicitCurrency === "$" ? "UNSUPPORTED" : providerRateCurrency(item) === "UNSUPPORTED" ? "UNSUPPORTED" : "KES");
+  if (currency === "UNSUPPORTED") {
     console.error(`[PROVIDER CURRENCY BLOCKED] ${providerServiceId} ${item.name}: unsupported non-KES rate`);
     return { providerId, providerServiceId, name: item.name, platform: category.split(" ")[0] || "Social", category, wholesaleRatePer1k: "0.0000", retailRatePer1k: "0.0000", minQuantity: Number(item.min), maxQuantity: Number(item.max), isActive: 0 };
   }
-  const providerRate = Number(String(item.rate).replace(/^(KES|KSh|KSH)\s*/i, "").replaceAll(",", ""));
-  if (!Number.isFinite(providerRate) || providerRate < 0) throw new Error(`Provider service ${providerServiceId} has an invalid KES rate`);
+  const providerRate = parseProviderRate(item.rate, currency, context.usdToKes ?? 130);
+  if (providerRate == null) throw new Error(`Provider service ${providerServiceId} has an invalid ${currency} rate`);
   const wholesaleRatePer1k = enforceProviderRateFloor(providerServiceId, item.name, providerRate);
   const imported = { providerId, providerServiceId, name: item.name, platform: category.split(" ")[0] || "Social", category, wholesaleRatePer1k: wholesaleRatePer1k.toFixed(4), retailRatePer1k: formatTieredRetailRatePer1k(wholesaleRatePer1k), minQuantity: Number(item.min), maxQuantity: Number(item.max), isActive: 1 };
   const normalized = normalizeServicePresentation(imported);

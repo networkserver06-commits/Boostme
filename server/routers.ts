@@ -4,7 +4,7 @@ import { systemRouter } from "./_core/systemRouter";
 import { adminProcedure, protectedProcedure, publicProcedure, router } from "./_core/trpc";
 import { and, chargeWallet, getActiveServices, getDb, getOrCreateProfile, getUserByEmail, getUserOrders, getUserWallet, listAdminUsers, listProviders, listSyncRuns, recordAudit, refundOrder, settleDeposit, orders, profiles, services, smmProviders, syncRuns, syncSchedules, users, walletTransactions, eq, desc, sql } from "./db";
 import { clearAuthAttempts, consumeAuthAttempt, createSession, hashPassword, normalizeEmail, readSessionToken, revokeSession, verifyPassword } from "./_core/passwordAuth";
-import { cancelProviderOrder, enforceProviderRateFloor, fetchProviderServices, fetchProviderStatus, getProviderServiceId, mapCatalogService, mapProviderStatus, submitProviderOrder } from "./provider";
+import { cancelProviderOrder, enforceProviderRateFloor, fetchProviderServices, fetchProviderStatus, getProviderPricingContext, getProviderServiceId, mapCatalogService, mapProviderStatus, submitProviderOrder } from "./provider";
 import { normalizeServicePresentation } from "../shared/serviceCatalog";
 import { calculateCheckoutEconomics, calculateRecordedOrderEconomics, calculateServiceEconomics, summarizeProfit } from "../shared/finance";
 import { MIN_RETAIL_RATE_PER_1K_KES, formatTieredRetailRatePer1k } from "../shared/pricing";
@@ -150,7 +150,7 @@ export const appRouter = router({
         try {
           const liveService = (await fetchProviderServices(provider.apiUrl, provider.apiKey)).find((item) => getProviderServiceId(item) === service.providerServiceId);
           if (!liveService) throw new Error(`Provider service ${service.providerServiceId} is no longer available`);
-          const liveMapped = mapCatalogService(liveService, provider.id);
+          const liveMapped = mapCatalogService(liveService, provider.id, getProviderPricingContext(provider.name, provider.apiUrl));
           if (Number(liveMapped.wholesaleRatePer1k) !== Number(service.wholesaleRatePer1k) || liveMapped.retailRatePer1k !== service.retailRatePer1k) {
             await db.update(services).set({ wholesaleRatePer1k: liveMapped.wholesaleRatePer1k, retailRatePer1k: liveMapped.retailRatePer1k, needsResync: 0 }).where(eq(services.id, service.id));
             service.wholesaleRatePer1k = liveMapped.wholesaleRatePer1k;
@@ -348,7 +348,8 @@ export const appRouter = router({
       const remote = await fetchProviderServices(provider.apiUrl, provider.apiKey);
       const local = await db.select().from(services).where(eq(services.providerId, provider.id));
       const mapped = new Map(local.filter(item => item.providerServiceId).map(item => [item.providerServiceId, item]));
-      return remote.map(item => { const providerServiceId = getProviderServiceId(item); return { ...item, providerServiceId, localService: mapped.get(providerServiceId) ?? null }; });
+      const pricing = getProviderPricingContext(provider.name, provider.apiUrl);
+      return remote.map(item => { const providerServiceId = getProviderServiceId(item); const mappedService = mapCatalogService(item, provider.id, pricing); return { ...item, providerServiceId, wholesaleRatePer1k: mappedService.wholesaleRatePer1k, retailRatePer1k: mappedService.retailRatePer1k, rateCurrency: pricing.currency, usdToKes: pricing.usdToKes, localService: mapped.get(providerServiceId) ?? null }; });
     }),
     syncProviderServices: adminOnly.input(z.object({ providerId: z.number().int().positive(), serviceIds: z.array(z.string().min(1)).min(1), markupPercent: z.number().min(0).max(1000).default(150) })).mutation(async ({ ctx, input }) => {
       const db = await getDb(); if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database unavailable" });
@@ -361,7 +362,7 @@ export const appRouter = router({
       for (const item of selected) {
         const providerServiceId = getProviderServiceId(item);
         try {
-          const values = mapCatalogService(item, provider.id);
+          const values = mapCatalogService(item, provider.id, getProviderPricingContext(provider.name, provider.apiUrl));
           const existing = (await db.select().from(services).where(and(eq(services.providerId, provider.id), eq(services.providerServiceId, providerServiceId))).limit(1))[0];
           if (existing) await db.update(services).set({ ...values, needsResync: 0 }).where(eq(services.id, existing.id)); else await db.insert(services).values({ ...values, needsResync: 0 });
           synced += 1;

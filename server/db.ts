@@ -7,7 +7,7 @@ import { ENV } from "./_core/env";
 import * as schema from "../drizzle/schema";
 import { compareCustomerPlatforms, isCustomerVisiblePlatform, normalizeServicePresentation } from "../shared/serviceCatalog";
 import { MIN_RETAIL_RATE_PER_1K_KES, formatTieredRetailRatePer1k } from "../shared/pricing";
-import { enforceProviderRateFloor, fetchProviderServices, getProviderServiceId, mapCatalogService } from "./provider";
+import { enforceProviderRateFloor, fetchProviderServices, getProviderPricingContext, getProviderServiceId, mapCatalogService } from "./provider";
 
 export type DbRow = Record<string, any>;
 export type TursoDb = LibSQLDatabase<typeof schema.drizzleSchema>;
@@ -198,9 +198,10 @@ async function refreshCatalogFromProvider(db: TursoDb) {
         const mappedByProviderId = new Map(mapped.filter((service) => service.providerServiceId).map((service) => [service.providerServiceId!, service]));
         const client = getTursoClient();
         if (!client) throw new Error("Database client unavailable");
+        const pricing = getProviderPricingContext(provider.name, provider.apiUrl);
         const statements = remote.map((item) => {
           const providerServiceId = getProviderServiceId(item);
-          const values = mapCatalogService(item, provider.id);
+          const values = mapCatalogService(item, provider.id, pricing);
           const existing = mappedByProviderId.get(providerServiceId);
           const safe = Number(values.wholesaleRatePer1k) > 0 && Number(values.retailRatePer1k) > 0;
           return existing
