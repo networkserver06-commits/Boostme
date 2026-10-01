@@ -41,6 +41,7 @@ const categoryLabel = (category: string) => {
   if (value.includes("best")) return "Best Services";
   return category;
 };
+const normalizeCategory = (category: string) => category.trim().replace(/\s+/g, " ").toLowerCase();
 const platformStyle = (platform: string) => {
   const value = platform.toLowerCase();
   if (value.includes("instagram")) return { Icon: Instagram, className: "bg-gradient-to-br from-pink-500 via-rose-500 to-amber-300 text-white", short: "IG" };
@@ -108,20 +109,19 @@ export default function Dashboard() {
   const categoryOptions = useMemo(() => {
     const seen = new Map<string, { key: string; platform: string; category: string; label: string }>();
     platformServices.forEach((service) => {
-      const key = platform ? service.category : `${service.platform}::${service.category}`;
-      if (!seen.has(key)) seen.set(key, { key, platform: service.platform, category: service.category, label: platform ? categoryLabel(service.category) : `${service.platform} · ${categoryLabel(service.category)}` });
+      const normalized = normalizeCategory(service.category);
+      const key = platform ? normalized : normalized;
+      if (!seen.has(key)) seen.set(key, { key, platform: platform ? service.platform : "", category: service.category.trim().replace(/\s+/g, " "), label: categoryLabel(service.category.trim().replace(/\s+/g, " ")) });
     });
     return Array.from(seen.values()).sort((a, b) => compareCustomerPlatforms(a.platform, b.platform) || categoryPriority(a.category) - categoryPriority(b.category) || a.category.localeCompare(b.category));
   }, [platformServices, platform]);
   const categoryServices = useMemo(() => {
     if (!category) return platformServices;
-    if (platform) return platformServices.filter((service) => service.category === category);
-    const [selectedPlatform, selectedCategory] = category.split("::");
-    return platformServices.filter((service) => service.platform === selectedPlatform && service.category === selectedCategory);
+    return platformServices.filter((service) => normalizeCategory(service.category) === category);
   }, [platformServices, platform, category]);
   const selected = categoryServices.find((service) => service.id === Number(serviceId));
   const targetLinkError = targetLink.trim() && !validHttpUrl(targetLink) ? "Enter a complete link beginning with https:// or http://." : selected && targetLink.trim() && platformHosts[selected.platform] && (() => { try { const host = new URL(targetLink.trim()).hostname.toLowerCase(); return !platformHosts[selected.platform].some((item) => host === item || host.endsWith(`.${item}`)); } catch { return true; } })() ? `Use a valid ${selected.platform} link for this service.` : "";
-  useEffect(() => { const match = services.data?.find((service) => service.id === Number(serviceId)); if (match) { setQuantity(match.minQuantity); setPlatform(match.platform); setCategory(match.category); } }, [services.data, serviceId]);
+  useEffect(() => { const match = services.data?.find((service) => service.id === Number(serviceId)); if (match) { setQuantity(match.minQuantity); setPlatform(match.platform); setCategory(normalizeCategory(match.category)); } }, [services.data, serviceId]);
   const calculatedCharge = selected ? Number((Number(selected.retailRatePer1k) * quantity / 1000).toFixed(2)) : 0;
   const charge = selected ? Math.max(calculatedCharge, 10) : 0;
   const isMinimumChargeApplied = Boolean(selected && calculatedCharge < 10);
