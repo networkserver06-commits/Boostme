@@ -5,7 +5,7 @@ describe("tiered retail pricing", () => {
   it("applies a 150% markup through the KES 20.00 threshold", () => {
     expect(LOW_COST_RETAIL_MULTIPLIER).toBe(2.5);
     expect(calculateTieredRetailRatePer1k(20)).toBe(50);
-    expect(formatTieredRetailRatePer1k("0.88")).toBe("2.2000");
+    expect(formatTieredRetailRatePer1k("0.88")).toBe("3.0000");
   });
 
   it("applies a 40% markup above the KES 20.00 threshold", () => {

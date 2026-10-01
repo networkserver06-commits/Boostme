@@ -3,7 +3,7 @@ import { calculateCheckoutEconomics, calculateOrderEconomics, calculateRecordedO
 
 describe("finance calculations", () => {
 	it("applies the KSh 10 floor and rejects unsafe margins", () => {
-		expect(calculateCheckoutEconomics({ quantity: 50, retailRatePer1k: 5, wholesaleRatePer1k: 1 })).toMatchObject({ retailAmountCalculated: 0.25, finalRetailCharged: 10, wholesaleCostForQty: 0.05, estimatedProfit: 9.95, isValid: true });
+		expect(calculateCheckoutEconomics({ quantity: 50, retailRatePer1k: 0.5, wholesaleRatePer1k: 0.1 })).toMatchObject({ retailAmountCalculated: 0.15, finalRetailCharged: 10, wholesaleCostForQty: 0.01, estimatedProfit: 9.99, isValid: true });
 		expect(calculateCheckoutEconomics({ quantity: 1000, retailRatePer1k: 10, wholesaleRatePer1k: 10 })).toMatchObject({ isValid: false });
 		expect(calculateCheckoutEconomics({ quantity: 1000, retailRatePer1k: 10.99, wholesaleRatePer1k: 10 })).toMatchObject({ isValid: false });
 	});
@@ -31,5 +31,8 @@ describe("finance calculations", () => {
   it("normalizes invalid numeric inputs and cancellation spelling", () => {
     expect(calculateOrderEconomics({ quantity: 1000, charge: -20, retailRatePer1k: -35, wholesaleRatePer1k: 12.5, status: "CANCELLED" })).toMatchObject({ billed: 0, revenue: 0, providerCost: 0, profit: 0 });
     expect(summarizeProfit({ orders: [{ quantity: 1000, charge: 35, retailRatePer1k: 35, wholesaleRatePer1k: 12.5, status: "completed" }], refunds: [-5, "not-a-number"] })).toMatchObject({ refunds: 0, netRevenue: 35, profit: 22.5 });
+  });
+  it("never calculates a new retail rate below KES 3 per 1k", () => {
+    expect(calculateServiceEconomics({ quantity: 1000, retailRatePer1k: 0.5, wholesaleRatePer1k: 0.1 })).toMatchObject({ revenue: 3, providerCost: 0.1, profit: 2.9 });
   });
 });

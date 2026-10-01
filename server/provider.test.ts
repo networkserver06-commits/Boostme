@@ -33,7 +33,7 @@ describe("provider service mapping", () => {
   });
 
   it("supports ShakerGain’s documented services and Category aliases", () => {
-    expect(mapCatalogService({ services: "1", name: "Data Entry", Category: "Seo", rate: 1, min: "10", max: "100000", type: "Default" }, 8)).toMatchObject({ providerId: 8, providerServiceId: "1", platform: "Seo", category: "Seo", wholesaleRatePer1k: "1.0000", retailRatePer1k: "2.5000" });
+    expect(mapCatalogService({ services: "1", name: "Data Entry", Category: "Seo", rate: 1, min: "10", max: "100000", type: "Default" }, 8)).toMatchObject({ providerId: 8, providerServiceId: "1", platform: "Seo", category: "Seo", wholesaleRatePer1k: "1.0000", retailRatePer1k: "3.0000" });
   });
 
   it("accepts KES/KSh rates and blocks USD rates instead of treating dollars as KES", () => {

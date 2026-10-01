@@ -7,7 +7,7 @@ import { clearAuthAttempts, consumeAuthAttempt, createSession, hashPassword, nor
 import { cancelProviderOrder, enforceProviderRateFloor, fetchProviderServices, fetchProviderStatus, getProviderServiceId, mapCatalogService, mapProviderStatus, submitProviderOrder } from "./provider";
 import { normalizeServicePresentation } from "../shared/serviceCatalog";
 import { calculateCheckoutEconomics, calculateRecordedOrderEconomics, calculateServiceEconomics, summarizeProfit } from "../shared/finance";
-import { formatTieredRetailRatePer1k } from "../shared/pricing";
+import { MIN_RETAIL_RATE_PER_1K_KES, formatTieredRetailRatePer1k } from "../shared/pricing";
 import { executeProviderSync } from "./scheduled";
 import { createLeeTecStkPush, findLeeTecTransaction, normalizePaymentStatus, summarizeLeeTecResponse } from "./leetec";
 
@@ -391,7 +391,7 @@ export const appRouter = router({
       await recordAudit({ actorUserId: ctx.user.id, action: "service.toggled", entityType: "service", entityId: String(input.id), details: input });
       return { success: true };
     }),
-    adjustBalance: adminOnly.input(z.object({ userId: z.number().int().positive(), amount: z.number(), note: z.string().min(3) })).mutation(async ({ ctx, input }) => {
+    adjustBalance: adminOnly.input(z.object({ userId: z.number().int().positive(), amount: z.number().finite().refine((amount) => amount === 0 || Math.abs(amount) >= MIN_RETAIL_RATE_PER_1K_KES, `Adjustment must be zero or at least KES ${MIN_RETAIL_RATE_PER_1K_KES}`), note: z.string().min(3) })).mutation(async ({ ctx, input }) => {
       const db = await getDb(); if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database unavailable" });
       const profile = (await db.select().from(profiles).where(eq(profiles.userId, input.userId)).limit(1))[0];
       if (!profile) throw new TRPCError({ code: "NOT_FOUND", message: "Wallet profile not found" });

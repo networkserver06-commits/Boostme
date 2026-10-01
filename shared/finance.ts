@@ -1,3 +1,5 @@
+import { MIN_RETAIL_RATE_PER_1K_KES } from "./pricing";
+
 export type ServiceEconomicsInput = {
   quantity: number;
   retailRatePer1k: number | string;
@@ -14,7 +16,7 @@ const fromCents = (value: number) => Number((value / 100).toFixed(2));
 
 export function calculateServiceEconomics(input: ServiceEconomicsInput) {
   const quantity = Math.max(0, Math.trunc(input.quantity));
-  const retail = Math.max(0, Number(input.retailRatePer1k) || 0);
+  const retail = Math.max(MIN_RETAIL_RATE_PER_1K_KES, Number(input.retailRatePer1k) || 0);
   const wholesale = Math.max(0, Number(input.wholesaleRatePer1k) || 0);
   const revenueCents = cents(retail * quantity / 1000);
   const costCents = cents(wholesale * quantity / 1000);
@@ -30,7 +32,8 @@ export function calculateServiceEconomics(input: ServiceEconomicsInput) {
 export function calculateCheckoutEconomics(input: { quantity: number; retailRatePer1k: number | string; wholesaleRatePer1k: number | string }) {
   const quantity = Math.max(0, Math.trunc(input.quantity));
   const wholesaleCostForQty = Number((quantity / 1000 * Math.max(0, Number(input.wholesaleRatePer1k) || 0)).toFixed(2));
-  const retailAmountCalculated = Number((quantity / 1000 * Math.max(0, Number(input.retailRatePer1k) || 0)).toFixed(2));
+  const retailRate = Math.max(MIN_RETAIL_RATE_PER_1K_KES, Number(input.retailRatePer1k) || 0);
+  const retailAmountCalculated = Number((quantity / 1000 * retailRate).toFixed(2));
   const finalRetailCharged = Math.max(retailAmountCalculated, 10);
   const estimatedProfit = Number((finalRetailCharged - wholesaleCostForQty).toFixed(2));
   return { wholesaleCostForQty, retailAmountCalculated, finalRetailCharged, estimatedProfit, isValid: Number.isFinite(wholesaleCostForQty) && Number.isFinite(finalRetailCharged) && finalRetailCharged > wholesaleCostForQty && estimatedProfit >= 1 };
