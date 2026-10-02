@@ -48,7 +48,14 @@ import {
   XCircle,
   Youtube,
 } from "lucide-react";
-import { Fragment, useEffect, useMemo, useRef, useState } from "react";
+import {
+  Fragment,
+  useDeferredValue,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 import { Link, useLocation } from "wouter";
 import { toast } from "sonner";
 
@@ -257,6 +264,10 @@ export default function Dashboard() {
   });
   const services = trpc.dashboard.services.useQuery(undefined, {
     enabled: isOverviewPage || isPlaceOrderPage,
+    staleTime: 2 * 60 * 1000,
+    gcTime: 15 * 60 * 1000,
+    refetchOnMount: false,
+    placeholderData: previous => previous,
   });
   const orders = trpc.dashboard.orders.useQuery(undefined, {
     enabled: isOverviewPage || isOrdersPage,
@@ -323,7 +334,8 @@ export default function Dashboard() {
       }),
   });
 
-  const searchTerm = catalogSearch.trim().toLowerCase();
+  const deferredCatalogSearch = useDeferredValue(catalogSearch);
+  const searchTerm = deferredCatalogSearch.trim().toLowerCase();
   const searchableServices = useMemo(
     () =>
       (services.data ?? []).filter(
