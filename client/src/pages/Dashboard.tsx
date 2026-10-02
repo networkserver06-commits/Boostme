@@ -55,9 +55,13 @@ import { toast } from "sonner";
 const MIN_DEPOSIT_KES = 10;
 const money = (value: unknown) =>
   `KES ${Number(value ?? 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
-const serviceOptionLabel = (service: { platform: string; name: string; retailRatePer1k: string }, includePlatform: boolean) => {
+const serviceOptionLabel = (
+  service: { platform: string; name: string; retailRatePer1k: string },
+  includePlatform: boolean
+) => {
   const name = service.name.replace(/\s+/g, " ").trim();
-  const conciseName = name.length > 58 ? `${name.slice(0, 55).trimEnd()}…` : name;
+  const conciseName =
+    name.length > 58 ? `${name.slice(0, 55).trimEnd()}…` : name;
   return `${includePlatform ? `${service.platform} · ` : ""}${conciseName} · ${money(service.retailRatePer1k)} / 1k`;
 };
 const displayStatus = (status: string) => status.replaceAll("_", " ");
@@ -242,7 +246,11 @@ export default function Dashboard() {
   const { user } = useAuth();
   const isOrdersPage = location === "/dashboard/orders";
   const isWalletPage = location === "/dashboard/wallet";
-  const isPlaceOrderPage = location === "/dashboard/new-order";
+  const isPlaceOrderPage = [
+    "/dashboard/new-order",
+    "/dashboard/order",
+    "/dashboard/place-order",
+  ].includes(location);
   const isOverviewPage = !isOrdersPage && !isWalletPage && !isPlaceOrderPage;
   const overview = trpc.dashboard.overview.useQuery(undefined, {
     enabled: isOverviewPage || isWalletPage,
@@ -608,7 +616,7 @@ export default function Dashboard() {
         {(isOverviewPage || isPlaceOrderPage) && (
           <>
             {isOverviewPage && (
-              <section className="relative overflow-visible rounded-2xl border border-cyan-200/10 bg-[linear-gradient(135deg,rgba(29,78,216,.22),rgba(13,20,31,.94)_62%)] p-5 shadow-[0_18px_70px_rgba(0,0,0,.16)] sm:p-6">
+              <section className="theme-card-surface relative overflow-visible rounded-2xl border border-cyan-200/10 bg-[linear-gradient(135deg,rgba(29,78,216,.22),rgba(13,20,31,.94)_62%)] p-5 shadow-[0_18px_70px_rgba(0,0,0,.16)] sm:p-6">
                 <div className="flex items-start justify-between gap-4">
                   <div>
                     <span className="inline-flex rounded-full bg-blue-200/15 px-2.5 py-1 text-[10px] font-semibold text-blue-100">
@@ -762,7 +770,7 @@ export default function Dashboard() {
               <div className="grid min-w-0 max-w-full gap-5 overflow-x-hidden xl:grid-cols-[1.15fr_.85fr]">
                 <section
                   id="new-order"
-                  className="min-w-0 scroll-mt-20 rounded-2xl border border-blue-200/10 bg-[linear-gradient(145deg,rgba(31,75,143,.12),rgba(13,20,31,.92)_45%)] p-5 shadow-[0_16px_60px_rgba(0,0,0,.14)] sm:p-6"
+                  className="theme-card-surface min-w-0 scroll-mt-20 rounded-2xl border border-blue-200/10 bg-[linear-gradient(145deg,rgba(31,75,143,.12),rgba(13,20,31,.92)_45%)] p-5 shadow-[0_16px_60px_rgba(0,0,0,.14)] sm:p-6"
                 >
                   <div className="flex items-start justify-between gap-4">
                     <div>
@@ -781,23 +789,55 @@ export default function Dashboard() {
                       <Plus className="h-4 w-4" />
                     </span>
                   </div>
-                  <details open className="group mt-6 rounded-2xl border border-amber-200/15 bg-gradient-to-br from-amber-200/[.08] via-cyan-300/[.04] to-transparent shadow-[0_12px_35px_rgba(245,158,11,.06)]">
+                  <details
+                    open
+                    className="group mt-6 rounded-2xl border border-amber-200/15 bg-gradient-to-br from-amber-200/[.08] via-cyan-300/[.04] to-transparent shadow-[0_12px_35px_rgba(245,158,11,.06)]"
+                  >
                     <summary className="flex cursor-pointer list-none items-start gap-3 p-4 sm:p-5 [&::-webkit-details-marker]:hidden">
                       <span className="grid h-9 w-9 shrink-0 place-items-center rounded-xl border border-amber-200/20 bg-amber-200/[.10] text-amber-100">
                         <Info className="h-4 w-4" />
                       </span>
                       <span className="min-w-0 flex-1">
-                        <span className="block text-sm font-semibold text-white">Important information</span>
-                        <span className="mt-1 block text-[10px] leading-4 text-slate-400">Read this before placing an order so you can choose the right service and wait time.</span>
+                        <span className="block text-sm font-semibold text-white">
+                          Important information
+                        </span>
+                        <span className="mt-1 block text-[10px] leading-4 text-slate-400">
+                          Read this before placing an order so you can choose
+                          the right service and wait time.
+                        </span>
                       </span>
                       <ChevronDown className="mt-1 h-4 w-4 shrink-0 text-amber-100 transition-transform group-open:rotate-180" />
                     </summary>
                     <div className="border-t border-amber-200/10 px-4 pb-4 sm:px-5 sm:pb-5">
                       <ul className="grid gap-3 pt-4 text-xs leading-5 text-slate-300 sm:grid-cols-2">
-                        <li><strong className="text-amber-100">Start time may vary:</strong> When the server is busy, delays can occur even if a service is marked “Instant.”</li>
-                        <li><strong className="text-amber-100">Cheap services are slow:</strong> We cannot speed up or cancel cheap services. Choose them only if you are ready to wait longer.</li>
-                        <li><strong className="text-amber-100">Be patient:</strong> Some services start immediately, while others may take hours or days depending on the queue.</li>
-                        <li><strong className="text-amber-100">Read descriptions:</strong> Check each service’s notes for drop rates, refill terms, speed, and platform requirements.</li>
+                        <li>
+                          <strong className="text-amber-100">
+                            Start time may vary:
+                          </strong>{" "}
+                          When the server is busy, delays can occur even if a
+                          service is marked “Instant.”
+                        </li>
+                        <li>
+                          <strong className="text-amber-100">
+                            Cheap services are slow:
+                          </strong>{" "}
+                          We cannot speed up or cancel cheap services. Choose
+                          them only if you are ready to wait longer.
+                        </li>
+                        <li>
+                          <strong className="text-amber-100">
+                            Be patient:
+                          </strong>{" "}
+                          Some services start immediately, while others may take
+                          hours or days depending on the queue.
+                        </li>
+                        <li>
+                          <strong className="text-amber-100">
+                            Read descriptions:
+                          </strong>{" "}
+                          Check each service’s notes for drop rates, refill
+                          terms, speed, and platform requirements.
+                        </li>
                       </ul>
                     </div>
                   </details>
@@ -807,39 +847,102 @@ export default function Dashboard() {
                         <LockKeyhole className="h-4 w-4" />
                       </span>
                       <span className="min-w-0 flex-1">
-                        <span className="block text-sm font-semibold text-white">Private accounts do not receive services</span>
-                        <span className="mt-1 block text-[10px] leading-4 text-slate-400">Make the target public before ordering and keep it public until delivery is complete.</span>
+                        <span className="block text-sm font-semibold text-white">
+                          Private accounts do not receive services
+                        </span>
+                        <span className="mt-1 block text-[10px] leading-4 text-slate-400">
+                          Make the target public before ordering and keep it
+                          public until delivery is complete.
+                        </span>
                       </span>
                       <ChevronDown className="mt-1 h-4 w-4 shrink-0 text-cyan-100 transition-transform group-open:rotate-180" />
                     </summary>
                     <div className="border-t border-cyan-200/10 px-4 pb-4 sm:px-5 sm:pb-5">
-                      <p className="pt-4 text-xs leading-5 text-slate-300">A private profile, post, video, channel, group, or status can block provider delivery. We cannot reliably service content that the provider cannot see. Do not share your password; only change the platform privacy setting.</p>
+                      <p className="pt-4 text-xs leading-5 text-slate-300">
+                        A private profile, post, video, channel, group, or
+                        status can block provider delivery. We cannot reliably
+                        service content that the provider cannot see. Do not
+                        share your password; only change the platform privacy
+                        setting.
+                      </p>
                       <div className="mt-4 grid gap-2 sm:grid-cols-2">
                         {[
-                          ["Instagram", "Profile → ☰ → Settings and activity → Account privacy → turn off Private account."],
-                          ["TikTok", "Profile → ☰ → Settings and privacy → Privacy → turn off Private account."],
-                          ["Facebook", "Open the profile/page or post audience setting → choose Public. For a group, use a public group only when appropriate."],
-                          ["YouTube", "YouTube Studio → Content → choose the video → Visibility → Public. Check the channel and video visibility."],
-                          ["X", "Profile → Settings and privacy → Privacy and safety → turn off Protect your posts."],
-                          ["WhatsApp / Telegram", "Use a public channel, group, status, or invite/link that the selected service supports; private chats and restricted groups cannot be processed."],
+                          [
+                            "Instagram",
+                            "Profile → ☰ → Settings and activity → Account privacy → turn off Private account.",
+                          ],
+                          [
+                            "TikTok",
+                            "Profile → ☰ → Settings and privacy → Privacy → turn off Private account.",
+                          ],
+                          [
+                            "Facebook",
+                            "Open the profile/page or post audience setting → choose Public. For a group, use a public group only when appropriate.",
+                          ],
+                          [
+                            "YouTube",
+                            "YouTube Studio → Content → choose the video → Visibility → Public. Check the channel and video visibility.",
+                          ],
+                          [
+                            "X",
+                            "Profile → Settings and privacy → Privacy and safety → turn off Protect your posts.",
+                          ],
+                          [
+                            "WhatsApp / Telegram",
+                            "Use a public channel, group, status, or invite/link that the selected service supports; private chats and restricted groups cannot be processed.",
+                          ],
                         ].map(([platformName, instruction]) => (
-                          <div key={platformName} className="rounded-xl border border-white/[.08] bg-white/[.025] p-3">
-                            <p className="text-xs font-semibold text-cyan-100">{platformName}</p>
-                            <p className="mt-1 text-[10px] leading-4 text-slate-400">{instruction}</p>
+                          <div
+                            key={platformName}
+                            className="rounded-xl border border-white/[.08] bg-white/[.025] p-3"
+                          >
+                            <p className="text-xs font-semibold text-cyan-100">
+                              {platformName}
+                            </p>
+                            <p className="mt-1 text-[10px] leading-4 text-slate-400">
+                              {instruction}
+                            </p>
                           </div>
                         ))}
                       </div>
                       <div className="mt-4 rounded-xl border border-emerald-200/15 bg-emerald-300/[.05] p-3 text-[10px] leading-4 text-emerald-50/90">
-                        <strong className="text-emerald-100">Before you submit:</strong> open the target link in an incognito/logged-out browser window. If it cannot be viewed publicly, make it public first, then return here and select the correct service.
+                        <strong className="text-emerald-100">
+                          Before you submit:
+                        </strong>{" "}
+                        open the target link in an incognito/logged-out browser
+                        window. If it cannot be viewed publicly, make it public
+                        first, then return here and select the correct service.
                       </div>
-                      <Link href="/dashboard/account?tab=privacy" className="mt-4 inline-flex min-h-9 items-center gap-1.5 rounded-lg border border-cyan-200/20 bg-cyan-300/[.08] px-3 py-2 text-[10px] font-semibold text-cyan-50 hover:bg-cyan-300/[.16]">Open account privacy help <ArrowUpRight className="h-3.5 w-3.5" /></Link>
+                      <Link
+                        href="/dashboard/account?tab=privacy"
+                        className="mt-4 inline-flex min-h-9 items-center gap-1.5 rounded-lg border border-cyan-200/20 bg-cyan-300/[.08] px-3 py-2 text-[10px] font-semibold text-cyan-50 hover:bg-cyan-300/[.16]"
+                      >
+                        Open account privacy help{" "}
+                        <ArrowUpRight className="h-3.5 w-3.5" />
+                      </Link>
                     </div>
                   </details>
                   <div className="mt-4 flex flex-col gap-2 border-t border-amber-200/10 pt-3 sm:flex-row sm:items-center sm:justify-between">
-                    <p className="text-[10px] text-slate-400">Need help choosing a service?</p>
+                    <p className="text-[10px] text-slate-400">
+                      Need help choosing a service?
+                    </p>
                     <div className="flex flex-wrap gap-2">
-                      <a href="tel:+254116553618" className="inline-flex min-h-9 items-center justify-center gap-1.5 rounded-lg border border-cyan-200/20 bg-cyan-300/[.08] px-3 py-2 text-[10px] font-semibold text-cyan-50 hover:bg-cyan-300/[.16]"><PhoneCall className="h-3.5 w-3.5" />Call 0116 553 618</a>
-                      <a href="https://wa.me/254116553618?text=Hello%20Orbit%20Growth%20support" target="_blank" rel="noreferrer" className="inline-flex min-h-9 items-center justify-center gap-1.5 rounded-lg border border-emerald-200/20 bg-emerald-300/[.08] px-3 py-2 text-[10px] font-semibold text-emerald-50 hover:bg-emerald-300/[.16]"><MessageCircle className="h-3.5 w-3.5" />WhatsApp support</a>
+                      <a
+                        href="tel:+254116553618"
+                        className="inline-flex min-h-9 items-center justify-center gap-1.5 rounded-lg border border-cyan-200/20 bg-cyan-300/[.08] px-3 py-2 text-[10px] font-semibold text-cyan-50 hover:bg-cyan-300/[.16]"
+                      >
+                        <PhoneCall className="h-3.5 w-3.5" />
+                        Call 0116 553 618
+                      </a>
+                      <a
+                        href="https://wa.me/254116553618?text=Hello%20Orbit%20Growth%20support"
+                        target="_blank"
+                        rel="noreferrer"
+                        className="inline-flex min-h-9 items-center justify-center gap-1.5 rounded-lg border border-emerald-200/20 bg-emerald-300/[.08] px-3 py-2 text-[10px] font-semibold text-emerald-50 hover:bg-emerald-300/[.16]"
+                      >
+                        <MessageCircle className="h-3.5 w-3.5" />
+                        WhatsApp support
+                      </a>
                     </div>
                   </div>
                   <div className="mt-6 grid gap-4">
@@ -1063,14 +1166,29 @@ export default function Dashboard() {
                           ))}
                         </select>
                         {services.isLoading && (
-                          <p className="mt-2 flex items-center gap-2 text-xs text-muted-foreground" role="status">
-                            <Loader2 className="h-3.5 w-3.5 animate-spin" /> Loading live services…
+                          <p
+                            className="mt-2 flex items-center gap-2 text-xs text-muted-foreground"
+                            role="status"
+                          >
+                            <Loader2 className="h-3.5 w-3.5 animate-spin" />{" "}
+                            Loading live services…
                           </p>
                         )}
                         {services.isError && (
-                          <div className="mt-2 flex flex-wrap items-center justify-between gap-2 rounded-lg border border-rose-300/20 bg-rose-300/[.06] px-3 py-2 text-xs" role="alert">
-                            <span className="text-rose-200">We couldn’t load the service catalog.</span>
-                            <button type="button" className="font-semibold text-cyan-200 hover:text-white" onClick={() => void services.refetch()}>Retry</button>
+                          <div
+                            className="mt-2 flex flex-wrap items-center justify-between gap-2 rounded-lg border border-rose-300/20 bg-rose-300/[.06] px-3 py-2 text-xs"
+                            role="alert"
+                          >
+                            <span className="text-rose-200">
+                              We couldn’t load the service catalog.
+                            </span>
+                            <button
+                              type="button"
+                              className="font-semibold text-cyan-200 hover:text-white"
+                              onClick={() => void services.refetch()}
+                            >
+                              Retry
+                            </button>
                           </div>
                         )}
                         {services.data?.length === 0 && !services.isLoading && (
@@ -1082,8 +1200,16 @@ export default function Dashboard() {
                           <div className="mt-2 flex min-w-0 items-start gap-2 rounded-lg border border-cyan-200/10 bg-cyan-300/[.04] px-3 py-2">
                             <ShoppingBag className="mt-0.5 h-3.5 w-3.5 shrink-0 text-cyan-200" />
                             <div className="min-w-0">
-                              <p className="break-words text-xs font-semibold text-cyan-100">{selected.name}</p>
-                              <p className="mt-0.5 break-words text-[10px] leading-4 text-slate-400">{selected.description || `${selected.platform} · ${selected.category}`} · {selected.minQuantity.toLocaleString()}–{selected.maxQuantity.toLocaleString()} units · {money(selected.retailRatePer1k)} / 1k</p>
+                              <p className="break-words text-xs font-semibold text-cyan-100">
+                                {selected.name}
+                              </p>
+                              <p className="mt-0.5 break-words text-[10px] leading-4 text-slate-400">
+                                {selected.description ||
+                                  `${selected.platform} · ${selected.category}`}{" "}
+                                · {selected.minQuantity.toLocaleString()}–
+                                {selected.maxQuantity.toLocaleString()} units ·{" "}
+                                {money(selected.retailRatePer1k)} / 1k
+                              </p>
                             </div>
                           </div>
                         )}
@@ -1134,7 +1260,7 @@ export default function Dashboard() {
                         }
                       />
                     </div>
-                    <div className="flex min-w-0 flex-col gap-4 overflow-hidden rounded-xl border border-cyan-200/15 bg-gradient-to-br from-cyan-300/[.08] to-blue-400/[.04] p-4 shadow-[0_12px_35px_rgba(34,211,238,.07)] sm:flex-row sm:items-center sm:justify-between">
+                    <div className="theme-card-surface flex min-w-0 flex-col gap-4 overflow-hidden rounded-xl border border-cyan-200/15 bg-gradient-to-br from-cyan-300/[.08] to-blue-400/[.04] p-4 shadow-[0_12px_35px_rgba(34,211,238,.07)] sm:flex-row sm:items-center sm:justify-between">
                       <div className="min-w-0">
                         <p className="text-[10px] font-semibold uppercase tracking-[.14em] text-cyan-100/80">
                           Order summary
@@ -1143,7 +1269,9 @@ export default function Dashboard() {
                           Estimated charge
                         </p>
                         <p className="mt-1 text-xl font-semibold tabular-nums text-white">
-                          {selected ? `Total cost: KSh ${charge.toFixed(2)}` : "Select a service to see the price"}
+                          {selected
+                            ? `Total cost: KSh ${charge.toFixed(2)}`
+                            : "Select a service to see the price"}
                         </p>
                         <p className="mt-1 text-[10px] text-slate-500">
                           {selected
@@ -1152,12 +1280,20 @@ export default function Dashboard() {
                         </p>
                         {selected && (
                           <p className="mt-2 text-[10px] leading-4 text-slate-400">
-                            Listed rate: {money(selected.retailRatePer1k)} per 1,000. The final amount is based directly on your quantity.
+                            Listed rate: {money(selected.retailRatePer1k)} per
+                            1,000. The final amount is based directly on your
+                            quantity.
                           </p>
                         )}
                       </div>
                       <Button
-                        aria-label={createOrder.isPending ? "Submitting order" : selected ? "Review and place order" : "Select a service first"}
+                        aria-label={
+                          createOrder.isPending
+                            ? "Submitting order"
+                            : selected
+                              ? "Review and place order"
+                              : "Select a service first"
+                        }
                         className="min-h-11 h-auto w-full max-w-full justify-center whitespace-normal rounded-xl bg-primary px-5 py-3 text-center text-sm font-semibold !text-white shadow-lg shadow-blue-500/20 hover:bg-primary/90 disabled:bg-slate-700 disabled:!text-white disabled:opacity-100 sm:w-auto"
                         type="button"
                         disabled={
@@ -1185,8 +1321,16 @@ export default function Dashboard() {
                           </>
                         ) : (
                           <>
-                            {services.isLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <ShoppingBag className="h-4 w-4" />}
-                            <span>{services.isLoading ? "Loading services…" : "Select a service first"}</span>
+                            {services.isLoading ? (
+                              <Loader2 className="h-4 w-4 animate-spin" />
+                            ) : (
+                              <ShoppingBag className="h-4 w-4" />
+                            )}
+                            <span>
+                              {services.isLoading
+                                ? "Loading services…"
+                                : "Select a service first"}
+                            </span>
                           </>
                         )}
                       </Button>
@@ -1197,76 +1341,128 @@ export default function Dashboard() {
                     </p>
                   </div>
                 </section>
-                {isOverviewPage && <TopUpCard
-                  phone={phone}
-                  setPhone={setPhone}
-                  amount={depositAmount}
-                  setAmount={setDepositAmount}
-                  pending={requestDeposit.isPending}
-                  checking={checkDeposit.isPending}
-                  reference={depositReference}
-                  paymentStatus={depositStatus}
-                  gatewayResponse={depositResponse}
-                  lastChecked={depositLastChecked}
-                  onSubmit={() =>
-                    requestDeposit.mutate({ amount: depositAmount, phone })
-                  }
-                  onCheck={() => checkDepositNow(false)}
-                  compact
-                />}
+                {isOverviewPage && (
+                  <TopUpCard
+                    phone={phone}
+                    setPhone={setPhone}
+                    amount={depositAmount}
+                    setAmount={setDepositAmount}
+                    pending={requestDeposit.isPending}
+                    checking={checkDeposit.isPending}
+                    reference={depositReference}
+                    paymentStatus={depositStatus}
+                    gatewayResponse={depositResponse}
+                    lastChecked={depositLastChecked}
+                    onSubmit={() =>
+                      requestDeposit.mutate({ amount: depositAmount, phone })
+                    }
+                    onCheck={() => checkDepositNow(false)}
+                    compact
+                  />
+                )}
                 <Dialog open={reviewOpen} onOpenChange={setReviewOpen}>
                   <DialogContent className="border-white/10 bg-card text-card-foreground sm:max-w-md">
                     <DialogHeader>
                       <DialogTitle>Review your order</DialogTitle>
                       <DialogDescription>
-                        Check the details below. Your wallet is charged only when you place the order.
+                        Check the details below. Your wallet is charged only
+                        when you place the order.
                       </DialogDescription>
                     </DialogHeader>
                     {createOrder.error && (
-                      <div role="alert" className="rounded-xl border border-rose-300/20 bg-rose-300/[.08] p-3 text-xs leading-5 text-rose-100">
-                        <p className="font-semibold">Order could not be placed</p>
-                        <p className="mt-1 text-rose-100/80">{friendlyErrorMessage(createOrder.error, "Check the service, public link, quantity, and wallet balance, then try again.")}</p>
-                        <p className="mt-2 text-[10px] text-rose-100/70">Your wallet was not charged unless the order was successfully accepted.</p>
+                      <div
+                        role="alert"
+                        className="rounded-xl border border-rose-300/20 bg-rose-300/[.08] p-3 text-xs leading-5 text-rose-100"
+                      >
+                        <p className="font-semibold">
+                          Order could not be placed
+                        </p>
+                        <p className="mt-1 text-rose-100/80">
+                          {friendlyErrorMessage(
+                            createOrder.error,
+                            "Check the service, public link, quantity, and wallet balance, then try again."
+                          )}
+                        </p>
+                        <p className="mt-2 text-[10px] text-rose-100/70">
+                          Your wallet was not charged unless the order was
+                          successfully accepted.
+                        </p>
                       </div>
                     )}
                     {selected && (
                       <div className="space-y-3 rounded-xl border border-border bg-muted/40 p-4 text-sm">
                         <div className="flex items-start justify-between gap-4">
                           <span className="text-muted-foreground">Service</span>
-                          <span className="max-w-[65%] text-right font-medium">{selected.name}</span>
+                          <span className="max-w-[65%] text-right font-medium">
+                            {selected.name}
+                          </span>
                         </div>
                         <div className="flex items-start justify-between gap-4">
-                          <span className="text-muted-foreground">Quantity</span>
-                          <span className="font-medium tabular-nums">{quantity.toLocaleString()}</span>
+                          <span className="text-muted-foreground">
+                            Quantity
+                          </span>
+                          <span className="font-medium tabular-nums">
+                            {quantity.toLocaleString()}
+                          </span>
                         </div>
                         <div className="flex items-start justify-between gap-4">
-                          <span className="text-muted-foreground">Target link</span>
-                          <span className="max-w-[65%] break-all text-right text-xs">{targetLink.trim()}</span>
+                          <span className="text-muted-foreground">
+                            Target link
+                          </span>
+                          <span className="max-w-[65%] break-all text-right text-xs">
+                            {targetLink.trim()}
+                          </span>
                         </div>
                         <div className="border-t border-border pt-3">
                           <div className="flex items-center justify-between gap-4">
                             <span className="font-semibold">Wallet charge</span>
-                            <span className="text-lg font-semibold tabular-nums">{money(charge)}</span>
+                            <span className="text-lg font-semibold tabular-nums">
+                              {money(charge)}
+                            </span>
                           </div>
-                          <p className="mt-1 text-xs text-muted-foreground">({quantity.toLocaleString()} ÷ 1,000) × {money(selected.retailRatePer1k)} per 1,000</p>
+                          <p className="mt-1 text-xs text-muted-foreground">
+                            ({quantity.toLocaleString()} ÷ 1,000) ×{" "}
+                            {money(selected.retailRatePer1k)} per 1,000
+                          </p>
                         </div>
                         <div className="flex items-center justify-between gap-4 text-xs">
-                          <span className="text-muted-foreground">Current wallet balance</span>
-                          <span className="font-medium">{money(overview.data?.profile?.balance)}</span>
+                          <span className="text-muted-foreground">
+                            Current wallet balance
+                          </span>
+                          <span className="font-medium">
+                            {money(overview.data?.profile?.balance)}
+                          </span>
                         </div>
                       </div>
                     )}
                     <DialogFooter>
-                      <Button type="button" variant="outline" onClick={() => setReviewOpen(false)}>Go back</Button>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        onClick={() => setReviewOpen(false)}
+                      >
+                        Go back
+                      </Button>
                       <Button
                         type="button"
                         disabled={createOrder.isPending || !selected}
                         onClick={() => {
                           if (!selected) return;
-                          createOrder.mutate({ serviceId: selected.id, targetLink: targetLink.trim(), quantity });
+                          createOrder.mutate({
+                            serviceId: selected.id,
+                            targetLink: targetLink.trim(),
+                            quantity,
+                          });
                         }}
                       >
-                        {createOrder.isPending ? <><Loader2 className="h-4 w-4 animate-spin" /> Placing order…</> : "Place order"}
+                        {createOrder.isPending ? (
+                          <>
+                            <Loader2 className="h-4 w-4 animate-spin" /> Placing
+                            order…
+                          </>
+                        ) : (
+                          "Place order"
+                        )}
                       </Button>
                     </DialogFooter>
                   </DialogContent>
