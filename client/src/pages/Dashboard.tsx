@@ -450,6 +450,13 @@ export default function Dashboard() {
     : null;
   const calculatedCharge = checkoutEconomics?.retailAmountCalculated ?? 0;
   const charge = checkoutEconomics?.finalRetailCharged ?? 0;
+  const canSubmitOrder = Boolean(
+    selected &&
+      targetLink.trim() &&
+      !targetLinkError &&
+      quantity >= (selected?.minQuantity ?? 0) &&
+      quantity <= (selected?.maxQuantity ?? Infinity)
+  );
   const filteredOrders = useMemo(
     () =>
       (orders.data ?? []).filter(
@@ -1157,7 +1164,7 @@ export default function Dashboard() {
                       </div>
                       <Button
                         aria-label={createOrder.isPending ? "Submitting order" : selected ? "Review and place order" : "Select a service first"}
-                        style={{ color: selected ? "var(--primary-foreground)" : "var(--foreground)" }}
+                        style={{ color: canSubmitOrder ? "var(--primary-foreground)" : "var(--foreground)" }}
                         className="min-h-11 h-auto w-full max-w-full justify-center whitespace-normal rounded-xl bg-primary px-5 py-3 text-center text-sm font-semibold text-primary-foreground shadow-lg shadow-blue-500/20 hover:bg-primary/90 disabled:bg-muted disabled:opacity-100 sm:w-auto"
                         type="button"
                         disabled={

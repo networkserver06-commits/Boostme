@@ -5,14 +5,18 @@ import {
   ArrowDownRight,
   ArrowRight,
   ArrowUpRight,
+  AtSign,
   Check,
   ChevronDown,
   CircleDollarSign,
   Clock3,
+  Facebook,
   Layers3,
+  MessageCircle,
+  Music2,
   Instagram,
   Menu,
-  Play,
+  Send,
   ShieldCheck,
   Sparkles,
   WalletCards,
@@ -25,9 +29,18 @@ import { Link } from "wouter";
 function serviceIcon(platform: string) {
   const normalized = platform.toLowerCase();
   if (normalized.includes("instagram")) return Instagram;
+  if (normalized.includes("facebook")) return Facebook;
   if (normalized.includes("youtube")) return Youtube;
-  if (normalized.includes("tiktok")) return Play;
+  if (normalized.includes("tiktok")) return Music2;
+  if (normalized.includes("whatsapp")) return MessageCircle;
+  if (normalized.includes("telegram")) return Send;
+  if (normalized === "x" || normalized.includes("twitter")) return AtSign;
   return Sparkles;
+}
+
+function conciseServiceName(name: string) {
+  const normalized = name.replace(/\s+/g, " ").trim();
+  return normalized.length > 62 ? `${normalized.slice(0, 59).trimEnd()}…` : normalized;
 }
 
 function money(value: number) {
@@ -36,7 +49,7 @@ function money(value: number) {
 
 function PublicServiceCard({ service, onSelect }: { service: { id: number; platform: string; name: string; category: string; description: string | null; retailRatePer1k: string; minQuantity: number; maxQuantity: number }; onSelect: () => void }) {
   const Icon = serviceIcon(service.platform);
-  return <article className="group flex min-h-[190px] flex-col rounded-2xl border border-white/[.08] bg-[#0d1420]/80 p-4 transition duration-200 hover:-translate-y-0.5 hover:border-cyan-300/25 hover:bg-[#101b2a] sm:p-5"><div className="flex items-start justify-between gap-3"><span className="grid h-10 w-10 place-items-center rounded-xl border border-white/[.06] bg-white/[.04] text-cyan-100"><Icon className="h-4 w-4" /></span><span className="rounded-full border border-white/[.08] px-2.5 py-1 text-[9px] font-medium text-slate-400">{service.category}</span></div><h4 className="mt-4 line-clamp-2 text-sm font-semibold leading-5 text-white">{service.name}</h4>{service.description && <p className="mt-1 line-clamp-2 text-[10px] leading-4 text-slate-500">{service.description}</p>}<div className="mt-auto flex items-end justify-between gap-3 border-t border-white/[.07] pt-4"><div><p className="text-[9px] text-slate-500">{service.minQuantity.toLocaleString()}–{service.maxQuantity.toLocaleString()} units</p><p className="mt-1 text-sm font-semibold tabular-nums text-white">{money(Number(service.retailRatePer1k))}<span className="ml-1 text-[9px] font-normal text-slate-500">/ 1k</span></p></div><button onClick={onSelect} className="inline-flex items-center gap-1 rounded-lg px-2.5 py-2 text-[10px] font-semibold text-cyan-200 hover:bg-cyan-200/10 hover:text-white">Order <ArrowUpRight className="h-3.5 w-3.5" /></button></div></article>;
+  return <article className="group flex min-h-[190px] flex-col rounded-2xl border border-white/[.08] bg-[#0d1420]/80 p-4 transition duration-200 hover:-translate-y-0.5 hover:border-cyan-300/25 hover:bg-[#101b2a] sm:p-5"><div className="flex items-start justify-between gap-3"><span className="grid h-10 w-10 place-items-center rounded-xl border border-white/[.06] bg-white/[.04] text-cyan-100"><Icon className="h-4 w-4" /></span><span className="rounded-full border border-white/[.08] px-2.5 py-1 text-[9px] font-medium text-slate-400">{service.category}</span></div><h4 className="mt-4 line-clamp-2 text-sm font-semibold leading-5 text-white">{service.name}</h4>{service.description && <p className="mt-1 line-clamp-2 text-[10px] leading-4 text-slate-500">{service.description}</p>}<div className="mt-auto flex items-end justify-between gap-3 border-t border-white/[.07] pt-4"><div><p className="text-[9px] text-slate-500">{service.minQuantity.toLocaleString()}–{service.maxQuantity.toLocaleString()} units</p><p className="mt-1 text-sm font-semibold tabular-nums text-white">{money(Number(service.retailRatePer1k))}<span className="ml-1 text-[9px] font-normal text-slate-500">/ 1k</span></p></div><button type="button" aria-label={`Order ${service.name}`} onClick={onSelect} className="inline-flex items-center gap-1 rounded-lg px-2.5 py-2 text-[10px] font-semibold text-cyan-200 hover:bg-cyan-200/10 hover:text-white">Order <ArrowUpRight className="h-3.5 w-3.5" /></button></div></article>;
 }
 
 export default function Home() {
@@ -110,7 +123,7 @@ export default function Home() {
             <div className="mt-10 flex flex-wrap items-center gap-x-7 gap-y-3 border-t border-white/[.08] pt-5 text-xs text-slate-400 sm:text-sm">
               <span><strong className="text-white">{servicesQuery.isLoading || servicesQuery.isError ? "—" : services.length}</strong> {servicesQuery.isLoading ? "checking catalog" : "active offers"}</span><span><strong className="text-white">{servicesQuery.isLoading || servicesQuery.isError ? "—" : platformCount}</strong> {servicesQuery.isLoading ? "platforms pending" : platformCount === 1 ? "platform" : "platforms"}</span><span className="inline-flex items-center gap-1.5"><ShieldCheck className="h-4 w-4 text-emerald-300" /> Secure account access</span>
             </div>
-            <div className="mt-4 flex flex-wrap items-center gap-2 text-[10px]"><span className="mr-1 font-semibold uppercase tracking-[.15em] text-slate-500">Active now</span>{platformNames.map((platform) => <span key={platform} className="inline-flex items-center gap-1.5 rounded-full border border-cyan-200/15 bg-cyan-300/[.06] px-2.5 py-1.5 font-medium text-cyan-100"><span className="h-1.5 w-1.5 rounded-full bg-emerald-300" />{platform}</span>)}</div>
+            <div className="mt-4 flex flex-wrap items-center gap-2 text-[10px]"><span className="mr-1 font-semibold uppercase tracking-[.15em] text-slate-500">Active now</span>{platformNames.map((platform) => { const Icon = serviceIcon(platform); return <span key={platform} className="inline-flex items-center gap-1.5 rounded-full border border-cyan-200/15 bg-cyan-300/[.06] px-2.5 py-1.5 font-medium text-cyan-100"><Icon className="h-3 w-3" />{platform}</span>; })}</div>
           </div>
 
           <div className="relative mx-auto w-full max-w-[540px]">
@@ -153,7 +166,7 @@ export default function Home() {
           <div className="grid overflow-hidden rounded-[26px] border border-blue-300/15 bg-[linear-gradient(135deg,rgba(45,95,191,.2),rgba(15,23,36,.96)_45%)] lg:grid-cols-[1.04fr_.96fr]">
             <div className="p-6 sm:p-9 lg:p-11"><p className="text-xs font-semibold uppercase tracking-[.2em] text-cyan-200">Transparent pricing</p><h2 className="mt-3 text-3xl font-semibold tracking-[-.05em]">Know the estimate before checkout.</h2><p className="mt-3 max-w-lg text-sm leading-6 text-slate-400">Adjust the quantity for an active service to see an estimate based on its current listed rate. Your final order summary is confirmed in your account.</p>
               {selectedService ? <div className="mt-7 max-w-lg space-y-5">
-                <label className="grid gap-2 text-xs font-medium text-slate-300">Service<select value={selectedServiceId || String(selectedService.id)} onChange={(event) => { const next = services.find((item) => item.id === Number(event.target.value)); setSelectedServiceId(event.target.value); if (next) setQuantity(next.minQuantity); }} className="h-11 w-full rounded-xl border border-white/10 bg-[#0a111b] px-3 text-sm text-white"><optgroup label="Active services">{services.map((service) => <option key={service.id} value={service.id}>{service.platform} · {service.name}</option>)}</optgroup></select></label>
+                <label className="grid gap-2 text-xs font-medium text-slate-300">Service<select value={selectedServiceId || String(selectedService.id)} onChange={(event) => { const next = services.find((item) => item.id === Number(event.target.value)); setSelectedServiceId(event.target.value); if (next) setQuantity(next.minQuantity); }} className="h-11 w-full min-w-0 rounded-xl border border-white/10 bg-[#0a111b] px-3 text-sm text-white"><optgroup label="Active services">{services.map((service) => <option key={service.id} value={service.id}>{service.platform} · {conciseServiceName(service.name)}</option>)}</optgroup></select></label>
                 <div><div className="mb-3 flex items-center justify-between gap-3 text-xs"><label htmlFor="quantity-range" className="font-medium text-slate-300">Quantity</label><span className="font-semibold tabular-nums text-white">{quantity.toLocaleString()} units</span></div><input id="quantity-range" aria-label="Quantity" type="range" min={selectedService.minQuantity} max={selectedService.maxQuantity} step={Math.max(1, Math.round((selectedService.maxQuantity - selectedService.minQuantity) / 100))} value={Math.min(Math.max(quantity, selectedService.minQuantity), selectedService.maxQuantity)} onChange={(event) => setQuantity(Number(event.target.value))} className="w-full accent-cyan-300" /><div className="mt-2 flex justify-between text-[10px] text-slate-500"><span>Min {selectedService.minQuantity.toLocaleString()}</span><span>Max {selectedService.maxQuantity.toLocaleString()}</span></div></div>
                 <div className="flex items-end justify-between border-t border-white/10 pt-4"><div><p className="text-xs text-slate-400">Estimated total</p><p className="mt-1 text-2xl font-semibold tracking-tight text-white">{money(estimate)}</p></div><p className="text-right text-[10px] leading-4 text-slate-500">{money(Number(selectedService.retailRatePer1k))}<br />per 1,000 units</p></div>
               </div> : <div className="mt-7 rounded-xl border border-white/10 bg-black/10 p-4 text-sm text-slate-400">Pricing estimates will be available when active services are published.</div>}
