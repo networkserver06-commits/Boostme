@@ -267,6 +267,7 @@ function DashboardLayoutContent({
         <SidebarMenuItem key={item.path}>
           <SidebarMenuButton
             isActive={isActive}
+            data-navigation-item={item.label.toLowerCase().replaceAll(" ", "-")}
             aria-current={isActive ? "page" : undefined}
             onPointerEnter={() => warmRoute(item.path)}
             onPointerDown={() => warmRoute(item.path)}
@@ -531,6 +532,8 @@ function DashboardLayoutContent({
               const active =
                 item.path !== "#menu" &&
                 (location === item.path ||
+                  (item.label === "Place order" &&
+                    isPlaceOrderPath(location)) ||
                   (item.path !== "/dashboard" &&
                     location.startsWith(`${item.path}/`)));
               return (
@@ -551,6 +554,10 @@ function DashboardLayoutContent({
                         ? setMobileMenuOpen(open => !open)
                         : navigate(item.path)
                     }
+                    title={item.label}
+                    data-navigation-item={item.label
+                      .toLowerCase()
+                      .replaceAll(" ", "-")}
                     aria-current={active ? "page" : undefined}
                     className={`flex min-h-[64px] w-full flex-col items-center justify-center gap-1 rounded-xl px-1 text-[9px] font-medium whitespace-nowrap ${active || (item.path === "#menu" && mobileMenuOpen) ? "bg-cyan-300/[.08] text-cyan-100" : "text-slate-500 hover:bg-white/[.04] hover:text-slate-200"}`}
                   >

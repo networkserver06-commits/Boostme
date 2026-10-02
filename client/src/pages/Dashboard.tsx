@@ -1294,7 +1294,7 @@ export default function Dashboard() {
                               ? "Review and place order"
                               : "Select a service first"
                         }
-                        className="min-h-11 h-auto w-full max-w-full justify-center whitespace-normal rounded-xl bg-primary px-5 py-3 text-center text-sm font-semibold !text-white shadow-lg shadow-blue-500/20 hover:bg-primary/90 disabled:bg-slate-700 disabled:!text-white disabled:opacity-100 sm:w-auto"
+                        className="order-submit-control min-h-11 h-auto w-full max-w-full justify-center whitespace-normal rounded-xl bg-primary px-5 py-3 text-center text-sm font-semibold !text-white shadow-lg shadow-blue-500/20 hover:bg-primary/90 disabled:bg-slate-700 disabled:!text-white disabled:opacity-100 sm:w-auto"
                         type="button"
                         disabled={
                           createOrder.isPending ||
@@ -1335,6 +1335,32 @@ export default function Dashboard() {
                         )}
                       </Button>
                     </div>
+                    {createOrder.error && (
+                      <div
+                        className="order-error-panel rounded-xl border p-3 text-xs leading-5"
+                        role="alert"
+                      >
+                        <p className="font-semibold">
+                          Order could not be placed
+                        </p>
+                        <p className="mt-1">
+                          {friendlyErrorMessage(
+                            createOrder.error,
+                            "Check the service, public link, quantity, and wallet balance, then try again."
+                          )}
+                        </p>
+                        <button
+                          type="button"
+                          className="mt-2 font-semibold underline underline-offset-2"
+                          onClick={() => {
+                            createOrder.reset();
+                            setReviewOpen(true);
+                          }}
+                        >
+                          Review and try again
+                        </button>
+                      </div>
+                    )}
                     <p className="text-[10px] leading-4 text-slate-500">
                       Final validation is performed when you place the order.
                       Only use target links you own or are authorized to manage.
@@ -1372,18 +1398,18 @@ export default function Dashboard() {
                     {createOrder.error && (
                       <div
                         role="alert"
-                        className="rounded-xl border border-rose-300/20 bg-rose-300/[.08] p-3 text-xs leading-5 text-rose-100"
+                        className="order-error-panel rounded-xl border p-3 text-xs leading-5"
                       >
                         <p className="font-semibold">
                           Order could not be placed
                         </p>
-                        <p className="mt-1 text-rose-100/80">
+                        <p className="mt-1">
                           {friendlyErrorMessage(
                             createOrder.error,
                             "Check the service, public link, quantity, and wallet balance, then try again."
                           )}
                         </p>
-                        <p className="mt-2 text-[10px] text-rose-100/70">
+                        <p className="mt-2 text-[10px] opacity-80">
                           Your wallet was not charged unless the order was
                           successfully accepted.
                         </p>

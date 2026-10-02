@@ -314,3 +314,30 @@ select:focus-visible {
   color: var(--card-foreground) !important;
   border-color: var(--border) !important;
 }
+.order-submit-control {
+  color: #ffffff !important;
+}
+.order-submit-control:disabled {
+  background-color: oklch(0.32 0.04 255) !important;
+  color: #ffffff !important;
+  opacity: 1 !important;
+}
+.order-error-panel {
+  border-color: oklch(0.62 0.18 25 / 35%) !important;
+  background-color: oklch(0.62 0.18 25 / 12%) !important;
+  color: oklch(0.9 0.06 25) !important;
+}
+[data-theme="light"] .order-error-panel {
+  border-color: oklch(0.52 0.16 25 / 38%) !important;
+  background-color: oklch(0.96 0.035 25) !important;
+  color: oklch(0.34 0.12 25) !important;
+}
+[data-navigation-item][aria-current="page"] {
+  color: var(--foreground) !important;
+}
+[data-navigation-item][aria-current="page"] svg {
+  color: oklch(0.68 0.16 205) !important;
+}
+[data-theme="light"] [data-navigation-item][aria-current="page"] svg {
+  color: oklch(0.46 0.16 235) !important;
+}
