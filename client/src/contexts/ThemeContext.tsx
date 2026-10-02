@@ -23,8 +23,17 @@ export function ThemeProvider({
 }: ThemeProviderProps) {
   const [theme, setTheme] = useState<Theme>(() => {
     if (switchable) {
-      const stored = localStorage.getItem("theme");
-      return (stored as Theme) || defaultTheme;
+      try {
+        const stored = localStorage.getItem("theme");
+        if (stored === "light" || stored === "dark") return stored;
+      } catch {
+        // Storage can be unavailable in privacy-restricted browsers.
+      }
+      if (
+        typeof window !== "undefined" &&
+        window.matchMedia("(prefers-color-scheme: light)").matches
+      )
+        return "light";
     }
     return defaultTheme;
   });
@@ -37,10 +46,14 @@ export function ThemeProvider({
       root.classList.remove("dark");
     }
     root.dataset.theme = theme;
+    root.style.colorScheme = theme;
 
-    if (switchable) {
-      localStorage.setItem("theme", theme);
-    }
+    if (switchable)
+      try {
+        localStorage.setItem("theme", theme);
+      } catch {
+        /* Ignore blocked storage. */
+      }
   }, [theme, switchable]);
 
   const toggleTheme = switchable
