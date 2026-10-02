@@ -10,9 +10,12 @@ const routePreloaders: Record<string, () => Promise<unknown>> = {
   "/dashboard/account": () => import("@/pages/Account"),
   "/admin": () => import("@/pages/Admin"),
 };
+const inFlightPreloads = new Map<string, Promise<unknown>>();
 
 export function preloadRoute(path: string) {
   const route = path.split(/[?#]/, 1)[0];
   const preload = routePreloaders[route];
-  if (preload) void preload().catch(() => undefined);
+  if (!preload || inFlightPreloads.has(route)) return;
+  const request = preload().catch(() => undefined);
+  inFlightPreloads.set(route, request);
 }
