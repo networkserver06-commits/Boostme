@@ -1056,7 +1056,7 @@ export default function Dashboard() {
                             if (next) setQuantity(next.minQuantity);
                           }}
                           disabled={!categoryServices.length}
-                          className="mt-2 h-11 w-full min-w-0 max-w-full rounded-xl border border-white/10 bg-[#0a111b] px-3 text-sm text-white"
+                          className="mt-2 h-11 w-full min-w-0 max-w-full rounded-xl border border-border bg-input px-3 text-sm text-foreground disabled:cursor-not-allowed disabled:opacity-70"
                         >
                           <option value="">
                             {categoryServices.length
@@ -1071,6 +1071,17 @@ export default function Dashboard() {
                             </option>
                           ))}
                         </select>
+                        {services.isLoading && (
+                          <p className="mt-2 flex items-center gap-2 text-xs text-muted-foreground" role="status">
+                            <Loader2 className="h-3.5 w-3.5 animate-spin" /> Loading live services…
+                          </p>
+                        )}
+                        {services.isError && (
+                          <div className="mt-2 flex flex-wrap items-center justify-between gap-2 rounded-lg border border-rose-300/20 bg-rose-300/[.06] px-3 py-2 text-xs" role="alert">
+                            <span className="text-rose-200">We couldn’t load the service catalog.</span>
+                            <button type="button" className="font-semibold text-cyan-200 hover:text-white" onClick={() => void services.refetch()}>Retry</button>
+                          </div>
+                        )}
                         {services.data?.length === 0 && !services.isLoading && (
                           <p className="mt-2 text-xs text-amber-200/80">
                             There are no active services at the moment.
@@ -1140,7 +1151,7 @@ export default function Dashboard() {
                           Estimated charge
                         </p>
                         <p className="mt-1 text-xl font-semibold tabular-nums text-white">
-                          Total Cost: KSh {charge.toFixed(2)}
+                          {selected ? `Total cost: KSh ${charge.toFixed(2)}` : "Select a service to see the price"}
                         </p>
                         <p className="mt-1 text-[10px] text-slate-500">
                           {selected
@@ -1154,7 +1165,8 @@ export default function Dashboard() {
                         )}
                       </div>
                       <Button
-                        className="h-11 w-full max-w-full justify-center whitespace-normal rounded-xl px-5 text-center text-sm font-semibold text-white shadow-lg shadow-blue-500/20 disabled:text-white sm:w-auto"
+                        aria-label={createOrder.isPending ? "Submitting order" : selected ? "Review and place order" : "Select a service first"}
+                        className="min-h-11 h-auto w-full max-w-full justify-center whitespace-normal rounded-xl bg-primary px-5 py-3 text-center text-sm font-semibold text-primary-foreground shadow-lg shadow-blue-500/20 hover:bg-primary/90 disabled:bg-muted disabled:text-muted-foreground disabled:opacity-100 sm:w-auto"
                         type="button"
                         disabled={
                           createOrder.isPending ||
@@ -1173,11 +1185,14 @@ export default function Dashboard() {
                           </>
                         ) : selected ? (
                           <>
-                            Confirm & place order{" "}
+                            Review & place order{" "}
                             <ArrowUpRight className="h-4 w-4" />
                           </>
                         ) : (
-                          <>Select a service first</>
+                          <>
+                            {services.isLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <ShoppingBag className="h-4 w-4" />}
+                            {services.isLoading ? "Loading services…" : "Select a service first"}
+                          </>
                         )}
                       </Button>
                     </div>
