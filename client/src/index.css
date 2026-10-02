@@ -260,3 +260,19 @@ select:focus-visible {
 [data-theme="light"] [class~="border-white/[.08]"] {
   border-color: var(--border) !important;
 }
+
+/* Final contrast guards for light-mode action controls. */
+[data-theme="light"] [class~="bg-primary"],
+[data-theme="light"] [class~="bg-blue-500"],
+[data-theme="light"] [class~="bg-cyan-300"],
+[data-theme="light"] [class~="bg-slate-600"] {
+  color: white !important;
+}
+[data-theme="light"] [data-slot="button"][class~="bg-primary"],
+[data-theme="light"] [data-slot="button"][class~="bg-blue-500"] {
+  color: white !important;
+}
+[data-theme="light"] [data-slot="button"][class~="disabled:bg-slate-700"] {
+  background-color: oklch(0.32 0.04 255) !important;
+  color: white !important;
+}
