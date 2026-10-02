@@ -25,12 +25,14 @@ import {
   ArrowUpRight,
   Bell,
   CheckCircle2,
+  ChevronDown,
   Clock3,
   ExternalLink,
   Facebook,
   Info,
   Instagram,
   Link2,
+  LockKeyhole,
   Linkedin,
   Loader2,
   MessageCircle,
@@ -774,81 +776,67 @@ export default function Dashboard() {
                       <Plus className="h-4 w-4" />
                     </span>
                   </div>
-                  <section
-                    className="mt-6 rounded-2xl border border-amber-200/15 bg-gradient-to-br from-amber-200/[.08] via-cyan-300/[.04] to-transparent p-4 shadow-[0_12px_35px_rgba(245,158,11,.06)] sm:p-5"
-                    aria-labelledby="important-order-information"
-                  >
-                    <div className="flex items-start gap-3">
+                  <details open className="group mt-6 rounded-2xl border border-amber-200/15 bg-gradient-to-br from-amber-200/[.08] via-cyan-300/[.04] to-transparent shadow-[0_12px_35px_rgba(245,158,11,.06)]">
+                    <summary className="flex cursor-pointer list-none items-start gap-3 p-4 sm:p-5 [&::-webkit-details-marker]:hidden">
                       <span className="grid h-9 w-9 shrink-0 place-items-center rounded-xl border border-amber-200/20 bg-amber-200/[.10] text-amber-100">
                         <Info className="h-4 w-4" />
                       </span>
-                      <div className="min-w-0">
-                        <h3
-                          id="important-order-information"
-                          className="text-sm font-semibold text-white"
-                        >
-                          Important information
-                        </h3>
-                        <p className="mt-1 text-[10px] leading-4 text-slate-400">
-                          Please read this before placing an order so you can
-                          choose the right service and wait time.
-                        </p>
-                      </div>
+                      <span className="min-w-0 flex-1">
+                        <span className="block text-sm font-semibold text-white">Important information</span>
+                        <span className="mt-1 block text-[10px] leading-4 text-slate-400">Read this before placing an order so you can choose the right service and wait time.</span>
+                      </span>
+                      <ChevronDown className="mt-1 h-4 w-4 shrink-0 text-amber-100 transition-transform group-open:rotate-180" />
+                    </summary>
+                    <div className="border-t border-amber-200/10 px-4 pb-4 sm:px-5 sm:pb-5">
+                      <ul className="grid gap-3 pt-4 text-xs leading-5 text-slate-300 sm:grid-cols-2">
+                        <li><strong className="text-amber-100">Start time may vary:</strong> When the server is busy, delays can occur even if a service is marked “Instant.”</li>
+                        <li><strong className="text-amber-100">Cheap services are slow:</strong> We cannot speed up or cancel cheap services. Choose them only if you are ready to wait longer.</li>
+                        <li><strong className="text-amber-100">Be patient:</strong> Some services start immediately, while others may take hours or days depending on the queue.</li>
+                        <li><strong className="text-amber-100">Read descriptions:</strong> Check each service’s notes for drop rates, refill terms, speed, and platform requirements.</li>
+                      </ul>
                     </div>
-                    <ul className="mt-4 grid gap-3 text-xs leading-5 text-slate-300 sm:grid-cols-2">
-                      <li>
-                        <strong className="text-amber-100">
-                          Start time may vary:
-                        </strong>{" "}
-                        When the server is busy, delays can occur even if a
-                        service is marked “Instant.”
-                      </li>
-                      <li>
-                        <strong className="text-amber-100">
-                          Cheap services are slow:
-                        </strong>{" "}
-                        We cannot speed up or cancel cheap services. Choose them
-                        only if you are ready to wait a long time; use
-                        fast-working services when you need quicker results.
-                      </li>
-                      <li>
-                        <strong className="text-amber-100">Be patient:</strong>{" "}
-                        Some services start immediately, while others may take
-                        hours or days to complete depending on the queue.
-                      </li>
-                      <li>
-                        <strong className="text-amber-100">
-                          Read descriptions:
-                        </strong>{" "}
-                        Always check each service’s notes. Some services may
-                        have drop rates while others are more stable. All
-                        services use real user interaction.
-                      </li>
-                    </ul>
-                    <div className="mt-4 flex flex-col gap-2 border-t border-amber-200/10 pt-3 sm:flex-row sm:items-center sm:justify-between">
-                      <p className="text-[10px] text-slate-400">
-                        Need help choosing a service?
-                      </p>
-                      <div className="flex flex-wrap gap-2">
-                        <a
-                          href="tel:+254116553618"
-                          className="inline-flex min-h-9 items-center justify-center gap-1.5 rounded-lg border border-cyan-200/20 bg-cyan-300/[.08] px-3 py-2 text-[10px] font-semibold text-cyan-50 hover:bg-cyan-300/[.16]"
-                        >
-                          <PhoneCall className="h-3.5 w-3.5" />
-                          Call 0116 553 618
-                        </a>
-                        <a
-                          href="https://wa.me/254116553618?text=Hello%20Orbit%20Growth%20support"
-                          target="_blank"
-                          rel="noreferrer"
-                          className="inline-flex min-h-9 items-center justify-center gap-1.5 rounded-lg border border-emerald-200/20 bg-emerald-300/[.08] px-3 py-2 text-[10px] font-semibold text-emerald-50 hover:bg-emerald-300/[.16]"
-                        >
-                          <MessageCircle className="h-3.5 w-3.5" />
-                          WhatsApp support
-                        </a>
+                  </details>
+                  <details className="group rounded-2xl border border-cyan-200/15 bg-cyan-300/[.04] shadow-[0_12px_35px_rgba(34,211,238,.04)]">
+                    <summary className="flex cursor-pointer list-none items-start gap-3 p-4 sm:p-5 [&::-webkit-details-marker]:hidden">
+                      <span className="grid h-9 w-9 shrink-0 place-items-center rounded-xl border border-cyan-200/20 bg-cyan-300/[.10] text-cyan-100">
+                        <LockKeyhole className="h-4 w-4" />
+                      </span>
+                      <span className="min-w-0 flex-1">
+                        <span className="block text-sm font-semibold text-white">Private accounts do not receive services</span>
+                        <span className="mt-1 block text-[10px] leading-4 text-slate-400">Make the target public before ordering and keep it public until delivery is complete.</span>
+                      </span>
+                      <ChevronDown className="mt-1 h-4 w-4 shrink-0 text-cyan-100 transition-transform group-open:rotate-180" />
+                    </summary>
+                    <div className="border-t border-cyan-200/10 px-4 pb-4 sm:px-5 sm:pb-5">
+                      <p className="pt-4 text-xs leading-5 text-slate-300">A private profile, post, video, channel, group, or status can block provider delivery. We cannot reliably service content that the provider cannot see. Do not share your password; only change the platform privacy setting.</p>
+                      <div className="mt-4 grid gap-2 sm:grid-cols-2">
+                        {[
+                          ["Instagram", "Profile → ☰ → Settings and activity → Account privacy → turn off Private account."],
+                          ["TikTok", "Profile → ☰ → Settings and privacy → Privacy → turn off Private account."],
+                          ["Facebook", "Open the profile/page or post audience setting → choose Public. For a group, use a public group only when appropriate."],
+                          ["YouTube", "YouTube Studio → Content → choose the video → Visibility → Public. Check the channel and video visibility."],
+                          ["X", "Profile → Settings and privacy → Privacy and safety → turn off Protect your posts."],
+                          ["WhatsApp / Telegram", "Use a public channel, group, status, or invite/link that the selected service supports; private chats and restricted groups cannot be processed."],
+                        ].map(([platformName, instruction]) => (
+                          <div key={platformName} className="rounded-xl border border-white/[.08] bg-white/[.025] p-3">
+                            <p className="text-xs font-semibold text-cyan-100">{platformName}</p>
+                            <p className="mt-1 text-[10px] leading-4 text-slate-400">{instruction}</p>
+                          </div>
+                        ))}
                       </div>
+                      <div className="mt-4 rounded-xl border border-emerald-200/15 bg-emerald-300/[.05] p-3 text-[10px] leading-4 text-emerald-50/90">
+                        <strong className="text-emerald-100">Before you submit:</strong> open the target link in an incognito/logged-out browser window. If it cannot be viewed publicly, make it public first, then return here and select the correct service.
+                      </div>
+                      <Link href="/dashboard/account?tab=privacy" className="mt-4 inline-flex min-h-9 items-center gap-1.5 rounded-lg border border-cyan-200/20 bg-cyan-300/[.08] px-3 py-2 text-[10px] font-semibold text-cyan-50 hover:bg-cyan-300/[.16]">Open account privacy help <ArrowUpRight className="h-3.5 w-3.5" /></Link>
                     </div>
-                  </section>
+                  </details>
+                  <div className="mt-4 flex flex-col gap-2 border-t border-amber-200/10 pt-3 sm:flex-row sm:items-center sm:justify-between">
+                    <p className="text-[10px] text-slate-400">Need help choosing a service?</p>
+                    <div className="flex flex-wrap gap-2">
+                      <a href="tel:+254116553618" className="inline-flex min-h-9 items-center justify-center gap-1.5 rounded-lg border border-cyan-200/20 bg-cyan-300/[.08] px-3 py-2 text-[10px] font-semibold text-cyan-50 hover:bg-cyan-300/[.16]"><PhoneCall className="h-3.5 w-3.5" />Call 0116 553 618</a>
+                      <a href="https://wa.me/254116553618?text=Hello%20Orbit%20Growth%20support" target="_blank" rel="noreferrer" className="inline-flex min-h-9 items-center justify-center gap-1.5 rounded-lg border border-emerald-200/20 bg-emerald-300/[.08] px-3 py-2 text-[10px] font-semibold text-emerald-50 hover:bg-emerald-300/[.16]"><MessageCircle className="h-3.5 w-3.5" />WhatsApp support</a>
+                    </div>
+                  </div>
                   <div className="mt-6 grid gap-4">
                     <div className="relative">
                       <Search className="pointer-events-none absolute left-3 top-3 h-4 w-4 text-slate-500" />
