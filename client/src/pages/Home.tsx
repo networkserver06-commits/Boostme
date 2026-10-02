@@ -118,7 +118,7 @@ export default function Home() {
         <section className="mx-auto grid max-w-7xl gap-14 px-5 pb-20 pt-16 sm:pt-20 lg:grid-cols-[1.08fr_.92fr] lg:items-center lg:px-8 lg:pb-28 lg:pt-24">
           <div>
             <div className="mb-6 inline-flex items-center gap-2 rounded-full border border-cyan-300/15 bg-cyan-300/[.07] px-3.5 py-2 text-xs font-medium text-cyan-100"><span className="h-1.5 w-1.5 rounded-full bg-cyan-300 shadow-[0_0_12px_rgba(103,232,249,.8)]" /> A clearer way to run social growth</div>
-            <h1 className="max-w-3xl text-[clamp(2.85rem,6vw,5.25rem)] font-semibold leading-[.99] tracking-[-.07em]">Growth services.<br /><span className="bg-gradient-to-r from-blue-300 via-cyan-200 to-white bg-clip-text text-transparent">One clear account.</span></h1>
+            <h1 className="max-w-3xl text-[clamp(2.85rem,6vw,5.25rem)] font-semibold leading-[.99] tracking-[-.07em]">Growth services.<br /><span className="light-readable-gradient bg-gradient-to-r from-blue-300 via-cyan-200 to-white bg-clip-text text-transparent">One clear account.</span></h1>
             <p className="mt-7 max-w-xl text-base leading-7 text-slate-400 sm:text-lg sm:leading-8">Find the right social growth service, see the price before checkout, and follow every order and wallet update from one simple dashboard.</p>
             <div className="mt-8 flex flex-col gap-3 sm:flex-row">
               <button onClick={() => startSignup()} className="inline-flex items-center justify-center gap-2 rounded-xl bg-blue-500 px-5 py-3.5 text-sm font-semibold text-white shadow-[0_10px_34px_rgba(37,99,235,.25)] hover:-translate-y-0.5 hover:bg-blue-400">Create your account <ArrowRight className="h-4 w-4" /></button>
