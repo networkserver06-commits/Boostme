@@ -1079,12 +1079,13 @@ export default function Dashboard() {
                           </p>
                         )}
                         {selected && (
-                          <p className="mt-2 text-xs leading-5 text-slate-400">
-                            {selected.description ||
-                              `${selected.platform} · ${selected.category}`}{" "}
-                            · {selected.minQuantity.toLocaleString()}–
-                            {selected.maxQuantity.toLocaleString()} units.
-                          </p>
+                          <div className="mt-2 flex min-w-0 items-start gap-2 rounded-lg border border-cyan-200/10 bg-cyan-300/[.04] px-3 py-2">
+                            <ShoppingBag className="mt-0.5 h-3.5 w-3.5 shrink-0 text-cyan-200" />
+                            <div className="min-w-0">
+                              <p className="break-words text-xs font-semibold text-cyan-100">{selected.name}</p>
+                              <p className="mt-0.5 break-words text-[10px] leading-4 text-slate-400">{selected.description || `${selected.platform} · ${selected.category}`} · {selected.minQuantity.toLocaleString()}–{selected.maxQuantity.toLocaleString()} units · {money(selected.retailRatePer1k)} / 1k</p>
+                            </div>
+                          </div>
                         )}
                       </div>
                     </div>
@@ -1133,7 +1134,7 @@ export default function Dashboard() {
                         }
                       />
                     </div>
-                    <div className="flex min-w-0 flex-col gap-4 rounded-xl border border-cyan-200/15 bg-gradient-to-br from-cyan-300/[.08] to-blue-400/[.04] p-4 shadow-[0_12px_35px_rgba(34,211,238,.07)] sm:flex-row sm:items-center sm:justify-between">
+                    <div className="flex min-w-0 flex-col gap-4 overflow-hidden rounded-xl border border-cyan-200/15 bg-gradient-to-br from-cyan-300/[.08] to-blue-400/[.04] p-4 shadow-[0_12px_35px_rgba(34,211,238,.07)] sm:flex-row sm:items-center sm:justify-between">
                       <div className="min-w-0">
                         <p className="text-[10px] font-semibold uppercase tracking-[.14em] text-cyan-100/80">
                           Order summary
@@ -1167,7 +1168,10 @@ export default function Dashboard() {
                           quantity < (selected?.minQuantity ?? 0) ||
                           quantity > (selected?.maxQuantity ?? Infinity)
                         }
-                        onClick={() => setReviewOpen(true)}
+                        onClick={() => {
+                          createOrder.reset();
+                          setReviewOpen(true);
+                        }}
                       >
                         {createOrder.isPending ? (
                           <>
@@ -1218,6 +1222,13 @@ export default function Dashboard() {
                         Check the details below. Your wallet is charged only when you place the order.
                       </DialogDescription>
                     </DialogHeader>
+                    {createOrder.error && (
+                      <div role="alert" className="rounded-xl border border-rose-300/20 bg-rose-300/[.08] p-3 text-xs leading-5 text-rose-100">
+                        <p className="font-semibold">Order could not be placed</p>
+                        <p className="mt-1 text-rose-100/80">{friendlyErrorMessage(createOrder.error, "Check the service, public link, quantity, and wallet balance, then try again.")}</p>
+                        <p className="mt-2 text-[10px] text-rose-100/70">Your wallet was not charged unless the order was successfully accepted.</p>
+                      </div>
+                    )}
                     {selected && (
                       <div className="space-y-3 rounded-xl border border-border bg-muted/40 p-4 text-sm">
                         <div className="flex items-start justify-between gap-4">
@@ -1252,7 +1263,6 @@ export default function Dashboard() {
                         disabled={createOrder.isPending || !selected}
                         onClick={() => {
                           if (!selected) return;
-                          setReviewOpen(false);
                           createOrder.mutate({ serviceId: selected.id, targetLink: targetLink.trim(), quantity });
                         }}
                       >

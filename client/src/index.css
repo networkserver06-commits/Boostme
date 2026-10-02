@@ -276,3 +276,20 @@ select:focus-visible {
   background-color: oklch(0.32 0.04 255) !important;
   color: white !important;
 }
+[data-theme="light"] [class~="text-cyan-200"],
+[data-theme="light"] [class~="text-cyan-100"] {
+  color: oklch(0.34 0.12 220) !important;
+}
+[data-theme="light"] [class~="text-amber-100"],
+[data-theme="light"] [class~="text-amber-200"] {
+  color: oklch(0.42 0.13 75) !important;
+}
+[data-theme="light"] [class~="text-emerald-50"],
+[data-theme="light"] [class~="text-emerald-100"],
+[data-theme="light"] [class~="text-emerald-200"] {
+  color: oklch(0.34 0.12 155) !important;
+}
+[data-theme="light"] [class~="text-rose-100"],
+[data-theme="light"] [class~="text-rose-200"] {
+  color: oklch(0.43 0.16 25) !important;
+}
