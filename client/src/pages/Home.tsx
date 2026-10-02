@@ -6,12 +6,15 @@ import {
   ArrowRight,
   ArrowUpRight,
   AtSign,
+  BookOpen,
   Check,
   ChevronDown,
   CircleDollarSign,
   Clock3,
   Facebook,
+  Info,
   Layers3,
+  LayoutGrid,
   MessageCircle,
   Music2,
   Instagram,
@@ -20,6 +23,7 @@ import {
   ShieldCheck,
   Sparkles,
   WalletCards,
+  Workflow,
   X,
   Youtube,
 } from "lucide-react";
@@ -89,10 +93,10 @@ export default function Home() {
             <span className="grid h-10 w-10 place-items-center rounded-xl border border-blue-300/20 bg-gradient-to-br from-blue-500 to-cyan-500 shadow-[0_8px_30px_rgba(28,112,225,.3)]"><Sparkles className="h-[18px] w-[18px]" /></span>
             <span className="leading-tight"><span className="block text-[15px] font-semibold tracking-[-.04em]">orbit growth</span><span className="mt-0.5 block text-[10px] font-medium uppercase tracking-[.19em] text-slate-500">Social growth, simplified</span></span>
           </Link>
-          <div className="hidden items-center gap-8 text-[13px] font-medium text-slate-400 md:flex">
-            <a href="#catalog" className="hover:text-white">Service catalog</a>
-            <a href="#how-it-works" className="hover:text-white">How it works</a>
-            <a href="#pricing" className="hover:text-white">Pricing</a><Link href="/how-to-use" className="hover:text-white">How to use</Link><Link href="/about" className="hover:text-white">About</Link>
+          <div className="hidden items-center gap-6 text-[13px] font-medium text-slate-400 md:flex">
+            <a href="#catalog" className="inline-flex items-center gap-1.5 hover:text-white"><LayoutGrid className="h-3.5 w-3.5 text-cyan-200" />Service catalog</a>
+            <a href="#how-it-works" className="inline-flex items-center gap-1.5 hover:text-white"><Workflow className="h-3.5 w-3.5 text-cyan-200" />How it works</a>
+            <a href="#pricing" className="inline-flex items-center gap-1.5 hover:text-white"><CircleDollarSign className="h-3.5 w-3.5 text-cyan-200" />Pricing</a><Link href="/how-to-use" className="inline-flex items-center gap-1.5 hover:text-white"><BookOpen className="h-3.5 w-3.5 text-cyan-200" />How to use</Link><Link href="/about" className="inline-flex items-center gap-1.5 hover:text-white"><Info className="h-3.5 w-3.5 text-cyan-200" />About</Link>
           </div>
           <div className="hidden items-center gap-3 md:flex">
             <button onClick={() => startLogin()} className="rounded-lg px-3 py-2 text-sm font-medium text-slate-300 hover:text-white">Sign in</button>
@@ -103,9 +107,9 @@ export default function Home() {
           </button>
         </nav>
         {menuOpen && <div id="mobile-menu" className="border-t border-white/[.07] bg-[#0b111c] px-5 py-4 md:hidden"><div className="mx-auto grid max-w-7xl gap-1 text-sm text-slate-300">
-          <a href="#catalog" onClick={closeMenu} className="rounded-lg px-3 py-3 hover:bg-white/5">Service catalog</a>
-          <a href="#how-it-works" onClick={closeMenu} className="rounded-lg px-3 py-3 hover:bg-white/5">How it works</a>
-          <a href="#pricing" onClick={closeMenu} className="rounded-lg px-3 py-3 hover:bg-white/5">Pricing</a><Link href="/how-to-use" onClick={closeMenu} className="rounded-lg px-3 py-3 hover:bg-white/5">How to use</Link><Link href="/terms" onClick={closeMenu} className="rounded-lg px-3 py-3 hover:bg-white/5">Terms of service</Link><Link href="/about" onClick={closeMenu} className="rounded-lg px-3 py-3 hover:bg-white/5">About</Link>
+          <a href="#catalog" onClick={closeMenu} className="inline-flex items-center gap-3 rounded-lg px-3 py-3 hover:bg-white/5"><LayoutGrid className="h-4 w-4 text-cyan-200" />Service catalog</a>
+          <a href="#how-it-works" onClick={closeMenu} className="inline-flex items-center gap-3 rounded-lg px-3 py-3 hover:bg-white/5"><Workflow className="h-4 w-4 text-cyan-200" />How it works</a>
+          <a href="#pricing" onClick={closeMenu} className="inline-flex items-center gap-3 rounded-lg px-3 py-3 hover:bg-white/5"><CircleDollarSign className="h-4 w-4 text-cyan-200" />Pricing</a><Link href="/how-to-use" onClick={closeMenu} className="inline-flex items-center gap-3 rounded-lg px-3 py-3 hover:bg-white/5"><BookOpen className="h-4 w-4 text-cyan-200" />How to use</Link><Link href="/terms" onClick={closeMenu} className="inline-flex items-center gap-3 rounded-lg px-3 py-3 hover:bg-white/5"><ShieldCheck className="h-4 w-4 text-cyan-200" />Terms of service</Link><Link href="/about" onClick={closeMenu} className="inline-flex items-center gap-3 rounded-lg px-3 py-3 hover:bg-white/5"><Info className="h-4 w-4 text-cyan-200" />About</Link>
           <div className="mt-2 grid grid-cols-2 gap-2"><button onClick={() => startLogin()} className="rounded-lg border border-white/10 px-3 py-3 font-medium">Sign in</button><button onClick={() => startSignup()} className="rounded-lg bg-blue-500 px-3 py-3 font-semibold text-white">Create account <ArrowUpRight className="ml-1 inline h-4 w-4" /></button></div>
         </div></div>}
       </header>
@@ -193,7 +197,7 @@ export default function Home() {
         <div className="mx-auto flex max-w-7xl flex-col gap-5 px-5 py-7 text-xs text-slate-500 sm:flex-row sm:items-center sm:justify-between lg:px-8">
           <Link href="/" className="inline-flex items-center gap-2.5 font-semibold text-slate-200"><span className="grid h-7 w-7 place-items-center rounded-lg bg-blue-500"><Sparkles className="h-3.5 w-3.5" /></span> orbit growth</Link>
           <span>Pricing and availability reflect the active service catalog. Wallet requests may require review.</span>
-          <div className="flex flex-wrap items-center gap-4"><Link href="/how-to-use" className="hover:text-white">How to use</Link><Link href="/terms" className="hover:text-white">Terms</Link><Link href="/about" className="hover:text-white">About</Link><button onClick={() => startLogin()} className="inline-flex items-center gap-1 font-medium text-slate-300 hover:text-white">Sign in <ChevronDown className="h-3.5 w-3.5 -rotate-90" /></button></div>
+          <div className="flex flex-wrap items-center gap-4"><Link href="/how-to-use" className="inline-flex items-center gap-1.5 hover:text-white"><BookOpen className="h-3.5 w-3.5" />How to use</Link><Link href="/terms" className="inline-flex items-center gap-1.5 hover:text-white"><ShieldCheck className="h-3.5 w-3.5" />Terms</Link><Link href="/about" className="inline-flex items-center gap-1.5 hover:text-white"><Info className="h-3.5 w-3.5" />About</Link><button onClick={() => startLogin()} className="inline-flex items-center gap-1 font-medium text-slate-300 hover:text-white"><CircleDollarSign className="h-3.5 w-3.5" />Sign in <ChevronDown className="h-3.5 w-3.5 -rotate-90" /></button></div>
         </div>
       </footer>
     </div>
