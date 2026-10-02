@@ -55,6 +55,11 @@ import { toast } from "sonner";
 const MIN_DEPOSIT_KES = 10;
 const money = (value: unknown) =>
   `KES ${Number(value ?? 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+const serviceOptionLabel = (service: { platform: string; name: string; retailRatePer1k: string }, includePlatform: boolean) => {
+  const name = service.name.replace(/\s+/g, " ").trim();
+  const conciseName = name.length > 58 ? `${name.slice(0, 55).trimEnd()}…` : name;
+  return `${includePlatform ? `${service.platform} · ` : ""}${conciseName} · ${money(service.retailRatePer1k)} / 1k`;
+};
 const displayStatus = (status: string) => status.replaceAll("_", " ");
 const terminalOrderStatuses = ["completed", "canceled", "failed"];
 const orderProgress = (order: {
@@ -1053,9 +1058,7 @@ export default function Dashboard() {
                           </option>
                           {categoryServices.map(service => (
                             <option key={service.id} value={service.id}>
-                              {!platform && `${service.platform} · `}
-                              {service.name} · {money(service.retailRatePer1k)}{" "}
-                              / 1k
+                              {serviceOptionLabel(service, !platform)}
                             </option>
                           ))}
                         </select>
@@ -1154,7 +1157,8 @@ export default function Dashboard() {
                       </div>
                       <Button
                         aria-label={createOrder.isPending ? "Submitting order" : selected ? "Review and place order" : "Select a service first"}
-                        className="min-h-11 h-auto w-full max-w-full justify-center whitespace-normal rounded-xl bg-primary px-5 py-3 text-center text-sm font-semibold text-primary-foreground shadow-lg shadow-blue-500/20 hover:bg-primary/90 disabled:bg-muted disabled:text-muted-foreground disabled:opacity-100 sm:w-auto"
+                        style={{ color: selected ? "var(--primary-foreground)" : "var(--foreground)" }}
+                        className="min-h-11 h-auto w-full max-w-full justify-center whitespace-normal rounded-xl bg-primary px-5 py-3 text-center text-sm font-semibold text-primary-foreground shadow-lg shadow-blue-500/20 hover:bg-primary/90 disabled:bg-muted disabled:opacity-100 sm:w-auto"
                         type="button"
                         disabled={
                           createOrder.isPending ||
@@ -1173,13 +1177,13 @@ export default function Dashboard() {
                           </>
                         ) : selected ? (
                           <>
-                            Review & place order{" "}
+                            <span>Review & place order</span>{" "}
                             <ArrowUpRight className="h-4 w-4" />
                           </>
                         ) : (
                           <>
                             {services.isLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <ShoppingBag className="h-4 w-4" />}
-                            {services.isLoading ? "Loading services…" : "Select a service first"}
+                            <span>{services.isLoading ? "Loading services…" : "Select a service first"}</span>
                           </>
                         )}
                       </Button>
