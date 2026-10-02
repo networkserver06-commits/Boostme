@@ -1,12 +1,12 @@
-export const LOW_COST_RETAIL_MULTIPLIER = 2.5;
-export const HIGH_COST_RETAIL_MULTIPLIER = 1.4;
+export const LOW_COST_RETAIL_MULTIPLIER = 1.5;
+export const HIGH_COST_RETAIL_MULTIPLIER = 1.2;
 export const HIGH_COST_THRESHOLD_KES = 20;
 export const MIN_RETAIL_RATE_PER_1K_KES = 3;
 
 /**
  * Returns the required retail rate per 1,000 units for a live provider rate.
- * Rates above KES 20 receive a 40% markup; all other non-negative rates receive
- * a 150% markup, with a KES 3.00 minimum retail rate per 1,000 units. Throwing on invalid input prevents silently importing a zero rate.
+ * Rates above KES 20 receive a 20% markup; all other non-negative rates receive
+ * a 50% markup, with a KES 3.00 minimum retail rate per 1,000 units. Throwing on invalid input prevents silently importing a zero rate.
  */
 export function calculateTieredRetailRatePer1k(wholesaleCostKes: string | number) {
   const wholesale = Number(wholesaleCostKes);

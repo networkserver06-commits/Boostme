@@ -8,7 +8,7 @@ import {
 } from "./finance";
 
 describe("finance calculations", () => {
-  it("applies the KSh 10 floor and rejects unsafe margins", () => {
+  it("calculates the exact quantity-based charge and rejects unsafe margins", () => {
     expect(
       calculateCheckoutEconomics({
         quantity: 50,
@@ -17,10 +17,10 @@ describe("finance calculations", () => {
       })
     ).toMatchObject({
       retailAmountCalculated: 0.15,
-      finalRetailCharged: 10,
+      finalRetailCharged: 0.15,
       wholesaleCostForQty: 0.01,
-      estimatedProfit: 9.99,
-      isValid: true,
+      estimatedProfit: 0.14,
+      isValid: false,
     });
     expect(
       calculateCheckoutEconomics({

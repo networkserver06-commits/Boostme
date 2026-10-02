@@ -45,6 +45,6 @@ describe("mandatory order loss prevention", () => {
     });
 
     expect(updates).toContainEqual({ needsResync: 1 });
-    expect(recordAuditMock).toHaveBeenCalledWith(expect.objectContaining({ action: "service.loss_blocked", entityId: "42", entityType: "service", details: expect.objectContaining({ customerCharge: 10, orderWholesaleCost: 41.26 }) }));
+    expect(recordAuditMock).toHaveBeenCalledWith(expect.objectContaining({ action: "service.loss_blocked", entityId: "42", entityType: "service", details: expect.objectContaining({ customerCharge: 0.88, orderWholesaleCost: 41.26 }) }));
   });
 });

@@ -20,26 +20,26 @@ describe("provider status mapping", () => {
 describe("provider service mapping", () => {
   it("does not allow the known 26949 service below its provider floor", () => {
     expect(enforceProviderRateFloor("26949", "TikTok Likes", 0.3537)).toBe(41.2269);
-    expect(mapCatalogService({ service: "26949", name: "TikTok Likes", category: "TikTok Likes", rate: "0.3537", min: "1000", max: "500000" }, 1)).toMatchObject({ wholesaleRatePer1k: "41.2269", retailRatePer1k: "57.7177" });
+    expect(mapCatalogService({ service: "26949", name: "TikTok Likes", category: "TikTok Likes", rate: "0.3537", min: "1000", max: "500000" }, 1)).toMatchObject({ wholesaleRatePer1k: "41.2269", retailRatePer1k: "49.4723" });
   });
 
   it("protects the confirmed Instagram Working / Flag OFF service rate", () => {
     expect(enforceProviderRateFloor("247", "Instagram - Followers [ Working ] [ Flag OFF ✅ ]", 5.3063)).toBe(484);
-    expect(mapCatalogService({ service: "247", name: "Instagram - Followers [ Working ] [ Flag OFF ✅ ]", category: "Instagram Followers", rate: "5.3063", min: "10", max: "1000000" }, 1)).toMatchObject({ wholesaleRatePer1k: "484.0000", retailRatePer1k: "677.6000" });
+    expect(mapCatalogService({ service: "247", name: "Instagram - Followers [ Working ] [ Flag OFF ✅ ]", category: "Instagram Followers", rate: "5.3063", min: "10", max: "1000000" }, 1)).toMatchObject({ wholesaleRatePer1k: "484.0000", retailRatePer1k: "580.8000" });
   });
 
   it("normalizes a remote service and applies the low-cost tier multiplier", () => {
-    expect(mapCatalogService({ service: "7", name: "Reels views", category: "Instagram Views", rate: "12.5", min: "100", max: "50000" }, 3)).toMatchObject({ providerId: 3, providerServiceId: "7", platform: "Instagram", wholesaleRatePer1k: "12.5000", retailRatePer1k: "31.2500", minQuantity: 100, maxQuantity: 50000, isActive: 1 });
+    expect(mapCatalogService({ service: "7", name: "Reels views", category: "Instagram Views", rate: "12.5", min: "100", max: "50000" }, 3)).toMatchObject({ providerId: 3, providerServiceId: "7", platform: "Instagram", wholesaleRatePer1k: "12.5000", retailRatePer1k: "18.7500", minQuantity: 100, maxQuantity: 50000, isActive: 1 });
   });
 
   it("supports ShakerGain’s documented services and Category aliases", () => {
     const context = getProviderPricingContext("ShakerGain", "https://shakergainske.com/api/v2");
     expect(context.currency).toBe("USD");
-    expect(mapCatalogService({ services: "1", name: "Data Entry", Category: "Seo", rate: 1, min: "10", max: "100000", type: "Default" }, 8, context)).toMatchObject({ providerId: 8, providerServiceId: "1", platform: "Seo", category: "Seo", wholesaleRatePer1k: "130.0000", retailRatePer1k: "182.0000" });
+    expect(mapCatalogService({ services: "1", name: "Data Entry", Category: "Seo", rate: 1, min: "10", max: "100000", type: "Default" }, 8, context)).toMatchObject({ providerId: 8, providerServiceId: "1", platform: "Seo", category: "Seo", wholesaleRatePer1k: "130.0000", retailRatePer1k: "156.0000" });
   });
 
   it("converts a ShakerGain API rate to the exact KES wholesale equivalent", () => {
-    expect(mapCatalogService({ service: "27503", name: "Instagram Followers | Emergency", category: "Instagram Followers", rate: "0.07253846", min: "10", max: "100000", type: "Default" }, 8, { currency: "USD", usdToKes: 130 })).toMatchObject({ wholesaleRatePer1k: "9.4300", retailRatePer1k: "23.5750" });
+    expect(mapCatalogService({ service: "27503", name: "Instagram Followers | Emergency", category: "Instagram Followers", rate: "0.07253846", min: "10", max: "100000", type: "Default" }, 8, { currency: "USD", usdToKes: 130 })).toMatchObject({ wholesaleRatePer1k: "9.4300", retailRatePer1k: "14.1450" });
   });
 
   it("accepts KES/KSh rates and blocks USD rates instead of treating dollars as KES", () => {

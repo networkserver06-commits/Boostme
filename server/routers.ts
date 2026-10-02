@@ -75,7 +75,6 @@ import {
 } from "./leetec";
 
 const MIN_DEPOSIT_KES = 10;
-const MINIMUM_ORDER_CHARGE_KES = 10;
 
 const serviceInput = z.object({
   name: z.string().min(3),
@@ -345,8 +344,13 @@ export const appRouter = router({
           service.name,
           Number(service.wholesaleRatePer1k)
         );
-        if (safeWholesaleRate > Number(service.wholesaleRatePer1k)) {
-          const safeRetailRate = formatTieredRetailRatePer1k(safeWholesaleRate);
+        const safeRetailRate = formatTieredRetailRatePer1k(safeWholesaleRate);
+        const currentWholesaleRate = Number(service.wholesaleRatePer1k);
+        const currentRetailRate = Number(service.retailRatePer1k);
+        if (
+          safeWholesaleRate > currentWholesaleRate ||
+          currentRetailRate > Number(safeRetailRate)
+        ) {
           await db
             .update(services)
             .set({
@@ -365,13 +369,8 @@ export const appRouter = router({
             Number(service.wholesaleRatePer1k)
           ).toFixed(2)
         );
-        const storedCustomerCharge = Math.max(
-          Number(
-            ((input.quantity / 1000) * Number(service.retailRatePer1k)).toFixed(
-              2
-            )
-          ),
-          MINIMUM_ORDER_CHARGE_KES
+        const storedCustomerCharge = Number(
+          ((input.quantity / 1000) * Number(service.retailRatePer1k)).toFixed(2)
         );
         if (
           !Number.isFinite(storedWholesaleCost) ||
@@ -411,7 +410,7 @@ export const appRouter = router({
                 .limit(1)
             )[0]
           : undefined;
-        if (provider && service.providerServiceId) {
+        if (provider?.apiUrl && provider.apiKey && service.providerServiceId) {
           try {
             const liveService = (
               await fetchProviderServices(provider.apiUrl, provider.apiKey)
@@ -507,13 +506,8 @@ export const appRouter = router({
             Number(service.wholesaleRatePer1k)
           ).toFixed(2)
         );
-        const customerCharge = Math.max(
-          Number(
-            ((input.quantity / 1000) * Number(service.retailRatePer1k)).toFixed(
-              2
-            )
-          ),
-          MINIMUM_ORDER_CHARGE_KES
+        const customerCharge = Number(
+          ((input.quantity / 1000) * Number(service.retailRatePer1k)).toFixed(2)
         );
         if (
           !Number.isFinite(orderWholesaleCost) ||

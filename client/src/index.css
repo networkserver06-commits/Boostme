@@ -231,3 +231,32 @@ select:focus-visible {
 [data-theme="light"] [class~="text-blue-100"] {
   color: oklch(0.32 0.12 245) !important;
 }
+
+/* Theme-safe mappings for legacy dashboard surfaces. */
+[data-theme="light"] [class~="bg-\[\#0b111c\]"],
+[data-theme="light"] [class~="bg-\[\#0d1420\]"],
+[data-theme="light"] [class~="bg-\[\#0e1622\]"],
+[data-theme="light"] [class~="bg-\[\#101b2a\]"],
+[data-theme="light"] [class~="bg-\[\#0b1220\]"] {
+  background-color: var(--card) !important;
+}
+[data-theme="light"] [class~="bg-\[\#0a1019\]"],
+[data-theme="light"] [class~="bg-\[\#0a111b\]"] {
+  background-color: var(--input) !important;
+}
+[data-theme="light"] [class~="text-white"],
+[data-theme="light"] [class~="text-slate-100"],
+[data-theme="light"] [class~="text-slate-200"] {
+  color: var(--card-foreground) !important;
+}
+[data-theme="light"] [class~="text-cyan-50"],
+[data-theme="light"] [class~="text-cyan-100"],
+[data-theme="light"] [class~="text-blue-100"] {
+  color: oklch(0.35 0.12 245) !important;
+}
+[data-theme="light"] [class~="border-white/10"],
+[data-theme="light"] [class~="border-white/[.06]"],
+[data-theme="light"] [class~="border-white/[.07]"],
+[data-theme="light"] [class~="border-white/[.08]"] {
+  border-color: var(--border) !important;
+}

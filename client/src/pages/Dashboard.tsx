@@ -1,10 +1,19 @@
 import { useAuth } from "@/_core/hooks/useAuth";
 import DashboardLayout from "@/components/DashboardLayout";
 import { Button } from "@/components/ui/button";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { trpc } from "@/lib/trpc";
 import { friendlyErrorMessage } from "@shared/errorMessages";
+import { calculateCheckoutEconomics } from "@shared/finance";
 import {
   compareCustomerPlatforms,
   isCustomerVisiblePlatform,
@@ -264,6 +273,7 @@ export default function Dashboard() {
     null
   );
   const [notificationsOpen, setNotificationsOpen] = useState(false);
+  const [reviewOpen, setReviewOpen] = useState(false);
   const platformScrollRef = useRef<HTMLDivElement>(null);
   const categoryScrollRef = useRef<HTMLDivElement>(null);
   const refreshOrderStatus = trpc.dashboard.refreshOrderStatus.useMutation({
@@ -424,11 +434,15 @@ export default function Dashboard() {
       setCategory(normalizeCategory(match.category));
     }
   }, [services.data, serviceId]);
-  const calculatedCharge = selected
-    ? Number(((Number(selected.retailRatePer1k) * quantity) / 1000).toFixed(2))
-    : 0;
-  const charge = selected ? Math.max(calculatedCharge, 10) : 0;
-  const isMinimumChargeApplied = Boolean(selected && calculatedCharge < 10);
+  const checkoutEconomics = selected
+    ? calculateCheckoutEconomics({
+        quantity,
+        retailRatePer1k: selected.retailRatePer1k,
+        wholesaleRatePer1k: selected.wholesaleRatePer1k,
+      })
+    : null;
+  const calculatedCharge = checkoutEconomics?.retailAmountCalculated ?? 0;
+  const charge = checkoutEconomics?.finalRetailCharged ?? 0;
   const filteredOrders = useMemo(
     () =>
       (orders.data ?? []).filter(
@@ -1130,12 +1144,12 @@ export default function Dashboard() {
                         </p>
                         <p className="mt-1 text-[10px] text-slate-500">
                           {selected
-                            ? `${quantity.toLocaleString()} × ${money(selected.retailRatePer1k)} per 1,000`
+                            ? `(${quantity.toLocaleString()} ÷ 1,000) × ${money(selected.retailRatePer1k)} per 1,000`
                             : "Choose a service to calculate"}
                         </p>
-                        {isMinimumChargeApplied && (
-                          <p className="mt-1 text-[10px] text-amber-200/80">
-                            Minimum checkout amount for test orders is KSh 10.00
+                        {selected && (
+                          <p className="mt-2 text-[10px] leading-4 text-slate-400">
+                            Listed rate: {money(selected.retailRatePer1k)} per 1,000. The final amount is based directly on your quantity.
                           </p>
                         )}
                       </div>
@@ -1150,18 +1164,7 @@ export default function Dashboard() {
                           quantity < (selected?.minQuantity ?? 0) ||
                           quantity > (selected?.maxQuantity ?? Infinity)
                         }
-                        onClick={() => {
-                          if (!selected) return;
-                          const confirmed = window.confirm(
-                            `Confirm order?\n\nService: ${selected.name}\nQuantity: ${quantity.toLocaleString()}\nCharge: ${money(charge)}\n\nYour wallet will be charged only after confirmation.`
-                          );
-                          if (confirmed)
-                            createOrder.mutate({
-                              serviceId: selected.id,
-                              targetLink: targetLink.trim(),
-                              quantity,
-                            });
-                        }}
+                        onClick={() => setReviewOpen(true)}
                       >
                         {createOrder.isPending ? (
                           <>
@@ -1184,7 +1187,7 @@ export default function Dashboard() {
                     </p>
                   </div>
                 </section>
-                <TopUpCard
+                {isOverviewPage && <TopUpCard
                   phone={phone}
                   setPhone={setPhone}
                   amount={depositAmount}
@@ -1200,7 +1203,58 @@ export default function Dashboard() {
                   }
                   onCheck={() => checkDepositNow(false)}
                   compact
-                />
+                />}
+                <Dialog open={reviewOpen} onOpenChange={setReviewOpen}>
+                  <DialogContent className="border-white/10 bg-card text-card-foreground sm:max-w-md">
+                    <DialogHeader>
+                      <DialogTitle>Review your order</DialogTitle>
+                      <DialogDescription>
+                        Check the details below. Your wallet is charged only when you place the order.
+                      </DialogDescription>
+                    </DialogHeader>
+                    {selected && (
+                      <div className="space-y-3 rounded-xl border border-border bg-muted/40 p-4 text-sm">
+                        <div className="flex items-start justify-between gap-4">
+                          <span className="text-muted-foreground">Service</span>
+                          <span className="max-w-[65%] text-right font-medium">{selected.name}</span>
+                        </div>
+                        <div className="flex items-start justify-between gap-4">
+                          <span className="text-muted-foreground">Quantity</span>
+                          <span className="font-medium tabular-nums">{quantity.toLocaleString()}</span>
+                        </div>
+                        <div className="flex items-start justify-between gap-4">
+                          <span className="text-muted-foreground">Target link</span>
+                          <span className="max-w-[65%] break-all text-right text-xs">{targetLink.trim()}</span>
+                        </div>
+                        <div className="border-t border-border pt-3">
+                          <div className="flex items-center justify-between gap-4">
+                            <span className="font-semibold">Wallet charge</span>
+                            <span className="text-lg font-semibold tabular-nums">{money(charge)}</span>
+                          </div>
+                          <p className="mt-1 text-xs text-muted-foreground">({quantity.toLocaleString()} ÷ 1,000) × {money(selected.retailRatePer1k)} per 1,000</p>
+                        </div>
+                        <div className="flex items-center justify-between gap-4 text-xs">
+                          <span className="text-muted-foreground">Current wallet balance</span>
+                          <span className="font-medium">{money(overview.data?.profile?.balance)}</span>
+                        </div>
+                      </div>
+                    )}
+                    <DialogFooter>
+                      <Button type="button" variant="outline" onClick={() => setReviewOpen(false)}>Go back</Button>
+                      <Button
+                        type="button"
+                        disabled={createOrder.isPending || !selected}
+                        onClick={() => {
+                          if (!selected) return;
+                          setReviewOpen(false);
+                          createOrder.mutate({ serviceId: selected.id, targetLink: targetLink.trim(), quantity });
+                        }}
+                      >
+                        {createOrder.isPending ? <><Loader2 className="h-4 w-4 animate-spin" /> Placing order…</> : "Place order"}
+                      </Button>
+                    </DialogFooter>
+                  </DialogContent>
+                </Dialog>
               </div>
             )}
           </>

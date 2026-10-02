@@ -1,5 +1,6 @@
 import { startLogin, startSignup } from "@/const";
 import { trpc } from "@/lib/trpc";
+import { calculateCheckoutEconomics } from "@shared/finance";
 import {
   ArrowDownRight,
   ArrowRight,
@@ -55,7 +56,7 @@ export default function Home() {
     return ai - bi || a.category.localeCompare(b.category) || a.name.localeCompare(b.name);
   }), [services, platformNames]);
   const platformCount = platformNames.length;
-  const estimate = selectedService ? Number((Number(selectedService.retailRatePer1k) * quantity / 1000).toFixed(2)) : 0;
+  const estimate = selectedService ? calculateCheckoutEconomics({ quantity, retailRatePer1k: selectedService.retailRatePer1k, wholesaleRatePer1k: selectedService.wholesaleRatePer1k }).finalRetailCharged : 0;
 
   useEffect(() => {
     if (!selectedServiceId && services.length > 0) {

@@ -37,7 +37,7 @@ describe("Turso-backed provider synchronization", () => {
       recordAudit: vi.fn() as any,
     });
 
-    expect(await db.select().from(services).where(eq(services.id, mapped.id))).toMatchObject([{ wholesaleRatePer1k: "41.2600", retailRatePer1k: "57.7640", needsResync: 0, isActive: 1 }]);
+    expect(await db.select().from(services).where(eq(services.id, mapped.id))).toMatchObject([{ wholesaleRatePer1k: "41.2600", retailRatePer1k: "49.5120", needsResync: 0, isActive: 1 }]);
     expect(await db.select().from(services).where(eq(services.id, missing.id))).toMatchObject([{ needsResync: 1, isActive: 0 }]);
   });
 

@@ -58,7 +58,7 @@ export function calculateCheckoutEconomics(input: {
   const retailAmountCalculated = Number(
     ((quantity / 1000) * retailRate).toFixed(2)
   );
-  const finalRetailCharged = Math.max(retailAmountCalculated, 10);
+  const finalRetailCharged = retailAmountCalculated;
   const estimatedProfit = Number(
     (finalRetailCharged - wholesaleCostForQty).toFixed(2)
   );

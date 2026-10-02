@@ -174,7 +174,7 @@ export async function getActiveServices() {
   const rows = await db.select().from(services).where(and(eq(services.isActive, 1), eq(services.needsResync, 0))).orderBy(asc(services.id));
   for (const service of rows) {
     const safeWholesale = enforceProviderRateFloor(service.providerServiceId ?? "", service.name, Number(service.wholesaleRatePer1k));
-    const safeRetail = Math.max(MIN_RETAIL_RATE_PER_1K_KES, Number(service.retailRatePer1k) || 0, Number(formatTieredRetailRatePer1k(safeWholesale)));
+    const safeRetail = Math.max(MIN_RETAIL_RATE_PER_1K_KES, Number(formatTieredRetailRatePer1k(safeWholesale)));
     if (safeWholesale > Number(service.wholesaleRatePer1k) || safeRetail !== Number(service.retailRatePer1k)) {
       await db.update(services).set({ wholesaleRatePer1k: safeWholesale.toFixed(4), retailRatePer1k: safeRetail.toFixed(4), needsResync: 0 }).where(eq(services.id, service.id));
       service.wholesaleRatePer1k = safeWholesale.toFixed(4);
