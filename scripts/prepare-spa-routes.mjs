@@ -10,6 +10,8 @@ const routes = [
   "about",
   "dashboard",
   "dashboard/new-order",
+  "dashboard/order",
+  "dashboard/place-order",
   "dashboard/services",
   "dashboard/orders",
   "dashboard/wallet",
