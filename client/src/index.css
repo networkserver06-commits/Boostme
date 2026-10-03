@@ -142,6 +142,27 @@ body {
   .order-summary-card {
     overflow-x: clip !important;
   }
+  .order-form-card {
+    padding-bottom: 10.5rem !important;
+  }
+  [data-order-actions] {
+    position: fixed !important;
+    left: max(0.75rem, env(safe-area-inset-left)) !important;
+    right: max(0.75rem, env(safe-area-inset-right)) !important;
+    bottom: calc(4.75rem + env(safe-area-inset-bottom)) !important;
+    z-index: 60 !important;
+    width: auto !important;
+    max-height: min(42vh, 18rem);
+    overflow-y: auto !important;
+    border-color: rgba(96, 165, 250, 0.55) !important;
+    background: rgba(8, 16, 30, 0.97) !important;
+    box-shadow: 0 16px 40px rgba(0, 0, 0, 0.42) !important;
+    backdrop-filter: blur(16px);
+  }
+  [data-order-actions] [data-order-action] {
+    visibility: visible !important;
+    opacity: 1 !important;
+  }
   .overflow-x-scroll {
     scrollbar-width: thin;
     overscroll-behavior-inline: contain;

@@ -1323,6 +1323,33 @@ export default function Dashboard() {
                         data-order-actions
                         className="w-full min-w-0 max-w-full rounded-2xl border border-blue-200/20 bg-blue-500/[.06] p-2 shadow-inner sm:p-2.5"
                       >
+                        {createOrder.error && (
+                          <div
+                            className="order-error-panel mb-2 rounded-xl border p-3 text-xs leading-5"
+                            role="alert"
+                            aria-live="assertive"
+                          >
+                            <p className="font-semibold">
+                              Order could not be placed
+                            </p>
+                            <p className="mt-1">
+                              {friendlyErrorMessage(
+                                createOrder.error,
+                                "Check the service, public link, quantity, and wallet balance, then try again."
+                              )}
+                            </p>
+                            <button
+                              type="button"
+                              className="mt-2 font-semibold underline underline-offset-2"
+                              onClick={() => {
+                                createOrder.reset();
+                                setReviewOpen(true);
+                              }}
+                            >
+                              Review and try again
+                            </button>
+                          </div>
+                        )}
                         {submitGuidance && (
                           <p
                             id="order-submit-guidance"
@@ -1399,32 +1426,6 @@ export default function Dashboard() {
                         </Link>
                       </div>
                     </div>
-                    {createOrder.error && (
-                      <div
-                        className="order-error-panel rounded-xl border p-3 text-xs leading-5"
-                        role="alert"
-                      >
-                        <p className="font-semibold">
-                          Order could not be placed
-                        </p>
-                        <p className="mt-1">
-                          {friendlyErrorMessage(
-                            createOrder.error,
-                            "Check the service, public link, quantity, and wallet balance, then try again."
-                          )}
-                        </p>
-                        <button
-                          type="button"
-                          className="mt-2 font-semibold underline underline-offset-2"
-                          onClick={() => {
-                            createOrder.reset();
-                            setReviewOpen(true);
-                          }}
-                        >
-                          Review and try again
-                        </button>
-                      </div>
-                    )}
                     <p className="text-[10px] leading-4 text-slate-500">
                       Final validation is performed when you place the order.
                       Only use target links you own or are authorized to manage.
