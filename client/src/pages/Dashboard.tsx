@@ -282,7 +282,10 @@ export default function Dashboard() {
   });
   const orders = trpc.dashboard.orders.useQuery(undefined, {
     enabled: isOverviewPage || isOrdersPage,
-    refetchInterval: isOrdersPage ? 30000 : false,
+    refetchInterval: isOrdersPage ? 15000 : false,
+    refetchIntervalInBackground: false,
+    refetchOnWindowFocus: true,
+    refetchOnReconnect: true,
   });
   const wallet = trpc.dashboard.wallet.useQuery(undefined, {
     enabled: isWalletPage,
@@ -617,7 +620,7 @@ export default function Dashboard() {
         ? "Place a new order."
         : `Welcome${user?.name ? `, ${user.name.split(" ")[0]}` : " back"}.`;
   const description = isOrdersPage
-    ? "Search and filter your order history. Status refreshes automatically."
+    ? "Search and filter your order history. Delivery progress updates automatically while this tab is open."
     : isWalletPage
       ? "Review wallet entries and submit a top-up request for administrator review."
       : isPlaceOrderPage
@@ -649,7 +652,7 @@ export default function Dashboard() {
           {isOrdersPage && (
             <span className="inline-flex items-center gap-2 self-start rounded-full border border-blue-200/10 bg-blue-200/[.05] px-3 py-2 text-xs text-blue-100 sm:self-auto">
               <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-blue-300" />{" "}
-              Refreshes every 30 sec
+              Live updates every 15 sec
             </span>
           )}
         </header>
@@ -1676,6 +1679,7 @@ export default function Dashboard() {
               onRefresh={id => refreshOrderStatus.mutate({ orderId: id })}
               onReload={() => void orders.refetch()}
               syncing={orders.isFetching}
+              lastUpdatedAt={orders.dataUpdatedAt}
               onCancel={id => cancelOrder.mutate({ orderId: id })}
               busyOrderId={
                 refreshOrderStatus.isPending || cancelOrder.isPending
@@ -1954,6 +1958,7 @@ function OrderTable({
   onRefresh,
   onReload,
   syncing = false,
+  lastUpdatedAt,
   onCancel,
   busyOrderId,
 }: {
@@ -1967,6 +1972,7 @@ function OrderTable({
   onRefresh?: (id: number) => void;
   onReload?: () => void;
   syncing?: boolean;
+  lastUpdatedAt?: number;
   onCancel?: (id: number) => void;
   busyOrderId?: number;
 }) {
@@ -1982,9 +1988,19 @@ function OrderTable({
           <h2 className="mt-1.5 text-lg font-semibold text-white">
             {recent ? "Latest orders" : "Track your orders"}
           </h2>
-          <p className="mt-1 text-[10px] text-slate-500">
-            Provider status refreshes automatically every 30 seconds.
-          </p>
+          <div className="mt-2 flex max-w-full flex-wrap items-center gap-2 text-[10px] text-slate-500">
+            <span className="inline-flex items-center gap-1.5 rounded-full border border-emerald-200/15 bg-emerald-300/[.06] px-2 py-1 text-emerald-100">
+              <span
+                className={`h-1.5 w-1.5 rounded-full ${syncing ? "animate-pulse bg-amber-300" : "bg-emerald-300"}`}
+              />
+              {syncing ? "Updating delivery status…" : "Live tracking"}
+            </span>
+            <span>
+              {lastUpdatedAt
+                ? `Updated ${new Date(lastUpdatedAt).toLocaleTimeString([], { hour: "numeric", minute: "2-digit" })}`
+                : "Waiting for first update"}
+            </span>
+          </div>
         </div>
         <div className="flex w-full min-w-0 flex-col gap-2 sm:w-auto sm:flex-row">
           {onReload && (
