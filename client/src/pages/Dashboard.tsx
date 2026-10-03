@@ -618,7 +618,7 @@ export default function Dashboard() {
 
   return (
     <DashboardLayout>
-      <div className="mx-auto w-full min-w-0 max-w-7xl space-y-6 overflow-x-hidden">
+      <div className="mx-auto w-full min-w-0 max-w-7xl space-y-4 overflow-x-hidden sm:space-y-6">
         <header className="flex flex-col justify-between gap-4 sm:flex-row sm:items-end">
           <div>
             <p className="text-[10px] font-semibold uppercase tracking-[.2em] text-cyan-200">
@@ -800,10 +800,10 @@ export default function Dashboard() {
               </div>
             )}
             {isPlaceOrderPage && (
-              <div className="grid w-full min-w-0 max-w-full gap-5 overflow-x-hidden xl:grid-cols-[minmax(0,1.15fr)_minmax(0,.85fr)]">
+              <div className="order-page-shell grid w-full min-w-0 max-w-full gap-3 overflow-x-hidden sm:gap-5 xl:grid-cols-[minmax(0,1.15fr)_minmax(0,.85fr)]">
                 <section
                   id="new-order"
-                  className="theme-card-surface min-w-0 max-w-full scroll-mt-20 overflow-x-hidden rounded-2xl border border-blue-200/10 bg-[linear-gradient(145deg,rgba(31,75,143,.12),rgba(13,20,31,.92)_45%)] p-3 shadow-[0_16px_60px_rgba(0,0,0,.14)] sm:p-6"
+                  className="order-form-card theme-card-surface min-w-0 max-w-full scroll-mt-20 overflow-x-hidden rounded-2xl border border-blue-200/10 bg-[linear-gradient(145deg,rgba(31,75,143,.12),rgba(13,20,31,.92)_45%)] p-2.5 shadow-[0_16px_60px_rgba(0,0,0,.14)] sm:p-6"
                 >
                   <div className="flex items-start justify-between gap-4">
                     <div>
@@ -822,8 +822,8 @@ export default function Dashboard() {
                       <Plus className="h-4 w-4" />
                     </span>
                   </div>
-                  <details className="group mt-6 rounded-2xl border border-amber-200/15 bg-gradient-to-br from-amber-200/[.08] via-cyan-300/[.04] to-transparent shadow-[0_12px_35px_rgba(245,158,11,.06)]">
-                    <summary className="flex cursor-pointer list-none items-start gap-3 p-4 sm:p-5 [&::-webkit-details-marker]:hidden">
+                  <details className="group mt-4 rounded-2xl border border-amber-200/15 bg-gradient-to-br from-amber-200/[.08] via-cyan-300/[.04] to-transparent shadow-[0_12px_35px_rgba(245,158,11,.06)] sm:mt-6">
+                    <summary className="flex cursor-pointer list-none items-start gap-3 p-3 sm:p-5 [&::-webkit-details-marker]:hidden">
                       <span className="grid h-9 w-9 shrink-0 place-items-center rounded-xl border border-amber-200/20 bg-amber-200/[.10] text-amber-100">
                         <Info className="h-4 w-4" />
                       </span>
@@ -871,8 +871,8 @@ export default function Dashboard() {
                       </ul>
                     </div>
                   </details>
-                  <details className="group rounded-2xl border border-cyan-200/15 bg-cyan-300/[.04] shadow-[0_12px_35px_rgba(34,211,238,.04)]">
-                    <summary className="flex cursor-pointer list-none items-start gap-3 p-4 sm:p-5 [&::-webkit-details-marker]:hidden">
+                  <details className="group mt-2 rounded-2xl border border-cyan-200/15 bg-cyan-300/[.04] shadow-[0_12px_35px_rgba(34,211,238,.04)]">
+                    <summary className="flex cursor-pointer list-none items-start gap-3 p-3 sm:p-5 [&::-webkit-details-marker]:hidden">
                       <span className="grid h-9 w-9 shrink-0 place-items-center rounded-xl border border-cyan-200/20 bg-cyan-300/[.10] text-cyan-100">
                         <LockKeyhole className="h-4 w-4" />
                       </span>
@@ -1292,7 +1292,7 @@ export default function Dashboard() {
                     </div>
                     <div
                       data-order-summary
-                      className="theme-card-surface flex w-full min-w-0 max-w-full flex-col gap-3 overflow-hidden rounded-xl border border-cyan-200/15 bg-gradient-to-br from-cyan-300/[.08] to-blue-400/[.04] p-4 shadow-[0_12px_35px_rgba(34,211,238,.07)]"
+                      className="order-summary-card theme-card-surface flex w-full min-w-0 max-w-full flex-col gap-3 overflow-hidden rounded-xl border border-cyan-200/15 bg-gradient-to-br from-cyan-300/[.08] to-blue-400/[.04] p-3 shadow-[0_12px_35px_rgba(34,211,238,.07)] sm:p-4"
                     >
                       <div className="min-w-0">
                         <p className="text-[10px] font-semibold uppercase tracking-[.14em] text-cyan-100/80">
@@ -1321,7 +1321,7 @@ export default function Dashboard() {
                       </div>
                       <div
                         data-order-actions
-                        className="w-full min-w-0 max-w-full rounded-2xl border border-blue-200/20 bg-blue-500/[.06] p-2.5 shadow-inner"
+                        className="w-full min-w-0 max-w-full rounded-2xl border border-blue-200/20 bg-blue-500/[.06] p-2 shadow-inner sm:p-2.5"
                       >
                         {submitGuidance && (
                           <p
@@ -1431,7 +1431,7 @@ export default function Dashboard() {
                     </p>
                   </div>
                 </section>
-                <section className="min-w-0 rounded-2xl border border-border bg-card p-4 text-card-foreground shadow-sm sm:p-5">
+                <section className="min-w-0 rounded-2xl border border-border bg-card p-3 text-card-foreground shadow-sm sm:p-5">
                   <div className="flex flex-wrap items-baseline gap-2">
                     <h2 className="text-sm font-semibold text-foreground">
                       Quick guide

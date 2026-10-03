@@ -130,6 +130,18 @@ body {
     sans-serif;
 }
 @media (max-width: 639px) {
+  .order-page-shell,
+  .order-page-shell > *,
+  .order-form-card,
+  .order-summary-card {
+    width: 100% !important;
+    min-width: 0 !important;
+    max-width: 100% !important;
+  }
+  .order-form-card,
+  .order-summary-card {
+    overflow-x: clip !important;
+  }
   .overflow-x-scroll {
     scrollbar-width: thin;
     overscroll-behavior-inline: contain;
