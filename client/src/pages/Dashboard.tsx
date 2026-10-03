@@ -1286,8 +1286,8 @@ export default function Dashboard() {
                         <p className="text-[10px] font-semibold uppercase tracking-[.14em] text-cyan-100/80">
                           Order summary
                         </p>
-                        <p className="mt-1 text-[10px] text-slate-400">
-                          Estimated charge
+                        <p className="mt-1 text-[10px] font-medium text-slate-400">
+                          Charge
                         </p>
                         <p className="mt-1 text-xl font-semibold tabular-nums text-white">
                           {selected
@@ -1339,7 +1339,9 @@ export default function Dashboard() {
                           </>
                         ) : selected ? (
                           <>
-                            <span className="!text-white">Submit order</span>
+                            <span className="!text-white uppercase tracking-wide">
+                              Submit order
+                            </span>
                             <ArrowUpRight className="h-4 w-4" />
                           </>
                         ) : (
@@ -1364,6 +1366,12 @@ export default function Dashboard() {
                             Choose a service above to enable Submit order.
                           </p>
                         )}
+                      <Link
+                        href="/dashboard/wallet"
+                        className="inline-flex min-h-12 w-full items-center justify-center rounded-xl border border-amber-300/30 bg-amber-200/[.10] px-4 py-3 text-sm font-semibold text-amber-100 transition hover:bg-amber-200/[.18]"
+                      >
+                        Add funds
+                      </Link>
                     </div>
                     {createOrder.error && (
                       <div
@@ -1396,6 +1404,34 @@ export default function Dashboard() {
                       Only use target links you own or are authorized to manage.
                     </p>
                   </div>
+                </section>
+                <section className="min-w-0 rounded-2xl border border-border bg-card p-4 text-card-foreground shadow-sm sm:p-5">
+                  <div className="flex flex-wrap items-baseline gap-2">
+                    <h2 className="text-sm font-semibold text-foreground">
+                      Quick guide
+                    </h2>
+                    <span className="text-xs text-muted-foreground">
+                      How to place an order
+                    </span>
+                  </div>
+                  <ol className="mt-4 grid gap-3 text-xs leading-5 text-muted-foreground sm:grid-cols-2">
+                    <li className="flex gap-2">
+                      <span className="font-semibold text-primary">1.</span>
+                      Select your preferred platform, category, and service.
+                    </li>
+                    <li className="flex gap-2">
+                      <span className="font-semibold text-primary">2.</span>
+                      Paste the public target link you want to boost.
+                    </li>
+                    <li className="flex gap-2">
+                      <span className="font-semibold text-primary">3.</span>
+                      Enter a quantity within the service limits.
+                    </li>
+                    <li className="flex gap-2">
+                      <span className="font-semibold text-primary">4.</span>
+                      Tap Submit order and confirm the review details.
+                    </li>
+                  </ol>
                 </section>
                 {isOverviewPage && (
                   <TopUpCard
