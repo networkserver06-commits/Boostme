@@ -1368,8 +1368,10 @@ export default function Dashboard() {
                         )}
                       <Link
                         href="/dashboard/wallet"
-                        className="inline-flex min-h-12 w-full items-center justify-center rounded-xl border border-amber-300/30 bg-amber-200/[.10] px-4 py-3 text-sm font-semibold text-amber-100 transition hover:bg-amber-200/[.18]"
+                        data-order-action="add-funds"
+                        className="inline-flex min-h-12 w-full items-center justify-center gap-2 rounded-xl border border-amber-300/30 bg-amber-200/[.10] px-4 py-3 text-sm font-semibold text-amber-100 transition hover:bg-amber-200/[.18]"
                       >
+                        <WalletCards className="h-4 w-4" />
                         Add funds
                       </Link>
                     </div>

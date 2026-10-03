@@ -151,6 +151,34 @@ input,
 select {
   transition: 160ms cubic-bezier(0.23, 1, 0.32, 1);
 }
+[data-order-action="review-submit"] {
+  display: flex !important;
+  align-items: center;
+  justify-content: center;
+  background-color: #2563eb !important;
+  color: #ffffff !important;
+  opacity: 1 !important;
+}
+[data-order-action="review-submit"]:disabled {
+  background-color: #475569 !important;
+  color: #ffffff !important;
+}
+[data-order-action="review-submit"] > *,
+[data-order-action="add-funds"] > * {
+  color: inherit !important;
+}
+[data-order-action="add-funds"] {
+  display: inline-flex !important;
+  align-items: center;
+  justify-content: center;
+  background-color: #fff7d6 !important;
+  border-color: #f2c94c !important;
+  color: #7c4a03 !important;
+  opacity: 1 !important;
+}
+[data-order-action="add-funds"]:hover {
+  background-color: #ffefad !important;
+}
 button:active {
   transform: scale(0.98);
 }
@@ -338,4 +366,19 @@ select:focus-visible {
 }
 [data-theme="light"] [data-navigation-item][aria-current="page"] svg {
   color: oklch(0.46 0.16 235) !important;
+}
+[data-theme="light"] [data-order-action="review-submit"],
+[data-theme="light"] [data-order-action="review-submit"] > * {
+  background-color: #2563eb !important;
+  color: #ffffff !important;
+}
+[data-theme="light"] [data-order-action="review-submit"]:disabled,
+[data-theme="light"] [data-order-action="review-submit"]:disabled > * {
+  background-color: #475569 !important;
+  color: #ffffff !important;
+}
+[data-theme="light"] [data-order-action="add-funds"],
+[data-theme="light"] [data-order-action="add-funds"] > * {
+  background-color: #fff7d6 !important;
+  color: #7c4a03 !important;
 }
