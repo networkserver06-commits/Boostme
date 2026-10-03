@@ -794,7 +794,7 @@ export default function Dashboard() {
               <div className="grid w-full min-w-0 max-w-full gap-5 overflow-x-hidden xl:grid-cols-[minmax(0,1.15fr)_minmax(0,.85fr)]">
                 <section
                   id="new-order"
-                  className="theme-card-surface min-w-0 max-w-full scroll-mt-20 overflow-visible rounded-2xl border border-blue-200/10 bg-[linear-gradient(145deg,rgba(31,75,143,.12),rgba(13,20,31,.92)_45%)] p-3 shadow-[0_16px_60px_rgba(0,0,0,.14)] sm:p-6"
+                  className="theme-card-surface min-w-0 max-w-full scroll-mt-20 overflow-x-hidden rounded-2xl border border-blue-200/10 bg-[linear-gradient(145deg,rgba(31,75,143,.12),rgba(13,20,31,.92)_45%)] p-3 shadow-[0_16px_60px_rgba(0,0,0,.14)] sm:p-6"
                 >
                   <div className="flex items-start justify-between gap-4">
                     <div>
@@ -1173,7 +1173,7 @@ export default function Dashboard() {
                             if (next) setQuantity(next.minQuantity);
                           }}
                           disabled={!categoryServices.length}
-                          className="mt-2 h-11 w-full min-w-0 max-w-full rounded-xl border border-border bg-input px-3 text-sm text-foreground disabled:cursor-not-allowed disabled:opacity-70"
+                          className="mt-2 block h-11 w-full min-w-0 max-w-full truncate rounded-xl border border-border bg-input px-3 text-sm text-foreground disabled:cursor-not-allowed disabled:opacity-70"
                         >
                           <option value="">
                             {categoryServices.length
@@ -1244,8 +1244,8 @@ export default function Dashboard() {
                           id="order-link"
                           inputMode="url"
                           autoComplete="url"
-                          className="h-11 rounded-xl border-white/10 bg-[#0a111b] pl-10"
-                          placeholder="https://instagram.com/your-post"
+                          className="h-11 w-full min-w-0 max-w-full rounded-xl border-white/10 bg-[#0a111b] pl-10"
+                          placeholder={`https://${selected?.platform.toLowerCase() ?? "instagram"}.com/your-post`}
                           value={targetLink}
                           onChange={event => setTargetLink(event.target.value)}
                         />
@@ -1271,7 +1271,7 @@ export default function Dashboard() {
                       </div>
                       <Input
                         id="order-quantity"
-                        className="mt-2 h-11 rounded-xl border-white/10 bg-[#0a111b]"
+                        className="mt-2 h-11 w-full min-w-0 max-w-full rounded-xl border-white/10 bg-[#0a111b]"
                         type="number"
                         min={selected?.minQuantity ?? 100}
                         max={selected?.maxQuantity ?? 100000}
@@ -1281,7 +1281,7 @@ export default function Dashboard() {
                         }
                       />
                     </div>
-                    <div className="theme-card-surface flex min-w-0 max-w-full flex-col gap-3 overflow-hidden rounded-xl border border-cyan-200/15 bg-gradient-to-br from-cyan-300/[.08] to-blue-400/[.04] p-4 shadow-[0_12px_35px_rgba(34,211,238,.07)]">
+                    <div className="theme-card-surface flex w-full min-w-0 max-w-full flex-col gap-3 overflow-hidden rounded-xl border border-cyan-200/15 bg-gradient-to-br from-cyan-300/[.08] to-blue-400/[.04] p-4 shadow-[0_12px_35px_rgba(34,211,238,.07)]">
                       <div className="min-w-0">
                         <p className="text-[10px] font-semibold uppercase tracking-[.14em] text-cyan-100/80">
                           Order summary
@@ -1317,7 +1317,7 @@ export default function Dashboard() {
                         }
                         data-order-action="review-submit"
                         size="lg"
-                        className="order-submit-control sticky bottom-[calc(76px+env(safe-area-inset-bottom))] z-20 !flex h-auto min-h-14 w-full min-w-0 max-w-full shrink-0 items-center justify-center gap-2 whitespace-normal rounded-xl !bg-blue-600 px-4 py-3 text-center text-sm font-semibold !text-white shadow-[0_10px_28px_rgba(37,99,235,.28)] hover:!bg-blue-500 disabled:!bg-slate-600 disabled:!text-white disabled:opacity-100 sm:static"
+                        className="order-submit-control relative z-20 !flex h-auto min-h-14 w-full min-w-0 max-w-full shrink-0 items-center justify-center gap-2 whitespace-normal rounded-xl !bg-blue-600 px-4 py-3 text-center text-sm font-semibold !text-white shadow-[0_10px_28px_rgba(37,99,235,.28)] hover:!bg-blue-500 disabled:!bg-slate-600 disabled:!text-white disabled:opacity-100"
                         type="button"
                         disabled={
                           createOrder.isPending ||

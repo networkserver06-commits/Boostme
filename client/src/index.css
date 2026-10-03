@@ -134,6 +134,12 @@ body {
     scrollbar-width: thin;
     overscroll-behavior-inline: contain;
   }
+  [data-order-action="review-submit"] {
+    width: 100% !important;
+    max-width: 100% !important;
+    min-width: 0 !important;
+    overflow: hidden;
+  }
   select,
   input {
     max-width: 100%;
