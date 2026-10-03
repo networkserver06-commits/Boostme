@@ -83,7 +83,7 @@ import {
   sendTopupConfirmationEmail,
 } from "./email";
 
-const MIN_DEPOSIT_KES = 10;
+const MIN_DEPOSIT_KES = 100;
 
 const serviceInput = z.object({
   name: z.string().min(3),

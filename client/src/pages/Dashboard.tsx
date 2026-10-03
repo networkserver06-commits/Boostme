@@ -59,7 +59,7 @@ import {
 import { Link, useLocation } from "wouter";
 import { toast } from "sonner";
 
-const MIN_DEPOSIT_KES = 10;
+const MIN_DEPOSIT_KES = 100;
 const money = (value: unknown) =>
   `KES ${Number(value ?? 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 const serviceOptionLabel = (
