@@ -175,6 +175,20 @@ body {
     overflow-wrap: anywhere;
     text-align: center;
   }
+  .order-page-shell {
+    display: grid !important;
+    grid-template-columns: minmax(0, 1fr) !important;
+    overflow-x: hidden !important;
+  }
+  .order-form-card {
+    display: block !important;
+    overflow-x: hidden !important;
+  }
+  .order-form-card > * {
+    width: 100% !important;
+    min-width: 0 !important;
+    max-width: 100% !important;
+  }
 }
 button,
 a,
@@ -293,6 +307,12 @@ select {
   }
   .order-form-card {
     padding: 0.75rem !important;
+  }
+  .order-form-card > .flex:first-child {
+    gap: 0.5rem;
+  }
+  .order-header-mark {
+    display: none !important;
   }
   .order-action-panel {
     position: relative !important;

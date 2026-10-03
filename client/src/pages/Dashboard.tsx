@@ -804,8 +804,8 @@ export default function Dashboard() {
                   id="new-order"
                   className="order-form-card theme-card-surface min-w-0 max-w-full scroll-mt-20 rounded-2xl border border-blue-200/10 bg-[linear-gradient(145deg,rgba(31,75,143,.12),rgba(13,20,31,.92)_45%)] p-2.5 shadow-[0_16px_60px_rgba(0,0,0,.14)] sm:p-6"
                 >
-                  <div className="flex items-start justify-between gap-4">
-                    <div>
+                  <div className="flex min-w-0 items-start justify-between gap-4">
+                    <div className="min-w-0">
                       <p className="text-[10px] font-semibold uppercase tracking-[.18em] text-cyan-200">
                         New order
                       </p>
@@ -826,7 +826,7 @@ export default function Dashboard() {
                         <WalletCards className="h-4 w-4" />
                         <span>Add funds</span>
                       </Link>
-                      <span className="grid h-10 w-10 shrink-0 place-items-center rounded-xl border border-blue-200/10 bg-blue-300/[.08] text-blue-100">
+                      <span className="order-header-mark grid h-10 w-10 shrink-0 place-items-center rounded-xl border border-blue-200/10 bg-blue-300/[.08] text-blue-100">
                         <Plus className="h-4 w-4" />
                       </span>
                     </div>
