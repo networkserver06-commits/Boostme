@@ -29,6 +29,7 @@ import {
 } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { Link } from "wouter";
+import ThemeToggle from "@/components/ThemeToggle";
 
 function serviceIcon(platform: string) {
   const normalized = platform.toLowerCase();
@@ -99,6 +100,7 @@ export default function Home() {
             <a href="#pricing" className="inline-flex items-center gap-1.5 hover:text-white"><CircleDollarSign className="h-3.5 w-3.5 text-cyan-200" />Pricing</a><Link href="/how-to-use" className="inline-flex items-center gap-1.5 hover:text-white"><BookOpen className="h-3.5 w-3.5 text-cyan-200" />How to use</Link><Link href="/about" className="inline-flex items-center gap-1.5 hover:text-white"><Info className="h-3.5 w-3.5 text-cyan-200" />About</Link>
           </div>
           <div className="hidden items-center gap-3 md:flex">
+            <ThemeToggle compact />
             <button onClick={() => startLogin()} className="rounded-lg px-3 py-2 text-sm font-medium text-slate-300 hover:text-white">Sign in</button>
             <button onClick={() => startSignup()} className="inline-flex items-center gap-2 rounded-lg bg-white px-4 py-2.5 text-sm font-semibold text-slate-950 shadow-sm hover:bg-cyan-50">Create account <ArrowUpRight className="h-4 w-4" /></button>
           </div>

@@ -93,9 +93,7 @@ export default function Services() {
     service =>
       (platform === "All platforms" ||
         service.platform.toLowerCase() === platform.toLowerCase()) &&
-      (platform === "All platforms" ||
-        category === "All categories" ||
-        service.category === category) &&
+      (category === "All categories" || service.category === category) &&
       `${service.name} ${service.category} ${service.platform} ${service.description ?? ""}`
         .toLowerCase()
         .includes(search.toLowerCase())
@@ -170,7 +168,7 @@ export default function Services() {
               />
             </div>
           </div>
-          {platform !== "All platforms" && categories.length > 1 && (
+          {categories.length > 1 && (
             <div className="mt-4 border-t border-white/[.06] pt-3">
               <p className="mb-2 text-[9px] font-semibold uppercase tracking-[.15em] text-slate-500">
                 Service type
