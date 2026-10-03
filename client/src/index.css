@@ -286,6 +286,17 @@ select {
   background: #fff7d6 !important;
   color: #7c4a03 !important;
 }
+.order-action-toggle {
+  display: none;
+}
+.order-action-content {
+  display: grid;
+  min-width: 0;
+  gap: 0.75rem;
+}
+.order-action-content-closed {
+  display: none;
+}
 @media (max-width: 1024px) {
   .order-action-panel {
     position: relative;
@@ -340,6 +351,27 @@ select {
     max-height: calc(100dvh - 8rem);
     overflow-y: auto;
     overscroll-behavior: contain;
+  }
+  .order-action-toggle {
+    display: flex;
+    min-height: 2.25rem;
+    width: 100%;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.5rem;
+    border-radius: 0.65rem;
+    padding: 0.45rem 0.6rem;
+    color: #bfdbfe;
+    font-size: 0.7rem;
+    font-weight: 700;
+    text-align: left;
+  }
+  .order-action-toggle:hover,
+  .order-action-toggle:focus-visible {
+    background: rgba(96, 165, 250, 0.12);
+  }
+  .order-action-content {
+    gap: 0.5rem;
   }
   .order-action-intro {
     display: none;

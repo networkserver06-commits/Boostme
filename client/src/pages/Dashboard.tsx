@@ -311,6 +311,7 @@ export default function Dashboard() {
   );
   const [notificationsOpen, setNotificationsOpen] = useState(false);
   const [reviewOpen, setReviewOpen] = useState(false);
+  const [mobileActionsOpen, setMobileActionsOpen] = useState(true);
   const platformScrollRef = useRef<HTMLDivElement>(null);
   const categoryScrollRef = useRef<HTMLDivElement>(null);
   const refreshOrderStatus = trpc.dashboard.refreshOrderStatus.useMutation({
@@ -1321,123 +1322,153 @@ export default function Dashboard() {
                         )}
                       </div>
                     </div>
-                    <div data-order-actions className="order-action-panel">
-                      <div className="order-action-intro min-w-0">
-                        <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-blue-200">
-                          Ready to continue?
-                        </p>
-                        <p className="mt-1 text-xs leading-4 text-slate-400">
-                          Review your details, then choose an action below.
-                        </p>
-                      </div>
-                      {createOrder.error && (
-                        <div
-                          className="order-error-panel rounded-xl border p-3 text-xs leading-5"
-                          role="alert"
-                          aria-live="assertive"
-                        >
-                          <p className="font-semibold">
-                            Order could not be placed
+                    <div
+                      data-order-actions
+                      data-open={mobileActionsOpen}
+                      className="order-action-panel"
+                    >
+                      <button
+                        type="button"
+                        className="order-action-toggle"
+                        aria-expanded={mobileActionsOpen}
+                        aria-controls="order-action-content"
+                        onClick={() => setMobileActionsOpen(open => !open)}
+                      >
+                        <span>
+                          {mobileActionsOpen
+                            ? "Hide order actions"
+                            : "Show order actions"}
+                        </span>
+                        <ChevronDown
+                          className={`h-4 w-4 transition-transform ${mobileActionsOpen ? "rotate-180" : ""}`}
+                        />
+                      </button>
+                      <div
+                        id="order-action-content"
+                        className={`order-action-content ${mobileActionsOpen ? "" : "order-action-content-closed"}`}
+                      >
+                        <div className="order-action-intro min-w-0">
+                          <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-blue-200">
+                            Ready to continue?
                           </p>
-                          <p className="mt-1">
-                            {friendlyErrorMessage(
-                              createOrder.error,
-                              "Check the service, public link, quantity, and wallet balance, then try again."
-                            )}
+                          <p className="mt-1 text-xs leading-4 text-slate-400">
+                            Review your details, then choose an action below.
                           </p>
-                          <button
+                        </div>
+                        {createOrder.error && (
+                          <div
+                            className="order-error-panel rounded-xl border p-3 text-xs leading-5"
+                            role="alert"
+                            aria-live="assertive"
+                          >
+                            <p className="font-semibold">
+                              Order could not be placed
+                            </p>
+                            <p className="mt-1">
+                              {friendlyErrorMessage(
+                                createOrder.error,
+                                "Check the service, public link, quantity, and wallet balance, then try again."
+                              )}
+                            </p>
+                            <button
+                              type="button"
+                              className="mt-2 font-semibold underline underline-offset-2"
+                              onClick={() => {
+                                createOrder.reset();
+                                setReviewOpen(true);
+                              }}
+                            >
+                              Review and try again
+                            </button>
+                          </div>
+                        )}
+                        {submitGuidance && (
+                          <p
+                            id="order-submit-guidance"
+                            role="status"
+                            className="rounded-lg border border-amber-300/25 bg-amber-200/[.08] px-3 py-2 text-center text-[11px] leading-4 text-amber-100"
+                          >
+                            {submitGuidance}
+                          </p>
+                        )}
+                        <div className="order-action-grid">
+                          <Button
+                            aria-label={
+                              createOrder.isPending
+                                ? "Submitting order"
+                                : "Submit order"
+                            }
+                            data-order-action="review-submit"
+                            aria-describedby={
+                              submitGuidance
+                                ? "order-submit-guidance"
+                                : undefined
+                            }
+                            className="order-action-primary"
                             type="button"
-                            className="mt-2 font-semibold underline underline-offset-2"
+                            disabled={
+                              createOrder.isPending ||
+                              !selected ||
+                              !targetLink.trim() ||
+                              Boolean(targetLinkError) ||
+                              quantity < (selected?.minQuantity ?? 0) ||
+                              quantity > (selected?.maxQuantity ?? Infinity)
+                            }
                             onClick={() => {
                               createOrder.reset();
                               setReviewOpen(true);
                             }}
                           >
-                            Review and try again
-                          </button>
-                        </div>
-                      )}
-                      {submitGuidance && (
-                        <p
-                          id="order-submit-guidance"
-                          role="status"
-                          className="rounded-lg border border-amber-300/25 bg-amber-200/[.08] px-3 py-2 text-center text-[11px] leading-4 text-amber-100"
-                        >
-                          {submitGuidance}
-                        </p>
-                      )}
-                      <div className="order-action-grid">
-                        <Button
-                          aria-label={
-                            createOrder.isPending
-                              ? "Submitting order"
-                              : "Submit order"
-                          }
-                          data-order-action="review-submit"
-                          aria-describedby={
-                            submitGuidance ? "order-submit-guidance" : undefined
-                          }
-                          className="order-action-primary"
-                          type="button"
-                          disabled={
-                            createOrder.isPending ||
-                            !selected ||
-                            !targetLink.trim() ||
-                            Boolean(targetLinkError) ||
-                            quantity < (selected?.minQuantity ?? 0) ||
-                            quantity > (selected?.maxQuantity ?? Infinity)
-                          }
-                          onClick={() => {
-                            createOrder.reset();
-                            setReviewOpen(true);
-                          }}
-                        >
-                          {createOrder.isPending ? (
-                            <>
-                              <Loader2 className="h-4 w-4 animate-spin" />
-                              <span
-                                data-order-label
-                                className="order-action-label"
-                              >
-                                Submitting order…
-                              </span>
-                            </>
-                          ) : selected ? (
-                            <>
-                              <ArrowUpRight className="h-4 w-4" />
-                              <span
-                                data-order-label
-                                className="order-action-label"
-                              >
-                                Submit order
-                              </span>
-                            </>
-                          ) : (
-                            <>
-                              {services.isLoading ? (
+                            {createOrder.isPending ? (
+                              <>
                                 <Loader2 className="h-4 w-4 animate-spin" />
-                              ) : (
-                                <ShoppingBag className="h-4 w-4" />
-                              )}
-                              <span
-                                data-order-label
-                                className="order-action-label"
-                              >
-                                Submit order
-                              </span>
-                            </>
-                          )}
-                        </Button>
-                        <Link
-                          href="/dashboard/wallet"
-                          data-order-action="add-funds"
-                          className="order-action-secondary"
-                        >
-                          <WalletCards className="h-4 w-4" />
-                          <span data-order-label className="order-action-label">
-                            Add funds
-                          </span>
-                        </Link>
+                                <span
+                                  data-order-label
+                                  className="order-action-label"
+                                >
+                                  Submitting order…
+                                </span>
+                              </>
+                            ) : selected ? (
+                              <>
+                                <ArrowUpRight className="h-4 w-4" />
+                                <span
+                                  data-order-label
+                                  className="order-action-label"
+                                >
+                                  Submit order
+                                </span>
+                              </>
+                            ) : (
+                              <>
+                                {services.isLoading ? (
+                                  <Loader2 className="h-4 w-4 animate-spin" />
+                                ) : (
+                                  <ShoppingBag className="h-4 w-4" />
+                                )}
+                                <span
+                                  data-order-label
+                                  className="order-action-label"
+                                >
+                                  Submit order
+                                </span>
+                              </>
+                            )}
+                          </Button>
+                          <Link
+                            href="/dashboard/wallet"
+                            data-order-action="add-funds"
+                            className="order-action-secondary"
+                          >
+                            <WalletCards className="h-4 w-4" />
+                            <span
+                              data-order-label
+                              className="order-action-label"
+                            >
+                              Add funds
+                            </span>
+                          </Link>
+                        </div>
                       </div>
                     </div>
                     <p className="text-[10px] leading-4 text-slate-500">
