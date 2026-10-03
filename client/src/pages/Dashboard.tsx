@@ -1339,11 +1339,13 @@ export default function Dashboard() {
                           {createOrder.isPending ? (
                             <>
                               <Loader2 className="h-4 w-4 animate-spin" />
-                              Submitting order…
+                              <span className="order-action-label">
+                                Submitting order…
+                              </span>
                             </>
                           ) : selected ? (
                             <>
-                              <span className="!text-white uppercase tracking-wide">
+                              <span className="order-action-label !text-white uppercase tracking-wide">
                                 Submit order
                               </span>
                               <ArrowUpRight className="h-4 w-4" />
@@ -1355,7 +1357,7 @@ export default function Dashboard() {
                               ) : (
                                 <ShoppingBag className="h-4 w-4" />
                               )}
-                              <span className="!text-white">
+                              <span className="order-action-label !text-white">
                                 {services.isLoading
                                   ? "Loading services…"
                                   : "Select a service to continue"}
@@ -1376,7 +1378,7 @@ export default function Dashboard() {
                           className="inline-flex min-h-12 w-full items-center justify-center gap-2 rounded-xl border border-amber-300/30 bg-amber-200/[.10] px-4 py-3 text-sm font-semibold text-amber-100 transition hover:bg-amber-200/[.18]"
                         >
                           <WalletCards className="h-4 w-4" />
-                          Add funds
+                          <span className="order-action-label">Add funds</span>
                         </Link>
                       </div>
                     </div>

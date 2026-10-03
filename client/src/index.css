@@ -138,7 +138,7 @@ body {
     width: 100% !important;
     max-width: 100% !important;
     min-width: 0 !important;
-    overflow: hidden;
+    overflow: visible !important;
   }
   select,
   input {
@@ -166,6 +166,15 @@ select {
 [data-order-action="review-submit"] > *,
 [data-order-action="add-funds"] > * {
   color: inherit !important;
+}
+.order-action-label {
+  display: inline-block !important;
+  flex: 0 0 auto !important;
+  min-width: max-content;
+  max-width: 100%;
+  overflow: visible !important;
+  white-space: nowrap;
+  line-height: 1.25;
 }
 [data-order-action="add-funds"] {
   display: inline-flex !important;
