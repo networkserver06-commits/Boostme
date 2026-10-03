@@ -129,7 +129,7 @@ body {
     "Segoe UI",
     sans-serif;
 }
-@media (max-width: 639px) {
+@media (max-width: 767px) {
   .order-page-shell,
   .order-page-shell > *,
   .order-form-card,
@@ -183,6 +183,23 @@ select {
   white-space: nowrap;
   line-height: 1.25;
 }
+.order-action-primary [data-order-label],
+.order-action-secondary [data-order-label] {
+  display: inline-flex !important;
+  flex: 0 0 auto !important;
+  align-items: center;
+  visibility: visible !important;
+  opacity: 1 !important;
+  overflow: visible !important;
+  text-indent: 0 !important;
+  transform: none !important;
+}
+.order-action-primary [data-order-label] {
+  color: #fff !important;
+}
+.order-action-secondary [data-order-label] {
+  color: #7c4a03 !important;
+}
 .order-action-panel {
   display: grid !important;
   gap: 0.75rem;
@@ -214,7 +231,7 @@ select {
   align-items: center;
   justify-content: center;
   gap: 0.5rem;
-  overflow: hidden;
+  overflow: visible;
   border-radius: 0.875rem;
   padding: 0.75rem 1rem;
   text-align: center;
@@ -241,7 +258,7 @@ select {
   background: #fff7d6 !important;
   color: #7c4a03 !important;
 }
-@media (max-width: 639px) {
+@media (max-width: 767px) {
   .order-action-panel {
     position: relative;
     z-index: 1;

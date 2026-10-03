@@ -1422,14 +1422,20 @@ export default function Dashboard() {
                             {createOrder.isPending ? (
                               <>
                                 <Loader2 className="h-4 w-4 animate-spin" />
-                                <span className="order-action-label">
+                                <span
+                                  data-order-label
+                                  className="order-action-label"
+                                >
                                   Submitting order…
                                 </span>
                               </>
                             ) : selected ? (
                               <>
                                 <ArrowUpRight className="h-4 w-4" />
-                                <span className="order-action-label">
+                                <span
+                                  data-order-label
+                                  className="order-action-label"
+                                >
                                   Submit order
                                 </span>
                               </>
@@ -1440,7 +1446,10 @@ export default function Dashboard() {
                                 ) : (
                                   <ShoppingBag className="h-4 w-4" />
                                 )}
-                                <span className="order-action-label">
+                                <span
+                                  data-order-label
+                                  className="order-action-label"
+                                >
                                   {services.isLoading
                                     ? "Loading services…"
                                     : "Select a service to continue"}
@@ -1454,7 +1463,10 @@ export default function Dashboard() {
                             className="order-action-secondary"
                           >
                             <WalletCards className="h-4 w-4" />
-                            <span className="order-action-label">
+                            <span
+                              data-order-label
+                              className="order-action-label"
+                            >
                               Add funds
                             </span>
                           </Link>
