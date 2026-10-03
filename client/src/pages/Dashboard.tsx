@@ -779,7 +779,7 @@ export default function Dashboard() {
               </div>
             )}
             {isPlaceOrderPage && (
-              <div className="grid w-full min-w-0 max-w-full gap-5 overflow-x-hidden xl:grid-cols-[1.15fr_.85fr]">
+              <div className="grid w-full min-w-0 max-w-full gap-5 overflow-x-hidden xl:grid-cols-[minmax(0,1.15fr)_minmax(0,.85fr)]">
                 <section
                   id="new-order"
                   className="theme-card-surface min-w-0 max-w-full scroll-mt-20 overflow-visible rounded-2xl border border-blue-200/10 bg-[linear-gradient(145deg,rgba(31,75,143,.12),rgba(13,20,31,.92)_45%)] p-3 shadow-[0_16px_60px_rgba(0,0,0,.14)] sm:p-6"
@@ -1269,7 +1269,7 @@ export default function Dashboard() {
                         }
                       />
                     </div>
-                    <div className="theme-card-surface flex min-w-0 max-w-full flex-col gap-3 overflow-visible rounded-xl border border-cyan-200/15 bg-gradient-to-br from-cyan-300/[.08] to-blue-400/[.04] p-4 shadow-[0_12px_35px_rgba(34,211,238,.07)]">
+                    <div className="theme-card-surface flex min-w-0 max-w-full flex-col gap-3 overflow-hidden rounded-xl border border-cyan-200/15 bg-gradient-to-br from-cyan-300/[.08] to-blue-400/[.04] p-4 shadow-[0_12px_35px_rgba(34,211,238,.07)]">
                       <div className="min-w-0">
                         <p className="text-[10px] font-semibold uppercase tracking-[.14em] text-cyan-100/80">
                           Order summary
@@ -1295,7 +1295,7 @@ export default function Dashboard() {
                           </p>
                         )}
                       </div>
-                      <button
+                      <Button
                         aria-label={
                           createOrder.isPending
                             ? "Submitting order"
@@ -1304,7 +1304,8 @@ export default function Dashboard() {
                               : "Select a service first"
                         }
                         data-order-action="review-submit"
-                        className="order-submit-control relative z-10 flex min-h-12 h-auto w-full min-w-0 max-w-full shrink-0 justify-center whitespace-normal rounded-xl bg-primary px-5 py-3 text-center text-sm font-semibold !text-white shadow-lg shadow-blue-500/20 hover:bg-primary/90 disabled:bg-slate-700 disabled:!text-white disabled:opacity-100"
+                        size="lg"
+                        className="order-submit-control relative z-10 h-auto min-h-12 w-full min-w-0 max-w-full shrink-0 whitespace-normal rounded-xl px-4 py-3 text-center text-sm font-semibold !text-white shadow-lg shadow-blue-500/20 disabled:bg-slate-700 disabled:!text-white disabled:opacity-100"
                         type="button"
                         disabled={
                           createOrder.isPending ||
@@ -1326,9 +1327,7 @@ export default function Dashboard() {
                           </>
                         ) : selected ? (
                           <>
-                            <span className="order-submit-label">
-                              Review & place order
-                            </span>{" "}
+                            <span>Review & place order</span>
                             <ArrowUpRight className="h-4 w-4" />
                           </>
                         ) : (
@@ -1338,14 +1337,14 @@ export default function Dashboard() {
                             ) : (
                               <ShoppingBag className="h-4 w-4" />
                             )}
-                            <span className="order-submit-label">
+                            <span>
                               {services.isLoading
                                 ? "Loading services…"
                                 : "Select a service first"}
                             </span>
                           </>
                         )}
-                      </button>
+                      </Button>
                     </div>
                     {createOrder.error && (
                       <div

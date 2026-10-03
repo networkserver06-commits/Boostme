@@ -314,33 +314,6 @@ select:focus-visible {
   color: var(--card-foreground) !important;
   border-color: var(--border) !important;
 }
-.order-submit-control {
-  appearance: none;
-  border: 0;
-  display: flex !important;
-  flex: 0 0 auto !important;
-  align-items: center !important;
-  justify-content: center !important;
-  min-width: 0 !important;
-  overflow: visible !important;
-  color: #ffffff !important;
-  cursor: pointer;
-}
-.order-submit-label {
-  display: inline-block !important;
-  max-width: 100% !important;
-  overflow: visible !important;
-  opacity: 1 !important;
-  visibility: visible !important;
-  white-space: normal !important;
-  color: #ffffff !important;
-}
-.order-submit-control:disabled {
-  background-color: oklch(0.32 0.04 255) !important;
-  color: #ffffff !important;
-  cursor: not-allowed;
-  opacity: 1 !important;
-}
 .order-error-panel {
   border-color: oklch(0.62 0.18 25 / 35%) !important;
   background-color: oklch(0.62 0.18 25 / 12%) !important;
