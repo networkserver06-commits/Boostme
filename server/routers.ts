@@ -35,6 +35,8 @@ import {
   eq,
   desc,
   isNull,
+  lt,
+  or,
   sql,
 } from "./db";
 import {
@@ -57,6 +59,7 @@ import {
   mapCatalogService,
   mapProviderStatus,
   submitProviderOrder,
+  supportsDocumentedCancellation,
 } from "./provider";
 import { normalizeServicePresentation } from "../shared/serviceCatalog";
 import {
@@ -70,6 +73,7 @@ import {
   formatTieredRetailRatePer1k,
 } from "../shared/pricing";
 import { executeProviderSync } from "./scheduled";
+import { applyProviderOrderStatus } from "./orderLifecycle";
 import {
   createLeeTecStkPush,
   findLeeTecTransaction,
@@ -405,6 +409,9 @@ export const appRouter = router({
           serviceId: z.number().int().positive(),
           targetLink: z.string().url(),
           quantity: z.number().int().positive(),
+          expectedRetailRatePer1k: z.number().positive(),
+          expectedMinQuantity: z.number().int().positive(),
+          expectedMaxQuantity: z.number().int().positive(),
         })
       )
       .mutation(async ({ ctx, input }) => {
@@ -431,62 +438,25 @@ export const appRouter = router({
           service.name,
           Number(service.wholesaleRatePer1k)
         );
-        const safeRetailRate = formatTieredRetailRatePer1k(safeWholesaleRate);
         const currentWholesaleRate = Number(service.wholesaleRatePer1k);
         const currentRetailRate = Number(service.retailRatePer1k);
+        const safeRetailRate = Math.max(
+          Number(formatTieredRetailRatePer1k(safeWholesaleRate)),
+          currentRetailRate || 0
+        ).toFixed(4);
         if (
           safeWholesaleRate > currentWholesaleRate ||
-          currentRetailRate > Number(safeRetailRate)
+          Number(safeRetailRate) > currentRetailRate
         ) {
           await db
             .update(services)
             .set({
               wholesaleRatePer1k: safeWholesaleRate.toFixed(4),
               retailRatePer1k: safeRetailRate,
-              needsResync: 0,
             })
             .where(eq(services.id, service.id));
           service.wholesaleRatePer1k = safeWholesaleRate.toFixed(4);
           service.retailRatePer1k = safeRetailRate;
-          service.needsResync = 0;
-        }
-        const storedWholesaleCost = Number(
-          (
-            (input.quantity / 1000) *
-            Number(service.wholesaleRatePer1k)
-          ).toFixed(2)
-        );
-        const storedCustomerCharge = Number(
-          ((input.quantity / 1000) * Number(service.retailRatePer1k)).toFixed(2)
-        );
-        if (
-          !Number.isFinite(storedWholesaleCost) ||
-          !Number.isFinite(storedCustomerCharge) ||
-          storedCustomerCharge < storedWholesaleCost
-        ) {
-          console.error(
-            `[CRITICAL LOSS BLOCKED] Service: ${service.id}, Charge: KES ${storedCustomerCharge}, Cost: KES ${storedWholesaleCost}`
-          );
-          await db
-            .update(services)
-            .set({ needsResync: 1 })
-            .where(eq(services.id, service.id));
-          await recordAudit({
-            actorUserId: ctx.user.id,
-            action: "service.loss_blocked",
-            entityType: "service",
-            entityId: String(service.id),
-            details: {
-              quantity: input.quantity,
-              customerCharge: storedCustomerCharge,
-              orderWholesaleCost: storedWholesaleCost,
-            },
-          });
-          throw new TRPCError({
-            code: "BAD_REQUEST",
-            message:
-              "Pricing update in progress for this service. Please try again in a few minutes or select another package.",
-          });
         }
         const provider = service.providerId
           ? (
@@ -514,20 +484,38 @@ export const appRouter = router({
               getProviderPricingContext(provider.name, provider.apiUrl)
             );
             if (
+              Number(liveMapped.wholesaleRatePer1k) <= 0 ||
+              Number(liveMapped.retailRatePer1k) <= 0 ||
+              !Number.isFinite(Number(liveMapped.minQuantity)) ||
+              !Number.isFinite(Number(liveMapped.maxQuantity)) ||
+              Number(liveMapped.minQuantity) < 1 ||
+              Number(liveMapped.maxQuantity) < Number(liveMapped.minQuantity) ||
+              liveMapped.isActive !== 1
+            )
+              throw new Error("Provider returned an unusable service price");
+            const liveMinChanged = Number(liveMapped.minQuantity) !== service.minQuantity;
+            const liveMaxChanged = Number(liveMapped.maxQuantity) !== service.maxQuantity;
+            if (
               Number(liveMapped.wholesaleRatePer1k) !==
                 Number(service.wholesaleRatePer1k) ||
-              liveMapped.retailRatePer1k !== service.retailRatePer1k
+              Number(liveMapped.retailRatePer1k) !== Number(service.retailRatePer1k) ||
+              liveMinChanged ||
+              liveMaxChanged
             ) {
               await db
                 .update(services)
                 .set({
                   wholesaleRatePer1k: liveMapped.wholesaleRatePer1k,
                   retailRatePer1k: liveMapped.retailRatePer1k,
+                  minQuantity: Number(liveMapped.minQuantity),
+                  maxQuantity: Number(liveMapped.maxQuantity),
                   needsResync: 0,
                 })
                 .where(eq(services.id, service.id));
               service.wholesaleRatePer1k = liveMapped.wholesaleRatePer1k;
               service.retailRatePer1k = liveMapped.retailRatePer1k;
+              service.minQuantity = Number(liveMapped.minQuantity);
+              service.maxQuantity = Number(liveMapped.maxQuantity);
               service.needsResync = 0;
             } else if (service.needsResync === 1) {
               await db
@@ -556,7 +544,24 @@ export const appRouter = router({
           throw new TRPCError({
             code: "BAD_REQUEST",
             message:
-              "Pricing update in progress for this service. Please try again in a few minutes or select another package.",
+              "Pricing update in progress for this service. Please refresh the service list or choose another package.",
+          });
+        if (
+          Math.abs(
+            Number(service.retailRatePer1k) - input.expectedRetailRatePer1k
+          ) >= 0.00005
+        )
+          throw new TRPCError({
+            code: "CONFLICT",
+            message: `Service price changed during checkout. The new price is KES ${Number(service.retailRatePer1k).toFixed(2)} per 1,000. No charge was made; review the updated total before placing the order again.`,
+          });
+        if (
+          service.minQuantity !== input.expectedMinQuantity ||
+          service.maxQuantity !== input.expectedMaxQuantity
+        )
+          throw new TRPCError({
+            code: "CONFLICT",
+            message: "Service limits changed during checkout. No charge was made; review the updated quantity range before placing the order again.",
           });
         const host = new URL(input.targetLink).hostname.toLowerCase();
         const servicePlatform = normalizeServicePresentation(service).platform;
@@ -622,7 +627,7 @@ export const appRouter = router({
           throw new TRPCError({
             code: "BAD_REQUEST",
             message:
-              "Pricing update in progress for this service. Please try again in a few minutes or select another package.",
+              "This package is below its current provider cost, so the order was not placed and no wallet balance was used. Please select another package while pricing is reviewed.",
           });
         }
         const {
@@ -657,7 +662,7 @@ export const appRouter = router({
           throw new TRPCError({
             code: "BAD_REQUEST",
             message:
-              "Pricing update in progress for this service. Please try again in a few minutes or select another package.",
+              "This package is below its current provider cost, so the order was not placed and no wallet balance was used. Please select another package while pricing is reviewed.",
           });
         }
         const charge = finalRetailCharged;
@@ -758,17 +763,23 @@ export const appRouter = router({
             message:
               "This order is no longer available in your account. Refresh your orders and try again.",
           });
-        if (
-          !order.providerOrderId ||
-          !order.providerId ||
-          ["completed", "canceled", "failed"].includes(order.status)
-        )
-          return order;
+        if (["completed", "canceled", "failed"].includes(order.status) || !order.providerOrderId) return order;
+        const now = new Date();
+        const oldestAllowedCheck = new Date(now.getTime() - 10_000);
+        const [claim] = await db.update(orders).set({ lastProviderCheckAt: now }).where(and(
+          eq(orders.id, order.id),
+          eq(orders.userId, ctx.user.id),
+          or(isNull(orders.lastProviderCheckAt), lt(orders.lastProviderCheckAt, oldestAllowedCheck)),
+        )).returning({ id: orders.id });
+        if (!claim) throw new TRPCError({ code: "TOO_MANY_REQUESTS", message: "Please wait a few seconds before checking this order again." });
+        const service = order.providerId ? undefined : (await db.select().from(services).where(eq(services.id, order.serviceId)).limit(1))[0];
+        const providerId = order.providerId ?? service?.providerId;
+        if (!providerId) throw new TRPCError({ code: "BAD_GATEWAY", message: "The order provider is no longer available." });
         const provider = (
           await db
             .select()
             .from(smmProviders)
-            .where(eq(smmProviders.id, order.providerId))
+            .where(eq(smmProviders.id, providerId))
             .limit(1)
         )[0];
         if (!provider)
@@ -776,36 +787,15 @@ export const appRouter = router({
             code: "BAD_GATEWAY",
             message: "The order provider is no longer available",
           });
-        const remote = await fetchProviderStatus(
-          provider.apiUrl,
-          provider.apiKey,
-          order.providerOrderId
-        );
-        const status = mapProviderStatus(remote.status);
-        await db
-          .update(orders)
-          .set({
-            status,
-            startCount: Number(remote.start_count ?? order.startCount ?? 0),
-            remains: Number(remote.remains ?? order.remains ?? order.quantity),
-          })
-          .where(eq(orders.id, order.id));
-        await recordAudit({
-          actorUserId: ctx.user.id,
-          action: "order.status_refreshed",
-          entityType: "order",
-          entityId: String(order.id),
-          details: { status, providerStatus: remote.status },
-        });
-        return (
-          (
-            await db
-              .select()
-              .from(orders)
-              .where(eq(orders.id, order.id))
-              .limit(1)
-          )[0] ?? order
-        );
+        try {
+          const remote = await fetchProviderStatus(provider.apiUrl, provider.apiKey, order.providerOrderId);
+          const accounting = await applyProviderOrderStatus(db, order.id, remote);
+          try { await recordAudit({ actorUserId: ctx.user.id, action: "order.status_refreshed", entityType: "order", entityId: String(order.id), details: { providerStatus: remote.status, refund: accounting.refund } }); } catch { /* the provider result and any wallet credit are already committed */ }
+          return (await db.select().from(orders).where(eq(orders.id, order.id)).limit(1))[0] ?? order;
+        } catch (error) {
+          if (error instanceof TRPCError) throw error;
+          throw new TRPCError({ code: "BAD_GATEWAY", message: "The latest order status could not be retrieved. Please try again shortly." });
+        }
       }),
     cancelOrder: protectedProcedure
       .input(z.object({ orderId: z.coerce.number().int().positive() }))
@@ -831,61 +821,38 @@ export const appRouter = router({
             message:
               "This order is no longer available in your account. Refresh your orders and try again.",
           });
-        if (order.status === "canceled") return order;
+        if (order.status === "canceled") return { success: true, message: "This order is already canceled." };
+        if (["submitting", "accepted"].includes(order.cancelRequestStatus))
+          throw new TRPCError({ code: "CONFLICT", message: "A cancellation request is already awaiting a final status." });
         if (!["pending", "in_progress", "partial"].includes(order.status))
           throw new TRPCError({
             code: "BAD_REQUEST",
-            message: "Only active orders can be canceled",
+            message: "This order is no longer eligible for a cancellation request.",
           });
-        if (order.providerOrderId && order.providerId) {
-          const provider = (
-            await db
-              .select()
-              .from(smmProviders)
-              .where(eq(smmProviders.id, order.providerId))
-              .limit(1)
-          )[0];
-          if (!provider)
-            throw new TRPCError({
-              code: "BAD_GATEWAY",
-              message: "The order provider is no longer available",
-            });
-          try {
-            await cancelProviderOrder(
-              provider.apiUrl,
-              provider.apiKey,
-              order.providerOrderId
-            );
-          } catch (error) {
-            const message = error instanceof Error ? error.message : "";
-            if (
-              !/order\s*(not found|does not exist)|invalid\s*order/i.test(
-                message
-              )
-            )
-              throw new TRPCError({
-                code: "BAD_GATEWAY",
-                message: `Provider cancellation failed: ${message || "try again"}`,
-              });
-          }
+        if (!order.providerOrderId) throw new TRPCError({ code: "BAD_REQUEST", message: "Cancellation is not available for this order." });
+        const service = order.providerId ? undefined : (await db.select().from(services).where(eq(services.id, order.serviceId)).limit(1))[0];
+        const providerId = order.providerId ?? service?.providerId;
+        const provider = providerId ? (await db.select().from(smmProviders).where(eq(smmProviders.id, providerId)).limit(1))[0] : undefined;
+        if (!provider || !provider.supportsCancel) throw new TRPCError({ code: "BAD_REQUEST", message: "Cancellation requests are not available for this service." });
+        const [claim] = await db.update(orders).set({ cancelRequestStatus: "submitting", updatedAt: new Date() }).where(and(
+          eq(orders.id, order.id),
+          eq(orders.userId, ctx.user.id),
+          or(eq(orders.status, "pending"), eq(orders.status, "in_progress"), eq(orders.status, "partial")),
+          or(eq(orders.cancelRequestStatus, "none"), eq(orders.cancelRequestStatus, "failed"), eq(orders.cancelRequestStatus, "rejected")),
+        )).returning({ id: orders.id });
+        if (!claim) throw new TRPCError({ code: "CONFLICT", message: "A cancellation request is already being processed." });
+        let result;
+        try {
+          result = await cancelProviderOrder(provider.apiUrl, provider.apiKey, order.providerOrderId);
+          if (!result.success || result.error) throw new Error("Provider did not acknowledge cancellation");
+        } catch {
+          await db.update(orders).set({ cancelRequestStatus: "failed", updatedAt: new Date() }).where(and(eq(orders.id, order.id), eq(orders.userId, ctx.user.id), eq(orders.cancelRequestStatus, "submitting")));
+          throw new TRPCError({ code: "BAD_GATEWAY", message: "The provider did not accept the cancellation request. Order status and wallet balance were not changed." });
         }
-        await refundOrder({
-          userId: ctx.user.id,
-          orderId: order.id,
-          amount: Number(order.charge),
-          reason: "Order canceled by customer",
-          status: "canceled",
-        });
-        await recordAudit({
-          actorUserId: ctx.user.id,
-          action: "order.canceled",
-          entityType: "order",
-          entityId: String(order.id),
-          details: { providerOrderId: order.providerOrderId },
-        });
-        return (
-          await db.select().from(orders).where(eq(orders.id, order.id)).limit(1)
-        )[0];
+        const requestedAt = new Date();
+        await db.update(orders).set({ cancelRequestStatus: "accepted", cancelRequestedAt: requestedAt, updatedAt: requestedAt }).where(and(eq(orders.id, order.id), eq(orders.userId, ctx.user.id), eq(orders.cancelRequestStatus, "submitting")));
+        try { await recordAudit({ actorUserId: ctx.user.id, action: "order.cancel_requested", entityType: "order", entityId: String(order.id), details: { providerOrderId: order.providerOrderId } }); } catch { /* provider acceptance is already stored */ }
+        return { success: true, message: "The provider accepted the cancellation request. Order status and any eligible wallet credit update after the provider confirms the result." };
       }),
     requestDeposit: protectedProcedure
       .input(
@@ -1172,7 +1139,7 @@ export const appRouter = router({
       const refundByOrder = new Map<number, number>();
       for (const refund of refundRows) {
         if (refund.status !== "completed") continue;
-        const match = refund.reference.match(/^refund-(\d+)$/);
+        const match = refund.reference.match(/^(?:refund|cancel-refund)-(\d+)$/);
         if (match)
           refundByOrder.set(
             Number(match[1]),
@@ -1268,7 +1235,7 @@ export const appRouter = router({
       const refundByOrder = new Map<number, number>();
       for (const refund of refundRows) {
         if (refund.status !== "completed") continue;
-        const match = refund.reference.match(/^refund-(\d+)$/);
+        const match = refund.reference.match(/^(?:refund|cancel-refund)-(\d+)$/);
         if (match)
           refundByOrder.set(
             Number(match[1]),
@@ -1625,6 +1592,7 @@ export const appRouter = router({
           name: z.string().min(2),
           apiUrl: z.string().url(),
           apiKey: z.string().min(4).optional(),
+          supportsCancel: z.boolean().optional(),
           isActive: z.number().int().min(0).max(1).default(1),
         })
       )
@@ -1635,10 +1603,12 @@ export const appRouter = router({
             code: "INTERNAL_SERVER_ERROR",
             message: "Database unavailable",
           });
+        const supportsCancel = input.supportsCancel ?? supportsDocumentedCancellation(input.apiUrl);
         if (input.id) {
           const values = {
             name: input.name,
             apiUrl: input.apiUrl,
+            supportsCancel: supportsCancel ? 1 : 0,
             isActive: input.isActive,
             ...(input.apiKey ? { apiKey: input.apiKey } : {}),
           };
@@ -1656,6 +1626,7 @@ export const appRouter = router({
             name: input.name,
             apiUrl: input.apiUrl,
             apiKey: input.apiKey,
+            supportsCancel: supportsCancel ? 1 : 0,
             isActive: input.isActive,
           });
         }

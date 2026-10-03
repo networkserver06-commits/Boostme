@@ -14,6 +14,8 @@ export type OrderEconomics = ServiceEconomicsInput & {
   status?: string | null;
 };
 
+export const MIN_ORDER_PROFIT_KES = 1;
+
 const cents = (value: number) =>
   Math.round((Number.isFinite(value) ? value : 0) * 100);
 const fromCents = (value: number) => Number((value / 100).toFixed(2));
@@ -71,8 +73,42 @@ export function calculateCheckoutEconomics(input: {
       Number.isFinite(wholesaleCostForQty) &&
       Number.isFinite(finalRetailCharged) &&
       finalRetailCharged > wholesaleCostForQty &&
-      estimatedProfit >= 1,
+      estimatedProfit >= MIN_ORDER_PROFIT_KES,
   };
+}
+
+export function minimumQuantityForOrderProfit(input: {
+  minQuantity: number;
+  maxQuantity: number;
+  retailRatePer1k: number | string;
+  wholesaleRatePer1k: number | string;
+  minimumProfitKes?: number;
+}) {
+  const retail = Number(input.retailRatePer1k);
+  const wholesale = Number(input.wholesaleRatePer1k);
+  const minimumProfit = Math.max(0, input.minimumProfitKes ?? MIN_ORDER_PROFIT_KES);
+  const spread = retail - wholesale;
+  if (!Number.isFinite(spread) || spread <= 0 || minimumProfit <= 0) return null;
+
+  let quantity = Math.max(
+    1,
+    Math.trunc(input.minQuantity),
+    Math.ceil((minimumProfit * 1000) / spread) - 2
+  );
+  const maxQuantity = Math.max(0, Math.trunc(input.maxQuantity));
+  // Cent rounding can move the exact threshold by a unit or two. The linear
+  // estimate makes this bounded correction small even for very large limits.
+  for (let attempt = 0; attempt < 20 && quantity <= maxQuantity; attempt += 1, quantity += 1) {
+    if (
+      calculateCheckoutEconomics({
+        quantity,
+        retailRatePer1k: retail,
+        wholesaleRatePer1k: wholesale,
+      }).estimatedProfit >= minimumProfit
+    )
+      return quantity;
+  }
+  return null;
 }
 
 export function calculateOrderEconomics(order: OrderEconomics) {

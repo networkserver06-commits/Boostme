@@ -17,7 +17,7 @@ const customerContext = (): TrpcContext => ({
 });
 
 describe("mandatory order loss prevention", () => {
-  it("flags and blocks an underpriced order before provider submission", async () => {
+  it("repairs an underpriced stored quote and requires customer review before any charge", async () => {
     const updates: unknown[] = [];
     const unsafeService = {
       id: 42,
@@ -39,12 +39,12 @@ describe("mandatory order loss prevention", () => {
     };
     getDbMock.mockResolvedValue(fakeDb);
 
-    await expect(appRouter.createCaller(customerContext()).dashboard.createOrder({ serviceId: 42, targetLink: "https://www.tiktok.com/@boostme/video/123", quantity: 1000 })).rejects.toMatchObject({
-      code: "BAD_REQUEST",
-      message: "Pricing update in progress for this service. Please try again in a few minutes or select another package.",
+    await expect(appRouter.createCaller(customerContext()).dashboard.createOrder({ serviceId: 42, targetLink: "https://www.tiktok.com/@boostme/video/123", quantity: 1000, expectedRetailRatePer1k: 0.88, expectedMinQuantity: 100, expectedMaxQuantity: 100000 })).rejects.toMatchObject({
+      code: "CONFLICT",
+      message: expect.stringContaining("Service price changed during checkout"),
     });
 
-    expect(updates).toContainEqual({ needsResync: 1 });
-    expect(recordAuditMock).toHaveBeenCalledWith(expect.objectContaining({ action: "service.loss_blocked", entityId: "42", entityType: "service", details: expect.objectContaining({ customerCharge: 0.88, orderWholesaleCost: 41.26 }) }));
+    expect(updates).toContainEqual({ wholesaleRatePer1k: "41.2600", retailRatePer1k: "49.5120" });
+    expect(recordAuditMock).not.toHaveBeenCalledWith(expect.objectContaining({ action: "service.loss_blocked" }));
   });
 });

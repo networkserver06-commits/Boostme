@@ -71,7 +71,20 @@ export function mapCatalogService(item: ProviderService, providerId: number, con
 }
 export async function submitProviderOrder(apiUrl: string, apiKey: string, input: { service: string; link: string; quantity: number }) { return providerRequest<{ order: string }>(apiUrl, apiKey, { action: "add", ...input }); }
 export async function fetchProviderStatus(apiUrl: string, apiKey: string, order: string) { return providerRequest<ProviderOrderStatus>(apiUrl, apiKey, { action: "status", order }); }
-export async function cancelProviderOrder(apiUrl: string, apiKey: string, orders: string) { return providerRequest<unknown>(apiUrl, apiKey, { action: "cancel", orders }); }
+export type ProviderCancelResult = { success?: string | boolean; error?: string };
+
+export function supportsDocumentedCancellation(apiUrl: string) {
+  try {
+    const hostname = new URL(apiUrl).hostname.toLowerCase();
+    return hostname === "shakergainske.com" || hostname.endsWith(".shakergainske.com");
+  } catch {
+    return false;
+  }
+}
+
+export async function cancelProviderOrder(apiUrl: string, apiKey: string, order: string) {
+  return providerRequest<ProviderCancelResult>(apiUrl, apiKey, { action: "cancel", order });
+}
 
 export function mapProviderStatus(status: string): "pending" | "in_progress" | "completed" | "canceled" | "partial" | "failed" {
   const normalized = status.toLowerCase().replaceAll(" ", "_");

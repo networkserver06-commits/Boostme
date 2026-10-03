@@ -1,7 +1,7 @@
 import { createClient, type Client } from "@libsql/client";
 import { mkdirSync } from "node:fs";
 import { dirname } from "node:path";
-import { and, asc, desc, eq, isNull, sql } from "drizzle-orm";
+import { and, asc, desc, eq, isNull, like, lt, or, sql } from "drizzle-orm";
 import { drizzle, type LibSQLDatabase } from "drizzle-orm/libsql";
 import { ENV } from "./_core/env";
 import * as schema from "../drizzle/schema";
@@ -20,6 +20,7 @@ import {
   getProviderPricingContext,
   getProviderServiceId,
   mapCatalogService,
+  supportsDocumentedCancellation,
 } from "./provider";
 
 export type DbRow = Record<string, any>;
@@ -39,7 +40,7 @@ export const {
   authRateLimits,
   passwordResetTokens,
 } = schema;
-export { and, asc, desc, eq, isNull, sql };
+export { and, asc, desc, eq, isNull, like, lt, or, sql };
 
 const schemaStatements = [
   `CREATE TABLE IF NOT EXISTS app_users (
@@ -54,7 +55,7 @@ const schemaStatements = [
   )`,
   `CREATE TABLE IF NOT EXISTS smm_providers (
     id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT NOT NULL, api_url TEXT NOT NULL, api_key TEXT NOT NULL,
-    is_active INTEGER NOT NULL DEFAULT 1, last_sync_at INTEGER, created_at INTEGER NOT NULL DEFAULT (unixepoch() * 1000)
+    is_active INTEGER NOT NULL DEFAULT 1, supports_cancel INTEGER NOT NULL DEFAULT 0, last_sync_at INTEGER, created_at INTEGER NOT NULL DEFAULT (unixepoch() * 1000)
   )`,
   `CREATE TABLE IF NOT EXISTS services (
     id INTEGER PRIMARY KEY AUTOINCREMENT, provider_id INTEGER, provider_service_id TEXT, name TEXT NOT NULL,
@@ -67,7 +68,7 @@ const schemaStatements = [
   `CREATE TABLE IF NOT EXISTS orders (
     id INTEGER PRIMARY KEY AUTOINCREMENT, user_id INTEGER NOT NULL, service_id INTEGER NOT NULL, provider_id INTEGER, provider_order_id TEXT,
     target_link TEXT NOT NULL, quantity INTEGER NOT NULL, charge TEXT NOT NULL, wholesale_cost_kes REAL, retail_paid_kes REAL, net_profit_kes REAL, start_count INTEGER, remains INTEGER,
-    status TEXT NOT NULL DEFAULT 'pending', error_message TEXT, created_at INTEGER NOT NULL DEFAULT (unixepoch() * 1000),
+    status TEXT NOT NULL DEFAULT 'pending', error_message TEXT, cancel_requested_at INTEGER, cancel_request_status TEXT NOT NULL DEFAULT 'none', last_provider_check_at INTEGER, created_at INTEGER NOT NULL DEFAULT (unixepoch() * 1000),
     updated_at INTEGER NOT NULL DEFAULT (unixepoch() * 1000)
   )`,
   `CREATE TABLE IF NOT EXISTS wallet_transactions (
@@ -151,6 +152,18 @@ export async function initializeTursoSchema(client: Client) {
       /* Existing databases already have the column. */
     }
   }
+  const addedProviderCancelFlag = await ensureColumn(client, "smm_providers", "supports_cancel", "INTEGER NOT NULL DEFAULT 0");
+  if (addedProviderCancelFlag) {
+    const providerRows = await client.execute("SELECT id, api_url FROM smm_providers");
+    for (const row of providerRows.rows) {
+      if (supportsDocumentedCancellation(String(row.api_url ?? ""))) {
+        await client.execute({ sql: "UPDATE smm_providers SET supports_cancel = 1 WHERE id = ?", args: [Number(row.id)] });
+      }
+    }
+  }
+  await ensureColumn(client, "orders", "cancel_requested_at", "INTEGER");
+  await ensureColumn(client, "orders", "cancel_request_status", "TEXT NOT NULL DEFAULT 'none'");
+  await ensureColumn(client, "orders", "last_provider_check_at", "INTEGER");
   try {
     await client.execute(
       "ALTER TABLE services ADD COLUMN needs_resync INTEGER NOT NULL DEFAULT 0"
@@ -164,6 +177,13 @@ export async function initializeTursoSchema(client: Client) {
   await client.execute(
     "CREATE INDEX IF NOT EXISTS services_needs_resync_idx ON services(needs_resync)"
   );
+}
+
+async function ensureColumn(client: Client, table: "smm_providers" | "orders", column: string, definition: string) {
+  const info = await client.execute(`PRAGMA table_info(${table})`);
+  if (info.rows.some(row => String(row.name) === column)) return false;
+  await client.execute(`ALTER TABLE ${table} ADD COLUMN ${column} ${definition}`);
+  return true;
 }
 
 export function setTursoClientForTesting(client: Client | null) {
@@ -216,7 +236,7 @@ export async function ensureEnvironmentProvider(dbOverride?: TursoDb) {
   if (existing) return existing.isActive ? existing : null;
   const [created] = await db
     .insert(smmProviders)
-    .values({ name: "ShakerGain", apiUrl, apiKey, isActive: 1 })
+    .values({ name: "ShakerGain", apiUrl, apiKey, isActive: 1, supportsCancel: supportsDocumentedCancellation(apiUrl) ? 1 : 0 })
     .returning();
   return created ?? null;
 }
@@ -304,7 +324,8 @@ export async function getActiveServices() {
     );
     const safeRetail = Math.max(
       MIN_RETAIL_RATE_PER_1K_KES,
-      Number(formatTieredRetailRatePer1k(safeWholesale))
+      Number(formatTieredRetailRatePer1k(safeWholesale)),
+      Number(service.retailRatePer1k) || 0
     );
     if (
       safeWholesale > Number(service.wholesaleRatePer1k) ||
@@ -463,17 +484,22 @@ async function refreshCatalogFromProvider(db: TursoDb) {
 export async function getUserOrders(userId: number) {
   const db = await getDb();
   if (!db) return [];
-  const [rows, catalog] = await Promise.all([
+  const [rows, catalog, providerRows, refunds] = await Promise.all([
     db
       .select()
       .from(orders)
       .where(eq(orders.userId, userId))
       .orderBy(desc(orders.createdAt)),
     db.select().from(services),
+    db.select().from(smmProviders),
+    db.select({ reference: walletTransactions.reference, amount: walletTransactions.amount, createdAt: walletTransactions.createdAt }).from(walletTransactions).where(and(eq(walletTransactions.userId, userId), like(walletTransactions.reference, "cancel-refund-%"))),
   ]);
+  const catalogById = new Map(catalog.map(service => [service.id, service]));
   const serviceById = new Map(
     catalog.map(service => [service.id, normalizeServicePresentation(service)])
   );
+  const providersById = new Map(providerRows.map(provider => [provider.id, provider]));
+  const refundByOrderId = new Map(refunds.map(refund => [Number(refund.reference.slice("cancel-refund-".length)), refund]));
   return rows.map(order => ({
     ...order,
     serviceName:
@@ -481,6 +507,8 @@ export async function getUserOrders(userId: number) {
     servicePlatform: serviceById.get(order.serviceId)?.platform ?? "Other",
     serviceCategory:
       serviceById.get(order.serviceId)?.category ?? "Other services",
+    providerSupportsCancel: Boolean(providersById.get(order.providerId ?? catalogById.get(order.serviceId)?.providerId ?? -1)?.supportsCancel),
+    cancellationRefund: refundByOrderId.get(order.id) ?? null,
   }));
 }
 
@@ -691,11 +719,12 @@ export async function listProviders() {
     .select()
     .from(smmProviders)
     .orderBy(desc(smmProviders.createdAt));
-  return rows.map(({ id, name, apiUrl, isActive, lastSyncAt, createdAt }) => ({
+  return rows.map(({ id, name, apiUrl, isActive, supportsCancel, lastSyncAt, createdAt }) => ({
     id,
     name,
     apiUrl,
     isActive,
+    supportsCancel: Boolean(supportsCancel),
     lastSyncAt,
     createdAt,
   }));

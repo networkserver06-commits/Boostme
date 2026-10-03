@@ -4,11 +4,12 @@ import {
   calculateOrderEconomics,
   calculateRecordedOrderEconomics,
   calculateServiceEconomics,
+  minimumQuantityForOrderProfit,
   summarizeProfit,
 } from "./finance";
 
 describe("finance calculations", () => {
-  it("calculates the exact quantity-based charge and rejects unsafe margins", () => {
+  it("calculates exact charges and enforces the KES 1 minimum contribution", () => {
     expect(
       calculateCheckoutEconomics({
         quantity: 50,
@@ -35,7 +36,22 @@ describe("finance calculations", () => {
         retailRatePer1k: 10.99,
         wholesaleRatePer1k: 10,
       })
+    ).toMatchObject({ estimatedProfit: 0.99, isValid: false });
+    expect(
+      calculateCheckoutEconomics({
+        quantity: 1000,
+        retailRatePer1k: 10,
+        wholesaleRatePer1k: 10.01,
+      })
     ).toMatchObject({ isValid: false });
+  });
+
+  it("finds the minimum safe quantity after cent rounding", () => {
+    const retailRatePer1k = 50.78;
+    const wholesaleRatePer1k = 42.3167;
+    expect(minimumQuantityForOrderProfit({ minQuantity: 100, maxQuantity: 100000, retailRatePer1k, wholesaleRatePer1k })).toBe(118);
+    expect(calculateCheckoutEconomics({ quantity: 100, retailRatePer1k, wholesaleRatePer1k })).toMatchObject({ estimatedProfit: 0.85, isValid: false });
+    expect(calculateCheckoutEconomics({ quantity: 118, retailRatePer1k, wholesaleRatePer1k })).toMatchObject({ estimatedProfit: 1, isValid: true });
   });
 
   it("calculates revenue, provider cost, profit, and margin per 1k", () => {

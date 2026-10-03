@@ -1,6 +1,7 @@
 import type { Request, Response } from "express";
 import { and, ensureEnvironmentProvider, desc, eq, getDb, orders, recordAudit, services, smmProviders, syncRuns } from "./db";
-import { fetchProviderServices, fetchProviderStatus, getProviderPricingContext, getProviderServiceId, mapCatalogService, mapProviderStatus } from "./provider";
+import { fetchProviderServices, fetchProviderStatus, getProviderPricingContext, getProviderServiceId, mapCatalogService } from "./provider";
+import { applyProviderOrderStatus } from "./orderLifecycle";
 
 export const OUTSTANDING_ORDER_STATUSES = ["pending", "in_progress", "partial"] as const;
 export const isAuthorizedCron = (user: { isCron?: boolean; taskUid?: string }) => Boolean(user.isCron && user.taskUid);
@@ -17,15 +18,17 @@ export async function executeProviderSync(kind: SyncKind, options: { taskUid?: s
   const getServices = options.fetchProviderServices ?? fetchProviderServices;
   const getStatus = options.fetchProviderStatus ?? fetchProviderStatus;
   const audit = options.recordAudit ?? recordAudit;
-  const provider = (await db.select().from(smmProviders).where(eq(smmProviders.isActive, 1)).limit(1))[0] ?? await ensureEnvironmentProvider(db);
+  const configuredProviders = await db.select().from(smmProviders);
+  const provider = configuredProviders.find(candidate => candidate.isActive === 1) ?? await ensureEnvironmentProvider(db);
   const [run] = await db.insert(syncRuns).values({ providerId: provider?.id ?? null, kind, status: "running", itemsProcessed: 0 }).returning();
-  if (!provider) {
+  if (!provider && kind === "catalog") {
     if (run) await db.update(syncRuns).set({ status: "failed", errorMessage: "No active provider configured", finishedAt: new Date() }).where(eq(syncRuns.id, run.id));
     return { runId: run?.id ?? null, processed: 0, skipped: "no-provider" as const };
   }
   let processed = 0;
   try {
     if (kind === "catalog") {
+      if (!provider) throw new Error("No active provider configured");
       const catalog = await getServices(provider.apiUrl, provider.apiKey);
       const localCatalog = await db.select().from(services).where(eq(services.providerId, provider.id));
       const localByProviderServiceId = new Map(localCatalog.filter((service) => service.providerServiceId).map((service) => [service.providerServiceId!, service]));
@@ -49,14 +52,18 @@ export async function executeProviderSync(kind: SyncKind, options: { taskUid?: s
       await db.update(smmProviders).set({ lastSyncAt: new Date() }).where(eq(smmProviders.id, provider.id));
     } else {
       const allOrders = await db.select().from(orders);
+      const allServices = await db.select().from(services);
       const outstanding = allOrders.filter((order) => !order.status || OUTSTANDING_ORDER_STATUSES.includes(order.status as (typeof OUTSTANDING_ORDER_STATUSES)[number]));
+      const providerById = new Map([...configuredProviders, ...(provider ? [provider] : [])].map(configured => [configured.id, configured]));
+      const serviceById = new Map(allServices.map(service => [service.id, service]));
       for (const order of outstanding) {
         if (!order.providerOrderId) continue;
         try {
-          const orderProvider = order.providerId === provider.id ? provider : order.providerId ? (await db.select().from(smmProviders).where(eq(smmProviders.id, order.providerId)).limit(1))[0] : provider;
+          const service = serviceById.get(order.serviceId);
+          const orderProvider = (order.providerId ? providerById.get(order.providerId) : undefined) ?? (service?.providerId ? providerById.get(service.providerId) : undefined) ?? provider;
           if (!orderProvider) continue;
           const status = await getStatus(orderProvider.apiUrl, orderProvider.apiKey, order.providerOrderId);
-          await db.update(orders).set({ status: mapProviderStatus(status.status), startCount: Number(status.start_count ?? order.startCount ?? 0), remains: Number(status.remains ?? order.remains ?? order.quantity) }).where(eq(orders.id, order.id));
+          await applyProviderOrderStatus(db, order.id, status);
           processed += 1;
         } catch (error) {
           await audit({ actorUserId: options.actorUserId, action: "sync.order_failed", entityType: "order", entityId: String(order.id), details: { error: String(error) } });

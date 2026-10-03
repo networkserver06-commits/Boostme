@@ -52,6 +52,7 @@ export const smmProviders = sqliteTable("smm_providers", {
   apiUrl: text("api_url").notNull(),
   apiKey: text("api_key").notNull(),
   isActive: integer("is_active").notNull().default(1),
+  supportsCancel: integer("supports_cancel").notNull().default(0),
   lastSyncAt: integer("last_sync_at", { mode: "timestamp_ms" }),
   createdAt: createdAt(),
 });
@@ -103,6 +104,12 @@ export const orders = sqliteTable(
     netProfitKes: real("net_profit_kes"),
     startCount: integer("start_count"),
     remains: integer("remains"),
+    cancelRequestedAt: integer("cancel_requested_at", { mode: "timestamp_ms" }),
+    cancelRequestStatus: text("cancel_request_status")
+      .$type<"none" | "submitting" | "accepted" | "failed" | "confirmed" | "rejected">()
+      .notNull()
+      .default("none"),
+    lastProviderCheckAt: integer("last_provider_check_at", { mode: "timestamp_ms" }),
     status: text("status")
       .$type<
         | "pending"

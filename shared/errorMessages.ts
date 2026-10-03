@@ -63,9 +63,15 @@ export function friendlyErrorMessage(
   if (/provider fulfillment failed/i.test(message))
     return "The service provider could not accept this order. Your wallet charge was refunded.";
   if (/live provider pricing could not be verified/i.test(message))
-    return "This service price is being refreshed from the provider. No charge was made; wait a moment and try again.";
+    return "The provider price could not be verified. No charge was made; refresh the service list and try again shortly.";
+  if (/service price changed/i.test(message))
+    return "The provider price changed while you were reviewing. No charge was made; review the updated total before placing the order again.";
+  if (/service limits changed/i.test(message))
+    return "This service’s quantity limits changed. No charge was made; review the updated range before trying again.";
   if (/pricing update in progress/i.test(message))
-    return "This service price is being updated safely. No charge was made; wait a moment and try again.";
+    return "This service is temporarily unavailable while its provider price is verified. No charge was made; refresh the service list or choose another package.";
+  if (/below .*provider cost|loss prevention/i.test(message))
+    return "This package currently does not meet safe pricing. No charge was made; refresh the service list or choose another package.";
   if (/service .*not found|service .*no longer available/i.test(message))
     return "That service is no longer available. Refresh the catalog and choose another service.";
   if (

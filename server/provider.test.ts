@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { cancelProviderOrder, enforceProviderRateFloor, fetchProviderServices, fetchProviderStatus, getProviderPricingContext, mapCatalogService, mapProviderStatus, providerRateCurrency, submitProviderOrder } from "./provider";
+import { cancelProviderOrder, enforceProviderRateFloor, fetchProviderServices, fetchProviderStatus, getProviderPricingContext, mapCatalogService, mapProviderStatus, providerRateCurrency, submitProviderOrder, supportsDocumentedCancellation } from "./provider";
 
 afterEach(() => vi.unstubAllGlobals());
 
@@ -50,6 +50,13 @@ describe("provider service mapping", () => {
 });
 
 describe("provider REST adapter", () => {
+  it("recognizes only the documented ShakerGain API host for cancellation support", () => {
+    expect(supportsDocumentedCancellation("https://shakergainske.com/api/v2")).toBe(true);
+    expect(supportsDocumentedCancellation("https://api.shakergainske.com/v2")).toBe(true);
+    expect(supportsDocumentedCancellation("https://notshakergainske.com/api")).toBe(false);
+    expect(supportsDocumentedCancellation("not a url")).toBe(false);
+  });
+
   it("sends the expected action payloads", async () => {
     const fetchMock = vi.fn().mockResolvedValue({ ok: true, json: async () => ({ order: "p-123" }) });
     vi.stubGlobal("fetch", fetchMock);
@@ -69,12 +76,12 @@ describe("provider REST adapter", () => {
     await expect(fetchProviderStatus("https://provider.example/api", "secret", "p-123")).resolves.toMatchObject({ status: "Completed" });
   });
 
-  it("sends provider cancellation requests with the external order id", async () => {
-    const fetchMock = vi.fn().mockResolvedValue({ ok: true, json: async () => ({ success: true }) });
+  it("sends the documented cancellation action and parses the provider acknowledgement", async () => {
+    const fetchMock = vi.fn().mockResolvedValue({ ok: true, json: async () => ({ success: "Cancellation request accepted" }) });
     vi.stubGlobal("fetch", fetchMock);
-    await cancelProviderOrder("https://provider.example/api", "secret", "p-123");
+    await expect(cancelProviderOrder("https://shakergainske.com/api/v2", "secret", "p-123")).resolves.toMatchObject({ success: "Cancellation request accepted" });
     const body = String(fetchMock.mock.calls[0]?.[1]?.body);
     expect(body).toContain("action=cancel");
-    expect(body).toContain("orders=p-123");
+    expect(body).toContain("order=p-123");
   });
 });

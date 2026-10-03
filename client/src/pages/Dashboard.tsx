@@ -13,7 +13,10 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { trpc } from "@/lib/trpc";
 import { friendlyErrorMessage } from "@shared/errorMessages";
-import { calculateCheckoutEconomics } from "@shared/finance";
+import {
+  calculateCheckoutEconomics,
+  minimumQuantityForOrderProfit,
+} from "@shared/finance";
 import {
   compareCustomerPlatforms,
   isCustomerVisiblePlatform,
@@ -74,6 +77,10 @@ const displayStatus = (status: string) => status.replaceAll("_", " ");
 const SUPPORT_WHATSAPP_NUMBER = "254116553618";
 const supportWhatsAppLink = (orderId: number) =>
   `https://wa.me/${SUPPORT_WHATSAPP_NUMBER}?text=${encodeURIComponent(`Hello Orbit Growth support, I need help with order #${orderId}.`)}`;
+const needsPriceReview = (error: unknown) => {
+  const message = friendlyErrorMessage(error, "");
+  return /service price changed|service limits changed|pricing update in progress|provider price could not be verified|below .*provider cost/i.test(message);
+};
 const orderStatusTabs = [
   { value: "all", label: "All orders", Icon: ShoppingBag },
   { value: "pending", label: "Pending", Icon: Clock3 },
@@ -104,7 +111,7 @@ const deliveryMessage = (order: {
   remains?: number | null;
 }) => {
   if (order.status === "completed") return "Delivery completed";
-  if (order.status === "canceled") return "Order canceled and refunded";
+  if (order.status === "canceled") return "Provider confirmed cancellation";
   if (order.status === "failed")
     return "Delivery failed; contact support if needed";
   if (!order.providerOrderId) return "Waiting for provider submission";
@@ -239,6 +246,7 @@ type Order = {
   servicePlatform?: string;
   serviceCategory?: string;
   providerId?: number | null;
+  providerSupportsCancel?: boolean;
   providerOrderId?: string | null;
   targetLink: string;
   quantity: number;
@@ -249,6 +257,10 @@ type Order = {
   errorMessage?: string | null;
   createdAt: Date;
   updatedAt?: Date;
+  cancelRequestStatus?: string;
+  cancelRequestedAt?: Date | null;
+  lastProviderCheckAt?: Date | null;
+  cancellationRefund?: { amount: string; createdAt: Date } | null;
 };
 type WalletEntry = {
   id: number;
@@ -271,13 +283,15 @@ export default function Dashboard() {
   ].includes(location);
   const isOverviewPage = !isOrdersPage && !isWalletPage && !isPlaceOrderPage;
   const overview = trpc.dashboard.overview.useQuery(undefined, {
-    enabled: isOverviewPage || isWalletPage,
+    enabled: isOverviewPage || isWalletPage || isPlaceOrderPage,
   });
   const services = trpc.dashboard.services.useQuery(undefined, {
     enabled: isOverviewPage || isPlaceOrderPage,
     staleTime: 2 * 60 * 1000,
     gcTime: 15 * 60 * 1000,
-    refetchOnMount: false,
+    refetchOnMount: true,
+    refetchOnWindowFocus: true,
+    refetchOnReconnect: true,
     placeholderData: previous => previous,
   });
   const orders = trpc.dashboard.orders.useQuery(undefined, {
@@ -314,6 +328,11 @@ export default function Dashboard() {
   );
   const [notificationsOpen, setNotificationsOpen] = useState(false);
   const [reviewOpen, setReviewOpen] = useState(false);
+  const [priceRefresh, setPriceRefresh] = useState<{
+    serviceId: number;
+    refreshing: boolean;
+    message: string;
+  } | null>(null);
   const [mobileActionsOpen, setMobileActionsOpen] = useState(true);
   const revealOrderActions = () => {
     setMobileActionsOpen(true);
@@ -339,10 +358,9 @@ export default function Dashboard() {
       }),
   });
   const cancelOrder = trpc.dashboard.cancelOrder.useMutation({
-    onSuccess: () => {
-      toast.success("Order canceled", {
-        description:
-          "The order was canceled and its charge was returned to your wallet.",
+    onSuccess: result => {
+      toast.success("Cancellation request sent", {
+        description: result.message,
       });
       void orders.refetch();
       void overview.refetch();
@@ -474,15 +492,6 @@ export default function Dashboard() {
           })()
         ? `Use a valid ${selected.platform} link for this service.`
         : "";
-  const submitGuidance = !selected
-    ? "Select a service before submitting the order."
-    : !targetLink.trim()
-      ? "Add the public target link before submitting the order."
-      : targetLinkError
-        ? targetLinkError
-        : quantity < selected.minQuantity || quantity > selected.maxQuantity
-          ? `Enter a quantity between ${selected.minQuantity.toLocaleString()} and ${selected.maxQuantity.toLocaleString()}.`
-          : "";
   useEffect(() => {
     const match = services.data?.find(
       service => service.id === Number(serviceId)
@@ -502,6 +511,32 @@ export default function Dashboard() {
     : null;
   const calculatedCharge = checkoutEconomics?.retailAmountCalculated ?? 0;
   const charge = checkoutEconomics?.finalRetailCharged ?? 0;
+  const minimumProfitableQuantity = selected
+    ? minimumQuantityForOrderProfit({
+        minQuantity: selected.minQuantity,
+        maxQuantity: selected.maxQuantity,
+        retailRatePer1k: selected.retailRatePer1k,
+        wholesaleRatePer1k: selected.wholesaleRatePer1k,
+      })
+    : null;
+  const balance = Number(overview.data?.profile?.balance ?? 0);
+  const hasWalletBalance = Boolean(overview.data?.profile);
+  const balanceShort = hasWalletBalance && charge > balance;
+  const submitGuidance = !selected
+    ? "Select a service before submitting the order."
+    : !targetLink.trim()
+      ? "Add the public target link before submitting the order."
+      : targetLinkError
+        ? targetLinkError
+        : quantity < selected.minQuantity || quantity > selected.maxQuantity
+          ? `Enter a quantity between ${selected.minQuantity.toLocaleString()} and ${selected.maxQuantity.toLocaleString()}.`
+          : balanceShort
+            ? "Your current wallet balance is below this order total. Add funds before placing the order."
+            : checkoutEconomics && !checkoutEconomics.isValid
+              ? minimumProfitableQuantity
+                ? `This quantity is below the KES 1.00 minimum order contribution. Set quantity to at least ${minimumProfitableQuantity.toLocaleString()} or choose a higher-margin package.`
+                : "This package does not currently meet safe pricing. Choose another service; no charge will be made."
+              : "";
   const filteredOrders = useMemo(
     () =>
       (orders.data ?? []).filter(
@@ -530,6 +565,8 @@ export default function Dashboard() {
     });
   const createOrder = trpc.dashboard.createOrder.useMutation({
     onSuccess: result => {
+      setPriceRefresh(null);
+      setReviewOpen(false);
       toast.success("Order placed", {
         description: `Order #${result.orderId} was submitted and is now being tracked.`,
       });
@@ -539,15 +576,43 @@ export default function Dashboard() {
       setTargetLink("");
       setLocation("/dashboard/orders");
     },
-    onError: error =>
-      toast.error("Order not placed", {
-        description: friendlyErrorMessage(
-          error,
-          "Review the service, link, quantity, and wallet balance, then try again."
-        ),
-        duration: 6500,
-        closeButton: true,
-      }),
+    onError: error => {
+      if (needsPriceReview(error)) {
+        const failedServiceId = Number(serviceId);
+        setPriceRefresh({
+          serviceId: failedServiceId,
+          refreshing: true,
+          message: "No charge was made. Refreshing this service’s current price…",
+        });
+        void services.refetch().then(({ data, error: refreshError }) => {
+          if (refreshError) throw refreshError;
+          const fresh = data?.find(item => item.id === failedServiceId);
+          setPriceRefresh({
+            serviceId: failedServiceId,
+            refreshing: false,
+            message: fresh
+              ? `Price refreshed to ${money(fresh.retailRatePer1k)} per 1,000. Your updated total is shown below. Review it before placing the order again.`
+              : "This package is temporarily unavailable while its price is verified. Choose another service; no charge was made.",
+          });
+        }).catch(() => {
+          setPriceRefresh({
+            serviceId: failedServiceId,
+            refreshing: false,
+            message: "The service list could not be refreshed. No charge was made; try again shortly or choose another service.",
+          });
+        });
+      } else {
+        if (reviewOpen) return;
+        toast.error("Order not placed", {
+          description: friendlyErrorMessage(
+            error,
+            "Review the service, link, quantity, and wallet balance, then try again."
+          ),
+          duration: 6500,
+          closeButton: true,
+        });
+      }
+    },
   });
   const handleReviewOrder = () => {
     createOrder.reset();
@@ -845,6 +910,16 @@ export default function Dashboard() {
                   id="new-order"
                   className="order-form-card theme-card-surface min-w-0 max-w-full scroll-mt-20 rounded-2xl border border-blue-200/10 bg-[linear-gradient(145deg,rgba(31,75,143,.12),rgba(13,20,31,.92)_45%)] p-2.5 shadow-[0_16px_60px_rgba(0,0,0,.14)] sm:p-6"
                 >
+                  <QueryIssue
+                    label="Service catalog"
+                    error={services.error}
+                    retry={() => void services.refetch()}
+                  />
+                  <QueryIssue
+                    label="Wallet balance"
+                    error={overview.error}
+                    retry={() => void overview.refetch()}
+                  />
                   <div className="flex min-w-0 items-start justify-between gap-4">
                     <div className="min-w-0">
                       <p className="text-[10px] font-semibold uppercase tracking-[.18em] text-cyan-200">
@@ -1453,7 +1528,7 @@ export default function Dashboard() {
                             Review your details, then choose an action below.
                           </p>
                         </div>
-                        {createOrder.error && (
+                        {createOrder.error && !reviewOpen && (
                           <div
                             className="order-error-panel rounded-xl border p-3 text-xs leading-5"
                             role="alert"
@@ -1593,7 +1668,17 @@ export default function Dashboard() {
                         when you place the order.
                       </DialogDescription>
                     </DialogHeader>
-                    {createOrder.error && (
+                    {priceRefresh && selected && priceRefresh.serviceId === selected.id && (
+                      <div
+                        role="status"
+                        aria-live="polite"
+                        className="rounded-xl border border-amber-300/25 bg-amber-200/[.08] p-3 text-xs leading-5 text-amber-100"
+                      >
+                        {priceRefresh.refreshing && <Loader2 className="mr-2 inline h-3.5 w-3.5 animate-spin" />}
+                        {priceRefresh.message}
+                      </div>
+                    )}
+                    {createOrder.error && !needsPriceReview(createOrder.error) && (
                       <div
                         role="alert"
                         className="order-error-panel rounded-xl border p-3 text-xs leading-5"
@@ -1649,12 +1734,37 @@ export default function Dashboard() {
                             {money(selected.retailRatePer1k)} per 1,000
                           </p>
                         </div>
+                        {checkoutEconomics && !checkoutEconomics.isValid && (
+                          <div role="alert" className="rounded-lg border border-amber-300/25 bg-amber-200/[.08] p-3 text-xs leading-5 text-amber-100">
+                            <p className="font-semibold">Order quantity needs an adjustment</p>
+                            <p className="mt-1">
+                              {minimumProfitableQuantity
+                                ? `KES 1.00 minimum contribution applies. At this service rate, use at least ${minimumProfitableQuantity.toLocaleString()} units.`
+                                : "This service does not currently meet safe provider pricing. Choose another package; no charge will be made."}
+                            </p>
+                            {minimumProfitableQuantity && (
+                              <Button type="button" variant="outline" className="mt-2 h-8 border-amber-200/25 text-[11px] text-amber-50" onClick={() => setQuantity(minimumProfitableQuantity)}>
+                                Set quantity to {minimumProfitableQuantity.toLocaleString()}
+                              </Button>
+                            )}
+                          </div>
+                        )}
+                        {balanceShort && (
+                          <div role="alert" className="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-amber-300/25 bg-amber-200/[.08] p-3 text-xs text-amber-100">
+                            <span>Wallet balance is below the order total. No charge has been made.</span>
+                            <Link href="/dashboard/wallet" className="font-semibold underline underline-offset-2">Add funds</Link>
+                          </div>
+                        )}
                         <div className="flex items-center justify-between gap-4 text-xs">
                           <span className="text-muted-foreground">
                             Current wallet balance
                           </span>
                           <span className="font-medium">
-                            {money(overview.data?.profile?.balance)}
+                            {overview.isLoading
+                              ? "Loading balance…"
+                              : overview.isError
+                                ? "Unavailable"
+                                : money(overview.data?.profile?.balance)}
                           </span>
                         </div>
                       </div>
@@ -1669,13 +1779,16 @@ export default function Dashboard() {
                       </Button>
                       <Button
                         type="button"
-                        disabled={createOrder.isPending || !selected}
+                        disabled={createOrder.isPending || priceRefresh?.refreshing === true || !selected || !checkoutEconomics?.isValid || balanceShort || overview.isLoading || overview.isError}
                         onClick={() => {
                           if (!selected) return;
                           createOrder.mutate({
                             serviceId: selected.id,
                             targetLink: targetLink.trim(),
                             quantity,
+                            expectedRetailRatePer1k: Number(selected.retailRatePer1k),
+                            expectedMinQuantity: selected.minQuantity,
+                            expectedMaxQuantity: selected.maxQuantity,
                           });
                         }}
                       >
@@ -2116,9 +2229,7 @@ function OrderTable({
                   order.providerOrderId &&
                   !terminalOrderStatuses.includes(order.status)
               );
-              const canCancel = ["pending", "in_progress", "partial"].includes(
-                order.status
-              );
+              const canCancel = Boolean(order.providerSupportsCancel) && ["pending", "in_progress", "partial"].includes(order.status) && !["submitting", "accepted"].includes(order.cancelRequestStatus ?? "none");
               return (
                 <Fragment key={order.id}>
                   <tr className="border-b border-white/[.05] last:border-0 hover:bg-white/[.018]">
@@ -2235,10 +2346,15 @@ function OrderTable({
                                 {order.errorMessage}
                               </p>
                             )}
+                            {order.cancelRequestStatus === "submitting" && <p className="mt-3 text-xs text-amber-100">Sending your cancellation request to the provider…</p>}
+                            {order.cancelRequestStatus === "accepted" && <p className="mt-3 text-xs text-amber-100">The provider accepted the request. The order remains active until a later status check confirms the outcome.</p>}
+                            {order.cancelRequestStatus === "rejected" && <p className="mt-3 text-xs text-slate-300">The provider did not cancel the order. Its delivery status remains controlled by the provider.</p>}
+                            {order.cancellationRefund && <p className="mt-3 text-xs text-emerald-200">Wallet credit: {money(order.cancellationRefund.amount)} for the undelivered portion.</p>}
+                            {order.status === "canceled" && !order.cancellationRefund && <p className="mt-3 text-xs text-slate-400">The provider confirmed cancellation. No automatic wallet credit was recorded for the remaining quantity.</p>}
                             <p className="mt-3 text-[10px] text-slate-500">
-                              Last checked{" "}
-                              {order.updatedAt
-                                ? new Date(order.updatedAt).toLocaleString()
+                              Last provider check{" "}
+                              {order.lastProviderCheckAt
+                                ? new Date(order.lastProviderCheckAt).toLocaleString()
                                 : "Not checked yet"}
                             </p>
                           </div>
@@ -2319,9 +2435,7 @@ function OrderTable({
               order.providerOrderId &&
               !terminalOrderStatuses.includes(order.status)
           );
-          const canCancel = ["pending", "in_progress", "partial"].includes(
-            order.status
-          );
+          const canCancel = Boolean(order.providerSupportsCancel) && ["pending", "in_progress", "partial"].includes(order.status) && !["submitting", "accepted"].includes(order.cancelRequestStatus ?? "none");
           const busy = busyOrderId === order.id;
           return (
             <article
@@ -2474,10 +2588,15 @@ function OrderTable({
                       {order.errorMessage}
                     </p>
                   )}
+                  {order.cancelRequestStatus === "submitting" && <p className="mt-2 text-amber-100">Sending your cancellation request to the provider…</p>}
+                  {order.cancelRequestStatus === "accepted" && <p className="mt-2 text-amber-100">The provider accepted the request. The order remains active until a later status check confirms the outcome.</p>}
+                  {order.cancelRequestStatus === "rejected" && <p className="mt-2 text-slate-300">The provider did not cancel the order. Delivery status remains controlled by the provider.</p>}
+                  {order.cancellationRefund && <p className="mt-2 text-emerald-200">Wallet credit: {money(order.cancellationRefund.amount)} for the undelivered portion.</p>}
+                  {order.status === "canceled" && !order.cancellationRefund && <p className="mt-2 text-slate-400">Provider cancellation confirmed; no automatic wallet credit was recorded for the remaining quantity.</p>}
                   <p className="mt-2 text-[10px] text-slate-500">
-                    Last checked{" "}
-                    {order.updatedAt
-                      ? new Date(order.updatedAt).toLocaleString()
+                    Last provider check{" "}
+                    {order.lastProviderCheckAt
+                      ? new Date(order.lastProviderCheckAt).toLocaleString()
                       : "Not checked yet"}
                   </p>
                 </div>
