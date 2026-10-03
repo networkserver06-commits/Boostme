@@ -130,6 +130,12 @@ body {
     sans-serif;
 }
 @media (max-width: 1024px) {
+  [data-slot="sidebar-wrapper"],
+  [data-slot="sidebar-inset"] {
+    width: 100% !important;
+    min-width: 0 !important;
+    max-width: 100vw !important;
+  }
   .order-page-shell,
   .order-page-shell > *,
   .order-form-card,
@@ -330,6 +336,10 @@ select {
     background: rgba(8, 16, 30, 0.98);
     box-shadow: 0 10px 30px rgba(3, 8, 20, 0.42);
     backdrop-filter: blur(14px);
+    max-width: calc(100vw - 1.5rem);
+    max-height: calc(100dvh - 8rem);
+    overflow-y: auto;
+    overscroll-behavior: contain;
   }
   .order-action-intro {
     display: none;
@@ -399,6 +409,9 @@ select:focus-visible {
 }
 #root {
   min-height: 100vh;
+  width: 100%;
+  max-width: 100%;
+  overflow-x: hidden;
 }
 @media (prefers-reduced-motion: reduce) {
   *,
