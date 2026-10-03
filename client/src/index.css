@@ -166,6 +166,15 @@ body {
     max-inline-size: 100% !important;
     min-inline-size: 0 !important;
   }
+  .order-action-label,
+  .order-action-primary [data-order-label],
+  .order-action-secondary [data-order-label] {
+    min-width: 0 !important;
+    max-width: 100% !important;
+    white-space: normal !important;
+    overflow-wrap: anywhere;
+    text-align: center;
+  }
 }
 button,
 a,

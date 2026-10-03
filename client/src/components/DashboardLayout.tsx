@@ -580,7 +580,7 @@ function DashboardLayoutContent({
                       .toLowerCase()
                       .replaceAll(" ", "-")}
                     aria-current={active ? "page" : undefined}
-                    className={`group relative flex min-h-[66px] w-full flex-col items-center justify-center gap-1 rounded-2xl px-1 text-[9px] font-semibold tracking-[-.01em] whitespace-nowrap transition-all ${
+                    className={`group relative flex min-h-[66px] w-full flex-col items-center justify-center gap-1 rounded-2xl px-1 text-center text-[9px] font-semibold leading-tight tracking-[-.01em] whitespace-normal transition-all ${
                       active || (item.path === "#menu" && mobileMenuOpen)
                         ? item.tone === "blue"
                           ? "bg-blue-500/[.16] text-blue-100 shadow-[0_8px_24px_rgba(37,99,235,.18)]"
