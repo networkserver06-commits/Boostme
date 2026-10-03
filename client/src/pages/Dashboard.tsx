@@ -970,6 +970,37 @@ export default function Dashboard() {
                       </Link>
                     </div>
                   </details>
+                  <details className="group mt-3 rounded-2xl border border-border bg-card text-card-foreground shadow-sm">
+                    <summary className="flex cursor-pointer list-none items-center justify-between gap-3 p-3 [&::-webkit-details-marker]:hidden">
+                      <span className="min-w-0">
+                        <span className="block text-sm font-semibold">
+                          Quick guide
+                        </span>
+                        <span className="mt-1 block text-[10px] text-muted-foreground">
+                          How to place an order
+                        </span>
+                      </span>
+                      <ChevronDown className="h-4 w-4 shrink-0 text-muted-foreground transition-transform group-open:rotate-180" />
+                    </summary>
+                    <ol className="grid gap-2 border-t border-border px-3 pb-3 pt-3 text-xs leading-5 text-muted-foreground sm:grid-cols-2">
+                      <li className="flex gap-2">
+                        <span className="font-semibold text-primary">1.</span>
+                        Select your preferred platform, category, and service.
+                      </li>
+                      <li className="flex gap-2">
+                        <span className="font-semibold text-primary">2.</span>
+                        Paste the public target link you want to boost.
+                      </li>
+                      <li className="flex gap-2">
+                        <span className="font-semibold text-primary">3.</span>
+                        Enter a quantity within the service limits.
+                      </li>
+                      <li className="flex gap-2">
+                        <span className="font-semibold text-primary">4.</span>
+                        Tap Submit order and confirm the review details.
+                      </li>
+                    </ol>
+                  </details>
                   <div className="mt-4 grid gap-3 sm:mt-6 sm:gap-4">
                     <div className="relative">
                       <Search className="pointer-events-none absolute left-3 top-3 h-4 w-4 text-slate-500" />
@@ -1496,34 +1527,6 @@ export default function Dashboard() {
                       Only use target links you own or are authorized to manage.
                     </p>
                   </div>
-                </section>
-                <section className="min-w-0 rounded-2xl border border-border bg-card p-3 text-card-foreground shadow-sm sm:p-5">
-                  <div className="flex flex-wrap items-baseline gap-2">
-                    <h2 className="text-sm font-semibold text-foreground">
-                      Quick guide
-                    </h2>
-                    <span className="text-xs text-muted-foreground">
-                      How to place an order
-                    </span>
-                  </div>
-                  <ol className="mt-4 grid gap-3 text-xs leading-5 text-muted-foreground sm:grid-cols-2">
-                    <li className="flex gap-2">
-                      <span className="font-semibold text-primary">1.</span>
-                      Select your preferred platform, category, and service.
-                    </li>
-                    <li className="flex gap-2">
-                      <span className="font-semibold text-primary">2.</span>
-                      Paste the public target link you want to boost.
-                    </li>
-                    <li className="flex gap-2">
-                      <span className="font-semibold text-primary">3.</span>
-                      Enter a quantity within the service limits.
-                    </li>
-                    <li className="flex gap-2">
-                      <span className="font-semibold text-primary">4.</span>
-                      Tap Submit order and confirm the review details.
-                    </li>
-                  </ol>
                 </section>
                 {isOverviewPage && (
                   <TopUpCard
