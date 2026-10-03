@@ -463,6 +463,15 @@ export default function Dashboard() {
           })()
         ? `Use a valid ${selected.platform} link for this service.`
         : "";
+  const submitGuidance = !selected
+    ? "Select a service before submitting the order."
+    : !targetLink.trim()
+      ? "Add the public target link before submitting the order."
+      : targetLinkError
+        ? targetLinkError
+        : quantity < selected.minQuantity || quantity > selected.maxQuantity
+          ? `Enter a quantity between ${selected.minQuantity.toLocaleString()} and ${selected.maxQuantity.toLocaleString()}.`
+          : "";
   useEffect(() => {
     const match = services.data?.find(
       service => service.id === Number(serviceId)
@@ -1314,6 +1323,15 @@ export default function Dashboard() {
                         data-order-actions
                         className="w-full min-w-0 max-w-full rounded-2xl border border-blue-200/20 bg-blue-500/[.06] p-2.5 shadow-inner"
                       >
+                        {submitGuidance && (
+                          <p
+                            id="order-submit-guidance"
+                            role="status"
+                            className="mb-2 rounded-lg border border-amber-300/25 bg-amber-200/[.08] px-3 py-2 text-center text-[11px] leading-4 text-amber-100"
+                          >
+                            {submitGuidance}
+                          </p>
+                        )}
                         <Button
                           aria-label={
                             createOrder.isPending
@@ -1323,6 +1341,9 @@ export default function Dashboard() {
                                 : "Select a service first"
                           }
                           data-order-action="review-submit"
+                          aria-describedby={
+                            submitGuidance ? "order-submit-guidance" : undefined
+                          }
                           size="lg"
                           className="order-submit-control relative z-20 !flex h-auto min-h-14 w-full min-w-0 max-w-full shrink-0 items-center justify-center gap-2 whitespace-normal rounded-xl !bg-blue-600 px-4 py-3 text-center text-sm font-semibold !text-white shadow-[0_10px_28px_rgba(37,99,235,.28)] hover:!bg-blue-500 disabled:!bg-slate-600 disabled:!text-white disabled:opacity-100"
                           type="button"
@@ -1368,13 +1389,6 @@ export default function Dashboard() {
                             </>
                           )}
                         </Button>
-                        {!selected &&
-                          !services.isLoading &&
-                          !services.isError && (
-                            <p className="mt-2 text-center text-[10px] text-muted-foreground">
-                              Choose a service above to enable Submit order.
-                            </p>
-                          )}
                         <Link
                           href="/dashboard/wallet"
                           data-order-action="add-funds"
