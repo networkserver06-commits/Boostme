@@ -156,7 +156,6 @@ body {
     white-space: nowrap;
   }
   .order-form-card,
-  .order-form-card > *,
   .order-link-field {
     min-width: 0 !important;
     max-width: 100% !important;
@@ -282,7 +281,6 @@ select {
   opacity: 1 !important;
 }
 [data-order-summary] {
-  contain: layout;
   isolation: isolate;
   transform: none !important;
 }
