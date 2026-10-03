@@ -549,6 +549,35 @@ export default function Dashboard() {
         closeButton: true,
       }),
   });
+  const handleReviewOrder = () => {
+    createOrder.reset();
+    if (!selected) {
+      toast.info("Choose a service first", {
+        description:
+          "Select a platform, category, and service so we can calculate your order.",
+      });
+      return;
+    }
+    if (!targetLink.trim()) {
+      toast.info("Add your public target link", {
+        description: `Paste the ${selected.platform} link you want to grow before submitting.`,
+      });
+      return;
+    }
+    if (targetLinkError) {
+      toast.error("Check the target link", {
+        description: targetLinkError,
+      });
+      return;
+    }
+    if (quantity < selected.minQuantity || quantity > selected.maxQuantity) {
+      toast.info("Enter a valid quantity", {
+        description: `Use a quantity from ${selected.minQuantity.toLocaleString()} to ${selected.maxQuantity.toLocaleString()}.`,
+      });
+      return;
+    }
+    setReviewOpen(true);
+  };
   const requestDeposit = trpc.dashboard.requestDeposit.useMutation({
     onSuccess: data => {
       setDepositReference(data.reference);
@@ -1203,6 +1232,7 @@ export default function Dashboard() {
                         <select
                           id="order-service"
                           value={serviceId}
+                          aria-invalid={!selected}
                           onChange={event => {
                             setServiceId(event.target.value);
                             const next = categoryServices.find(
@@ -1280,6 +1310,10 @@ export default function Dashboard() {
                         <Link2 className="pointer-events-none absolute left-3 top-3.5 h-4 w-4 text-slate-500" />
                         <Input
                           id="order-link"
+                          aria-describedby={
+                            targetLinkError ? "order-link-error" : undefined
+                          }
+                          aria-invalid={Boolean(targetLinkError)}
                           inputMode="url"
                           autoComplete="url"
                           dir="ltr"
@@ -1303,6 +1337,7 @@ export default function Dashboard() {
                         />
                         {targetLinkError && (
                           <p
+                            id="order-link-error"
                             role="alert"
                             className="mt-1.5 flex items-center gap-1.5 text-xs text-amber-200/90"
                           >
@@ -1323,6 +1358,12 @@ export default function Dashboard() {
                       </div>
                       <Input
                         id="order-quantity"
+                        aria-describedby="order-quantity-help"
+                        aria-invalid={Boolean(
+                          selected &&
+                            (quantity < selected.minQuantity ||
+                              quantity > selected.maxQuantity)
+                        )}
                         className="mt-2 h-11 w-full min-w-0 max-w-full rounded-xl border-white/10 bg-[#0a111b]"
                         type="number"
                         placeholder="Enter quantity"
@@ -1362,7 +1403,10 @@ export default function Dashboard() {
                             ? `Total cost: KSh ${charge.toFixed(2)}`
                             : "Select a service to see the price"}
                         </p>
-                        <p className="mt-1 text-[10px] text-slate-500">
+                        <p
+                          id="order-quantity-help"
+                          className="mt-1 text-[10px] text-slate-500"
+                        >
                           {selected
                             ? `(${quantity.toLocaleString()} ÷ 1,000) × ${money(selected.retailRatePer1k)} per 1,000`
                             : "Choose a service to calculate"}
@@ -1460,18 +1504,8 @@ export default function Dashboard() {
                             }
                             className="order-action-primary"
                             type="button"
-                            disabled={
-                              createOrder.isPending ||
-                              !selected ||
-                              !targetLink.trim() ||
-                              Boolean(targetLinkError) ||
-                              quantity < (selected?.minQuantity ?? 0) ||
-                              quantity > (selected?.maxQuantity ?? Infinity)
-                            }
-                            onClick={() => {
-                              createOrder.reset();
-                              setReviewOpen(true);
-                            }}
+                            disabled={createOrder.isPending}
+                            onClick={handleReviewOrder}
                           >
                             {createOrder.isPending ? (
                               <>
