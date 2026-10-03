@@ -1304,7 +1304,7 @@ export default function Dashboard() {
                               : "Select a service first"
                         }
                         data-order-action="review-submit"
-                        className="order-submit-control relative z-10 min-h-12 h-auto w-full min-w-0 max-w-full shrink-0 justify-center whitespace-normal rounded-xl bg-primary px-5 py-3 text-center text-sm font-semibold !text-white shadow-lg shadow-blue-500/20 hover:bg-primary/90 disabled:bg-slate-700 disabled:!text-white disabled:opacity-100"
+                        className="order-submit-control relative z-10 hidden min-h-12 h-auto w-full min-w-0 max-w-full shrink-0 justify-center whitespace-normal rounded-xl bg-primary px-5 py-3 text-center text-sm font-semibold !text-white shadow-lg shadow-blue-500/20 hover:bg-primary/90 disabled:bg-slate-700 disabled:!text-white disabled:opacity-100 md:flex"
                         type="button"
                         disabled={
                           createOrder.isPending ||
