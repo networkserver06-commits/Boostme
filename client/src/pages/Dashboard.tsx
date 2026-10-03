@@ -800,10 +800,10 @@ export default function Dashboard() {
               </div>
             )}
             {isPlaceOrderPage && (
-              <div className="order-page-shell grid w-full min-w-0 max-w-full gap-3 overflow-x-hidden sm:gap-5 xl:grid-cols-[minmax(0,1.15fr)_minmax(0,.85fr)]">
+              <div className="order-page-shell grid w-full min-w-0 max-w-full gap-3 sm:gap-5 xl:grid-cols-[minmax(0,1.15fr)_minmax(0,.85fr)]">
                 <section
                   id="new-order"
-                  className="order-form-card theme-card-surface min-w-0 max-w-full scroll-mt-20 overflow-x-hidden rounded-2xl border border-blue-200/10 bg-[linear-gradient(145deg,rgba(31,75,143,.12),rgba(13,20,31,.92)_45%)] p-2.5 shadow-[0_16px_60px_rgba(0,0,0,.14)] sm:p-6"
+                  className="order-form-card theme-card-surface min-w-0 max-w-full scroll-mt-20 rounded-2xl border border-blue-200/10 bg-[linear-gradient(145deg,rgba(31,75,143,.12),rgba(13,20,31,.92)_45%)] p-2.5 shadow-[0_16px_60px_rgba(0,0,0,.14)] sm:p-6"
                 >
                   <div className="flex items-start justify-between gap-4">
                     <div>
@@ -1319,13 +1319,18 @@ export default function Dashboard() {
                           </p>
                         )}
                       </div>
-                      <div
-                        data-order-actions
-                        className="w-full min-w-0 max-w-full rounded-2xl border border-blue-200/20 bg-blue-500/[.06] p-2 shadow-inner sm:p-2.5"
-                      >
+                      <div data-order-actions className="order-action-panel">
+                        <div className="min-w-0">
+                          <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-blue-200">
+                            Ready to continue?
+                          </p>
+                          <p className="mt-1 text-xs leading-4 text-slate-400">
+                            Review your details, then choose an action below.
+                          </p>
+                        </div>
                         {createOrder.error && (
                           <div
-                            className="order-error-panel mb-2 rounded-xl border p-3 text-xs leading-5"
+                            className="order-error-panel rounded-xl border p-3 text-xs leading-5"
                             role="alert"
                             aria-live="assertive"
                           >
@@ -1354,76 +1359,81 @@ export default function Dashboard() {
                           <p
                             id="order-submit-guidance"
                             role="status"
-                            className="mb-2 rounded-lg border border-amber-300/25 bg-amber-200/[.08] px-3 py-2 text-center text-[11px] leading-4 text-amber-100"
+                            className="rounded-lg border border-amber-300/25 bg-amber-200/[.08] px-3 py-2 text-center text-[11px] leading-4 text-amber-100"
                           >
                             {submitGuidance}
                           </p>
                         )}
-                        <Button
-                          aria-label={
-                            createOrder.isPending
-                              ? "Submitting order"
-                              : selected
-                                ? "Submit order"
-                                : "Select a service first"
-                          }
-                          data-order-action="review-submit"
-                          aria-describedby={
-                            submitGuidance ? "order-submit-guidance" : undefined
-                          }
-                          size="lg"
-                          className="order-submit-control relative z-20 !flex h-auto min-h-14 w-full min-w-0 max-w-full shrink-0 items-center justify-center gap-2 whitespace-normal rounded-xl !bg-blue-600 px-4 py-3 text-center text-sm font-semibold !text-white shadow-[0_10px_28px_rgba(37,99,235,.28)] hover:!bg-blue-500 disabled:!bg-slate-600 disabled:!text-white disabled:opacity-100"
-                          type="button"
-                          disabled={
-                            createOrder.isPending ||
-                            !selected ||
-                            !targetLink.trim() ||
-                            Boolean(targetLinkError) ||
-                            quantity < (selected?.minQuantity ?? 0) ||
-                            quantity > (selected?.maxQuantity ?? Infinity)
-                          }
-                          onClick={() => {
-                            createOrder.reset();
-                            setReviewOpen(true);
-                          }}
-                        >
-                          {createOrder.isPending ? (
-                            <>
-                              <Loader2 className="h-4 w-4 animate-spin" />
-                              <span className="order-action-label">
-                                Submitting order…
-                              </span>
-                            </>
-                          ) : selected ? (
-                            <>
-                              <span className="order-action-label !text-white uppercase tracking-wide">
-                                Submit order
-                              </span>
-                              <ArrowUpRight className="h-4 w-4" />
-                            </>
-                          ) : (
-                            <>
-                              {services.isLoading ? (
+                        <div className="order-action-grid">
+                          <Button
+                            aria-label={
+                              createOrder.isPending
+                                ? "Submitting order"
+                                : selected
+                                  ? "Submit order"
+                                  : "Select a service first"
+                            }
+                            data-order-action="review-submit"
+                            aria-describedby={
+                              submitGuidance
+                                ? "order-submit-guidance"
+                                : undefined
+                            }
+                            className="order-action-primary"
+                            type="button"
+                            disabled={
+                              createOrder.isPending ||
+                              !selected ||
+                              !targetLink.trim() ||
+                              Boolean(targetLinkError) ||
+                              quantity < (selected?.minQuantity ?? 0) ||
+                              quantity > (selected?.maxQuantity ?? Infinity)
+                            }
+                            onClick={() => {
+                              createOrder.reset();
+                              setReviewOpen(true);
+                            }}
+                          >
+                            {createOrder.isPending ? (
+                              <>
                                 <Loader2 className="h-4 w-4 animate-spin" />
-                              ) : (
-                                <ShoppingBag className="h-4 w-4" />
-                              )}
-                              <span className="order-action-label !text-white">
-                                {services.isLoading
-                                  ? "Loading services…"
-                                  : "Select a service to continue"}
-                              </span>
-                            </>
-                          )}
-                        </Button>
-                        <Link
-                          href="/dashboard/wallet"
-                          data-order-action="add-funds"
-                          className="inline-flex min-h-12 w-full items-center justify-center gap-2 rounded-xl border border-amber-300/30 bg-amber-200/[.10] px-4 py-3 text-sm font-semibold text-amber-100 transition hover:bg-amber-200/[.18]"
-                        >
-                          <WalletCards className="h-4 w-4" />
-                          <span className="order-action-label">Add funds</span>
-                        </Link>
+                                <span className="order-action-label">
+                                  Submitting order…
+                                </span>
+                              </>
+                            ) : selected ? (
+                              <>
+                                <ArrowUpRight className="h-4 w-4" />
+                                <span className="order-action-label">
+                                  Submit order
+                                </span>
+                              </>
+                            ) : (
+                              <>
+                                {services.isLoading ? (
+                                  <Loader2 className="h-4 w-4 animate-spin" />
+                                ) : (
+                                  <ShoppingBag className="h-4 w-4" />
+                                )}
+                                <span className="order-action-label">
+                                  {services.isLoading
+                                    ? "Loading services…"
+                                    : "Select a service to continue"}
+                                </span>
+                              </>
+                            )}
+                          </Button>
+                          <Link
+                            href="/dashboard/wallet"
+                            data-order-action="add-funds"
+                            className="order-action-secondary"
+                          >
+                            <WalletCards className="h-4 w-4" />
+                            <span className="order-action-label">
+                              Add funds
+                            </span>
+                          </Link>
+                        </div>
                       </div>
                     </div>
                     <p className="text-[10px] leading-4 text-slate-500">
