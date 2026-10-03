@@ -597,7 +597,7 @@ export default function Dashboard() {
 
   return (
     <DashboardLayout>
-      <div className="mx-auto min-w-0 max-w-7xl space-y-6 overflow-x-hidden">
+      <div className="mx-auto w-full min-w-0 max-w-7xl space-y-6 overflow-x-hidden">
         <header className="flex flex-col justify-between gap-4 sm:flex-row sm:items-end">
           <div>
             <p className="text-[10px] font-semibold uppercase tracking-[.2em] text-cyan-200">
@@ -779,7 +779,7 @@ export default function Dashboard() {
               </div>
             )}
             {isPlaceOrderPage && (
-              <div className="grid min-w-0 max-w-full gap-5 overflow-x-hidden xl:grid-cols-[1.15fr_.85fr]">
+              <div className="grid w-full min-w-0 max-w-full gap-5 overflow-x-hidden xl:grid-cols-[1.15fr_.85fr]">
                 <section
                   id="new-order"
                   className="theme-card-surface min-w-0 max-w-full scroll-mt-20 overflow-visible rounded-2xl border border-blue-200/10 bg-[linear-gradient(145deg,rgba(31,75,143,.12),rgba(13,20,31,.92)_45%)] p-3 shadow-[0_16px_60px_rgba(0,0,0,.14)] sm:p-6"
@@ -1295,7 +1295,7 @@ export default function Dashboard() {
                           </p>
                         )}
                       </div>
-                      <Button
+                      <button
                         aria-label={
                           createOrder.isPending
                             ? "Submitting order"
@@ -1345,7 +1345,7 @@ export default function Dashboard() {
                             </span>
                           </>
                         )}
-                      </Button>
+                      </button>
                     </div>
                     {createOrder.error && (
                       <div
