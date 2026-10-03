@@ -312,6 +312,14 @@ export default function Dashboard() {
   const [notificationsOpen, setNotificationsOpen] = useState(false);
   const [reviewOpen, setReviewOpen] = useState(false);
   const [mobileActionsOpen, setMobileActionsOpen] = useState(true);
+  const revealOrderActions = () => {
+    setMobileActionsOpen(true);
+    window.requestAnimationFrame(() => {
+      document
+        .querySelector<HTMLElement>("[data-order-actions]")
+        ?.scrollIntoView({ behavior: "smooth", block: "center" });
+    });
+  };
   const platformScrollRef = useRef<HTMLDivElement>(null);
   const categoryScrollRef = useRef<HTMLDivElement>(null);
   const refreshOrderStatus = trpc.dashboard.refreshOrderStatus.useMutation({
@@ -1297,9 +1305,21 @@ export default function Dashboard() {
                       className="order-summary-card theme-card-surface flex w-full min-w-0 max-w-full flex-col gap-3 overflow-visible rounded-xl border border-cyan-200/15 bg-gradient-to-br from-cyan-300/[.08] to-blue-400/[.04] p-3 shadow-[0_12px_35px_rgba(34,211,238,.07)] sm:p-4"
                     >
                       <div className="min-w-0">
-                        <p className="text-[10px] font-semibold uppercase tracking-[.14em] text-cyan-100/80">
-                          Order summary
-                        </p>
+                        <div className="flex items-center justify-between gap-2">
+                          <p className="text-[10px] font-semibold uppercase tracking-[.14em] text-cyan-100/80">
+                            Order summary
+                          </p>
+                          <button
+                            type="button"
+                            className="order-summary-quick-action"
+                            aria-controls="order-action-content"
+                            aria-expanded={mobileActionsOpen}
+                            onClick={revealOrderActions}
+                          >
+                            Quick actions
+                            <ArrowUpRight className="h-3 w-3" />
+                          </button>
+                        </div>
                         <p className="mt-1 text-[10px] font-medium text-slate-400">
                           Charge
                         </p>
