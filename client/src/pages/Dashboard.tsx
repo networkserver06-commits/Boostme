@@ -294,11 +294,11 @@ export default function Dashboard() {
   const [platform, setPlatform] = useState("");
   const [category, setCategory] = useState("");
   const [targetLink, setTargetLink] = useState("");
-  const [quantity, setQuantity] = useState(1000);
+  const [quantity, setQuantity] = useState(0);
   const [catalogSearch, setCatalogSearch] = useState("");
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
-  const [depositAmount, setDepositAmount] = useState(1000);
+  const [depositAmount, setDepositAmount] = useState(0);
   const [phone, setPhone] = useState("");
   const [depositReference, setDepositReference] = useState("");
   const [depositStatus, setDepositStatus] = useState<
@@ -1306,6 +1306,7 @@ export default function Dashboard() {
                         id="order-quantity"
                         className="mt-2 h-11 w-full min-w-0 max-w-full rounded-xl border-white/10 bg-[#0a111b]"
                         type="number"
+                        placeholder="Enter quantity"
                         min={selected?.minQuantity ?? 100}
                         max={selected?.maxQuantity ?? 100000}
                         value={quantity}
@@ -1794,7 +1795,8 @@ function TopUpCard({
             className="mt-2 h-10 rounded-lg border-white/10 bg-[#0a111b]"
             type="number"
             min={MIN_DEPOSIT_KES}
-            value={amount}
+            placeholder="Enter amount"
+            value={amount || ""}
             onChange={event => setAmount(Number(event.target.value))}
           />
         </div>

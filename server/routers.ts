@@ -30,8 +30,11 @@ import {
   syncSchedules,
   users,
   walletTransactions,
+  authSessions,
+  passwordResetTokens,
   eq,
   desc,
+  isNull,
   sql,
 } from "./db";
 import {
@@ -73,6 +76,12 @@ import {
   normalizePaymentStatus,
   summarizeLeeTecResponse,
 } from "./leetec";
+import {
+  createPasswordResetToken,
+  hashPasswordResetToken,
+  sendPasswordResetEmail,
+  sendTopupConfirmationEmail,
+} from "./email";
 
 const MIN_DEPOSIT_KES = 10;
 
@@ -108,6 +117,84 @@ export const appRouter = router({
   system: systemRouter,
   auth: router({
     me: publicProcedure.query(opts => opts.ctx.user),
+    requestPasswordReset: publicProcedure
+      .input(z.object({ email: z.string().trim().email().max(320) }))
+      .mutation(async ({ input }) => {
+        const message =
+          "If an account exists for that email, a password reset link has been sent.";
+        const db = await getDb();
+        if (!db) return { message };
+        const user = await getUserByEmail(normalizeEmail(input.email));
+        if (!user?.passwordHash) return { message };
+        const token = createPasswordResetToken();
+        await db
+          .delete(passwordResetTokens)
+          .where(eq(passwordResetTokens.userId, user.id));
+        await db.insert(passwordResetTokens).values({
+          tokenHash: token.tokenHash,
+          userId: user.id,
+          expiresAt: token.expiresAt,
+        });
+        try {
+          await sendPasswordResetEmail(user.email, user.name, token.rawToken);
+        } catch (error) {
+          console.error("[email] password reset delivery failed", error);
+        }
+        return { message };
+      }),
+    resetPassword: publicProcedure
+      .input(
+        z.object({
+          token: z.string().min(20).max(200),
+          password: z.string().min(8).max(256),
+        })
+      )
+      .mutation(async ({ input }) => {
+        const db = await getDb();
+        if (!db)
+          throw new TRPCError({
+            code: "INTERNAL_SERVER_ERROR",
+            message: "Account service is not configured",
+          });
+        const tokenHash = hashPasswordResetToken(input.token);
+        const record = (
+          await db
+            .select()
+            .from(passwordResetTokens)
+            .where(
+              and(
+                eq(passwordResetTokens.tokenHash, tokenHash),
+                isNull(passwordResetTokens.usedAt),
+                sql`${passwordResetTokens.expiresAt} > ${new Date()}`
+              )
+            )
+            .limit(1)
+        )[0];
+        if (!record)
+          throw new TRPCError({
+            code: "BAD_REQUEST",
+            message:
+              "This password reset link is invalid or expired. Request a new one.",
+          });
+        const passwordHash = await hashPassword(input.password);
+        await db.transaction(async tx => {
+          await tx
+            .update(users)
+            .set({ passwordHash, loginMethod: "password" })
+            .where(eq(users.id, record.userId));
+          await tx
+            .update(passwordResetTokens)
+            .set({ usedAt: new Date() })
+            .where(eq(passwordResetTokens.tokenHash, tokenHash));
+          await tx
+            .delete(authSessions)
+            .where(eq(authSessions.userId, record.userId));
+        });
+        return {
+          message:
+            "Your password has been reset. Sign in with your new password.",
+        };
+      }),
     signup: publicProcedure
       .input(
         z.object({
@@ -911,6 +998,19 @@ export const appRouter = router({
             entityId: input.reference,
             details: { gateway: "leetec", transaction: result.transaction },
           });
+        if (settled?.status === "completed") {
+          try {
+            await sendTopupConfirmationEmail({
+              to: ctx.user.email,
+              name: ctx.user.name,
+              amount: settled.amount,
+              reference: input.reference,
+              balanceAfter: settled.balanceAfter,
+            });
+          } catch (error) {
+            console.error("[email] top-up confirmation delivery failed", error);
+          }
+        }
         if (settled?.status === "failed")
           await recordAudit({
             actorUserId: ctx.user.id,
