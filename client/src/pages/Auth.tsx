@@ -377,7 +377,20 @@ export default function Auth() {
             </p>
           </div>
           <footer className="pb-4 text-center text-xs text-slate-700">
-            Need help? Contact your account administrator.
+            Need help?{" "}
+            <a href="tel:+254116553618" className="hover:text-slate-400">
+              0116 553 618
+            </a>{" "}
+            ·{" "}
+            <a
+              href="https://wa.me/254116553618?text=Hello%20Orbit%20Growth%20support"
+              target="_blank"
+              rel="noreferrer"
+              className="hover:text-slate-400"
+            >
+              WhatsApp support
+            </a>{" "}
+            · Powered by Lee Tech.
           </footer>
         </section>
       </div>

@@ -1,6 +1,9 @@
 import { createHash, randomBytes } from "node:crypto";
 
 const RESET_TTL_MS = 15 * 60 * 1000;
+const SUPPORT_PHONE = "+254116553618";
+const SUPPORT_DISPLAY = "0116 553 618";
+const SUPPORT_WHATSAPP = `https://wa.me/${SUPPORT_PHONE}`;
 
 function appBaseUrl() {
   return (
@@ -71,8 +74,10 @@ export async function sendPasswordResetEmail(
   return sendResendEmail({
     to,
     subject: "Reset your Orbit Growth password",
-    text: `Hi ${greeting},\n\nReset your password within 15 minutes: ${resetUrl}\n\nIf you did not request this, you can ignore this email.`,
-    html: `<div style="font-family:Arial,sans-serif;line-height:1.6;color:#172033;max-width:560px"><h2>Reset your Orbit Growth password</h2><p>Hi ${escapeHtml(greeting)},</p><p>Use the button below to choose a new password. This link expires in 15 minutes.</p><p><a href="${resetUrl}" style="display:inline-block;background:#2563eb;color:white;padding:12px 18px;border-radius:8px;text-decoration:none;font-weight:700">Reset password</a></p><p style="font-size:13px;color:#667085">If you did not request this, you can ignore this email.</p></div>`,
+    text: `Hi ${greeting},\n\nReset your password within 15 minutes: ${resetUrl}\n\nIf you did not request this, you can ignore this email.\n\nNeed help? Call ${SUPPORT_DISPLAY} or WhatsApp ${SUPPORT_WHATSAPP}.\n\nPowered by Lee Tech.`,
+    html: emailLayout(
+      `<h2>Reset your Orbit Growth password</h2><p>Hi ${escapeHtml(greeting)},</p><p>Use the button below to choose a new password. This link expires in 15 minutes.</p><p><a href="${resetUrl}" style="display:inline-block;background:#2563eb;color:white;padding:12px 18px;border-radius:8px;text-decoration:none;font-weight:700">Reset password</a></p><p style="font-size:13px;color:#667085">If you did not request this, you can ignore this email.</p>`
+    ),
   });
 }
 
@@ -87,9 +92,15 @@ export async function sendTopupConfirmationEmail(input: {
   return sendResendEmail({
     to: input.to,
     subject: `Top-up confirmed — KSh ${input.amount}`,
-    text: `Hi ${greeting},\n\nYour wallet top-up of KSh ${input.amount} was confirmed. Reference: ${input.reference}. Your new balance is KSh ${input.balanceAfter ?? "updated"}.`,
-    html: `<div style="font-family:Arial,sans-serif;line-height:1.6;color:#172033;max-width:560px"><h2>Top-up confirmed</h2><p>Hi ${escapeHtml(greeting)},</p><p>Your wallet top-up was successfully confirmed.</p><p><strong>Amount:</strong> KSh ${escapeHtml(input.amount)}<br><strong>Reference:</strong> ${escapeHtml(input.reference)}<br><strong>New balance:</strong> KSh ${escapeHtml(input.balanceAfter ?? "updated")}</p><p>You can now use your updated wallet balance for orders.</p></div>`,
+    text: `Hi ${greeting},\n\nYour wallet top-up of KSh ${input.amount} was confirmed. Reference: ${input.reference}. Your new balance is KSh ${input.balanceAfter ?? "updated"}.\n\nNeed help? Call ${SUPPORT_DISPLAY} or WhatsApp ${SUPPORT_WHATSAPP}.\n\nPowered by Lee Tech.`,
+    html: emailLayout(
+      `<h2>Top-up confirmed</h2><p>Hi ${escapeHtml(greeting)},</p><p>Your wallet top-up was successfully confirmed.</p><p><strong>Amount:</strong> KSh ${escapeHtml(input.amount)}<br><strong>Reference:</strong> ${escapeHtml(input.reference)}<br><strong>New balance:</strong> KSh ${escapeHtml(input.balanceAfter ?? "updated")}</p><p>You can now use your updated wallet balance for orders.</p>`
+    ),
   });
+}
+
+function emailLayout(content: string) {
+  return `<div style="font-family:Arial,sans-serif;line-height:1.6;color:#172033;max-width:560px"><div style="border-bottom:1px solid #e5e7eb;padding-bottom:14px;margin-bottom:22px"><strong style="font-size:20px">Orbit Growth</strong><div style="font-size:12px;color:#667085">Social growth, simplified</div></div>${content}<div style="border-top:1px solid #e5e7eb;margin-top:28px;padding-top:16px;font-size:13px;color:#667085"><strong>Need support?</strong><br>Call <a href="tel:${SUPPORT_PHONE}">${SUPPORT_DISPLAY}</a> or <a href="${SUPPORT_WHATSAPP}">WhatsApp support</a>.<br><span style="display:inline-block;margin-top:10px">Powered by <strong>Lee Tech</strong>.</span></div></div>`;
 }
 
 function escapeHtml(value: string) {

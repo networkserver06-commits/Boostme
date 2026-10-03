@@ -1022,6 +1022,20 @@ export default function Home() {
             Pricing and availability reflect the active service catalog. Wallet
             requests may require review.
           </span>
+          <span className="flex flex-wrap items-center gap-x-3 gap-y-1">
+            <a href="tel:+254116553618" className="hover:text-white">
+              Support: 0116 553 618
+            </a>
+            <a
+              href="https://wa.me/254116553618?text=Hello%20Orbit%20Growth%20support"
+              target="_blank"
+              rel="noreferrer"
+              className="hover:text-white"
+            >
+              WhatsApp
+            </a>
+            <span>Powered by Lee Tech</span>
+          </span>
           <div className="flex flex-wrap items-center gap-4">
             <Link
               href="/how-to-use"
