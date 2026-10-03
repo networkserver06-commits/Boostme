@@ -219,13 +219,19 @@ select {
 }
 @media (max-width: 639px) {
   .order-action-panel {
-    position: sticky;
-    bottom: calc(0.75rem + env(safe-area-inset-bottom));
-    z-index: 30;
+    position: fixed;
+    left: max(0.75rem, env(safe-area-inset-left));
+    right: max(0.75rem, env(safe-area-inset-right));
+    bottom: calc(4.5rem + env(safe-area-inset-bottom));
+    z-index: 60;
+    width: auto;
     padding: 0.75rem;
     background: rgba(8, 16, 30, 0.97);
     box-shadow: 0 14px 32px rgba(0, 0, 0, 0.35);
     backdrop-filter: blur(14px);
+  }
+  .order-form-card {
+    padding-bottom: 12rem !important;
   }
   .order-action-grid {
     grid-template-columns: 1fr;
