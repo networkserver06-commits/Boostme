@@ -129,7 +129,7 @@ body {
     "Segoe UI",
     sans-serif;
 }
-@media (max-width: 767px) {
+@media (max-width: 1024px) {
   .order-page-shell,
   .order-page-shell > *,
   .order-form-card,
@@ -257,7 +257,7 @@ select {
   background: #fff7d6 !important;
   color: #7c4a03 !important;
 }
-@media (max-width: 767px) {
+@media (max-width: 1024px) {
   .order-action-panel {
     position: relative;
     z-index: 1;
