@@ -1395,9 +1395,7 @@ export default function Dashboard() {
                           aria-label={
                             createOrder.isPending
                               ? "Submitting order"
-                              : selected
-                                ? "Submit order"
-                                : "Select a service first"
+                              : "Submit order"
                           }
                           data-order-action="review-submit"
                           aria-describedby={
@@ -1449,9 +1447,7 @@ export default function Dashboard() {
                                 data-order-label
                                 className="order-action-label"
                               >
-                                {services.isLoading
-                                  ? "Loading services…"
-                                  : "Select a service to continue"}
+                                Submit order
                               </span>
                             </>
                           )}
