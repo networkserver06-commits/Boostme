@@ -72,6 +72,18 @@ const serviceOptionLabel = (
   return `${includePlatform ? `${service.platform} · ` : ""}${conciseName} · ${money(service.retailRatePer1k)} / 1k`;
 };
 const displayStatus = (status: string) => status.replaceAll("_", " ");
+const SUPPORT_WHATSAPP_NUMBER = "254116553618";
+const supportWhatsAppLink = (orderId: number) =>
+  `https://wa.me/${SUPPORT_WHATSAPP_NUMBER}?text=${encodeURIComponent(`Hello Orbit Growth support, I need help with order #${orderId}.`)}`;
+const orderStatusTabs = [
+  { value: "all", label: "All orders", Icon: ShoppingBag },
+  { value: "pending", label: "Pending", Icon: Clock3 },
+  { value: "in_progress", label: "In progress", Icon: RefreshCw },
+  { value: "completed", label: "Completed", Icon: CheckCircle2 },
+  { value: "canceled", label: "Canceled", Icon: XCircle },
+  { value: "partial", label: "Partial", Icon: AlertTriangle },
+  { value: "failed", label: "Failed", Icon: AlertTriangle },
+];
 const terminalOrderStatuses = ["completed", "canceled", "failed"];
 const orderProgress = (order: {
   quantity: number;
@@ -1529,8 +1541,10 @@ export default function Dashboard() {
               onCancel={id => cancelOrder.mutate({ orderId: id })}
               busyOrderId={
                 refreshOrderStatus.isPending || cancelOrder.isPending
-                  ? (refreshOrderStatus.variables?.orderId ??
-                    cancelOrder.variables?.orderId)
+                  ? Number(
+                      refreshOrderStatus.variables?.orderId ??
+                        cancelOrder.variables?.orderId
+                    )
                   : undefined
               }
             />
@@ -1848,20 +1862,6 @@ function OrderTable({
               {syncing ? "Updating…" : "Refresh list"}
             </Button>
           )}
-          <select
-            aria-label="Filter orders by status"
-            value={statusFilter}
-            onChange={event => setStatusFilter(event.target.value)}
-            className="h-10 w-full rounded-lg border border-white/10 bg-[#0a111b] px-3 text-xs text-slate-200 sm:w-auto"
-          >
-            <option value="all">All status</option>
-            <option value="pending">Pending</option>
-            <option value="in_progress">In progress</option>
-            <option value="completed">Completed</option>
-            <option value="canceled">Canceled</option>
-            <option value="partial">Partial</option>
-            <option value="failed">Failed</option>
-          </select>
           <div className="relative min-w-0 flex-1 sm:w-64">
             <Search className="absolute left-3 top-3 h-4 w-4 text-slate-500" />
             <Input
@@ -1873,6 +1873,35 @@ function OrderTable({
             />
           </div>
         </div>
+      </div>
+      <div
+        className="flex gap-2 overflow-x-auto border-b border-white/[.07] px-3 py-3 sm:px-6"
+        role="tablist"
+        aria-label="Filter orders by status"
+      >
+        {orderStatusTabs.map(({ value, label, Icon }) => {
+          const active = statusFilter === value;
+          const count =
+            value === "all"
+              ? orders.length
+              : orders.filter(order => order.status === value).length;
+          return (
+            <button
+              key={value}
+              type="button"
+              role="tab"
+              aria-selected={active}
+              onClick={() => setStatusFilter(value)}
+              className={`inline-flex min-h-9 shrink-0 items-center gap-1.5 rounded-xl border px-3 py-2 text-[10px] font-semibold capitalize transition ${active ? "border-cyan-200/25 bg-cyan-300/[.12] text-cyan-100 shadow-[0_6px_18px_rgba(34,211,238,.1)]" : "border-white/[.07] bg-white/[.02] text-slate-500 hover:border-white/15 hover:bg-white/[.05] hover:text-slate-200"}`}
+            >
+              <Icon className="h-3.5 w-3.5" />
+              <span>{label}</span>
+              <span className="rounded-full bg-black/15 px-1.5 py-0.5 text-[9px] tabular-nums">
+                {count}
+              </span>
+            </button>
+          );
+        })}
       </div>
       <div className="hidden overflow-x-auto md:block">
         <table className="w-full min-w-[820px] text-left text-xs">
@@ -2026,10 +2055,13 @@ function OrderTable({
                           </div>
                           <div className="flex flex-wrap items-start gap-2 lg:justify-end">
                             <a
-                              href={`mailto:support@orbitgrowth.com?subject=Support%20for%20order%20%23${order.id}`}
-                              className="inline-flex h-9 items-center gap-1.5 rounded-lg border border-white/10 px-3 text-[10px] font-medium text-slate-300 hover:bg-white/[.06]"
+                              href={supportWhatsAppLink(order.id)}
+                              target="_blank"
+                              rel="noreferrer"
+                              className="inline-flex h-9 items-center gap-1.5 rounded-lg border border-emerald-200/20 bg-emerald-300/[.06] px-3 text-[10px] font-medium text-emerald-100 hover:bg-emerald-300/[.12]"
                             >
-                              Contact support
+                              <MessageCircle className="h-3.5 w-3.5" />
+                              WhatsApp support
                             </a>
                             {canCheck && (
                               <Button
@@ -2273,10 +2305,13 @@ function OrderTable({
                   </button>
                 )}
                 <a
-                  href={`mailto:support@orbitgrowth.com?subject=Support%20for%20order%20%23${order.id}`}
-                  className="inline-flex min-h-9 flex-1 items-center justify-center rounded-lg border border-white/10 px-3 py-2 text-[10px] font-medium text-slate-200"
+                  href={supportWhatsAppLink(order.id)}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="inline-flex min-h-9 flex-1 items-center justify-center gap-1.5 rounded-lg border border-emerald-200/20 bg-emerald-300/[.06] px-3 py-2 text-[10px] font-medium text-emerald-100"
                 >
-                  Contact support
+                  <MessageCircle className="h-3.5 w-3.5" />
+                  WhatsApp support
                 </a>
                 <button
                   type="button"

@@ -263,15 +263,13 @@ export async function recordAudit(input: {
 }) {
   const db = await getDb();
   if (!db) return;
-  await db
-    .insert(auditEvents)
-    .values({
-      actorUserId: input.actorUserId,
-      action: input.action,
-      entityType: input.entityType,
-      entityId: input.entityId,
-      details: input.details ?? null,
-    });
+  await db.insert(auditEvents).values({
+    actorUserId: input.actorUserId,
+    action: input.action,
+    entityType: input.entityType,
+    entityId: input.entityId,
+    details: input.details ?? null,
+  });
 }
 
 export async function getActiveServices() {
@@ -600,17 +598,15 @@ export async function chargeWallet(input: {
       })
       .returning({ id: orders.id });
     if (!created) throw new Error("Unable to create order");
-    await tx
-      .insert(walletTransactions)
-      .values({
-        userId: input.userId,
-        amount: (-input.charge).toFixed(2),
-        type: "order_charge",
-        status: "completed",
-        reference: `order-${created.id}`,
-        paymentMethod: "wallet",
-        balanceAfter: nextBalance.toFixed(2),
-      });
+    await tx.insert(walletTransactions).values({
+      userId: input.userId,
+      amount: (-input.charge).toFixed(2),
+      type: "order_charge",
+      status: "completed",
+      reference: `order-${created.id}`,
+      paymentMethod: "wallet",
+      balanceAfter: nextBalance.toFixed(2),
+    });
     return created.id;
   });
 }
@@ -652,18 +648,18 @@ export async function refundOrder(
     await tx
       .update(orders)
       .set({ status: input.status ?? "failed", errorMessage: input.reason })
-      .where(eq(orders.id, input.orderId));
-    await tx
-      .insert(walletTransactions)
-      .values({
-        userId: input.userId,
-        amount: refund.ledgerAmount,
-        type: "refund",
-        status: refund.status,
-        reference: `refund-${input.orderId}`,
-        paymentMethod: "system",
-        balanceAfter: refund.nextBalance,
-      });
+      .where(
+        and(eq(orders.id, input.orderId), eq(orders.userId, input.userId))
+      );
+    await tx.insert(walletTransactions).values({
+      userId: input.userId,
+      amount: refund.ledgerAmount,
+      type: "refund",
+      status: refund.status,
+      reference: `refund-${input.orderId}`,
+      paymentMethod: "system",
+      balanceAfter: refund.nextBalance,
+    });
     return refund.nextBalance;
   });
 }

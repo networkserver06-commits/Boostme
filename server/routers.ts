@@ -648,7 +648,7 @@ export const appRouter = router({
         }
       }),
     refreshOrderStatus: protectedProcedure
-      .input(z.object({ orderId: z.number().int().positive() }))
+      .input(z.object({ orderId: z.coerce.number().int().positive() }))
       .mutation(async ({ ctx, input }) => {
         const db = await getDb();
         if (!db)
@@ -660,13 +660,16 @@ export const appRouter = router({
           await db
             .select()
             .from(orders)
-            .where(eq(orders.id, input.orderId))
+            .where(
+              and(eq(orders.id, input.orderId), eq(orders.userId, ctx.user.id))
+            )
             .limit(1)
         )[0];
-        if (!order || order.userId !== ctx.user.id)
+        if (!order)
           throw new TRPCError({
             code: "NOT_FOUND",
-            message: "Order not found",
+            message:
+              "This order is no longer available in your account. Refresh your orders and try again.",
           });
         if (
           !order.providerOrderId ||
@@ -718,7 +721,7 @@ export const appRouter = router({
         );
       }),
     cancelOrder: protectedProcedure
-      .input(z.object({ orderId: z.number().int().positive() }))
+      .input(z.object({ orderId: z.coerce.number().int().positive() }))
       .mutation(async ({ ctx, input }) => {
         const db = await getDb();
         if (!db)
@@ -730,14 +733,18 @@ export const appRouter = router({
           await db
             .select()
             .from(orders)
-            .where(eq(orders.id, input.orderId))
+            .where(
+              and(eq(orders.id, input.orderId), eq(orders.userId, ctx.user.id))
+            )
             .limit(1)
         )[0];
-        if (!order || order.userId !== ctx.user.id)
+        if (!order)
           throw new TRPCError({
             code: "NOT_FOUND",
-            message: "Order not found",
+            message:
+              "This order is no longer available in your account. Refresh your orders and try again.",
           });
+        if (order.status === "canceled") return order;
         if (!["pending", "in_progress", "partial"].includes(order.status))
           throw new TRPCError({
             code: "BAD_REQUEST",
@@ -763,10 +770,16 @@ export const appRouter = router({
               order.providerOrderId
             );
           } catch (error) {
-            throw new TRPCError({
-              code: "BAD_GATEWAY",
-              message: `Provider cancellation failed: ${error instanceof Error ? error.message : "try again"}`,
-            });
+            const message = error instanceof Error ? error.message : "";
+            if (
+              !/order\s*(not found|does not exist)|invalid\s*order/i.test(
+                message
+              )
+            )
+              throw new TRPCError({
+                code: "BAD_GATEWAY",
+                message: `Provider cancellation failed: ${message || "try again"}`,
+              });
           }
         }
         await refundOrder({
@@ -803,17 +816,15 @@ export const appRouter = router({
           });
         const profile = await getOrCreateProfile(ctx.user);
         const reference = `OG-${ctx.user.id}-${Date.now()}`;
-        await db
-          .insert(walletTransactions)
-          .values({
-            userId: ctx.user.id,
-            amount: input.amount.toFixed(2),
-            type: "deposit",
-            status: "pending",
-            reference,
-            paymentMethod: "M-Pesa / LeeTec",
-            balanceAfter: profile?.balance ?? "0.00",
-          });
+        await db.insert(walletTransactions).values({
+          userId: ctx.user.id,
+          amount: input.amount.toFixed(2),
+          type: "deposit",
+          status: "pending",
+          reference,
+          paymentMethod: "M-Pesa / LeeTec",
+          balanceAfter: profile?.balance ?? "0.00",
+        });
         let response: Awaited<ReturnType<typeof createLeeTecStkPush>>;
         try {
           response = await createLeeTecStkPush({
@@ -1488,17 +1499,15 @@ export const appRouter = router({
             .update(profiles)
             .set({ balance: nextBalance.toFixed(2) })
             .where(eq(profiles.userId, input.userId));
-          await tx
-            .insert(walletTransactions)
-            .values({
-              userId: input.userId,
-              amount: input.amount.toFixed(2),
-              type: "adjustment",
-              status: "completed",
-              reference: `admin-${Date.now()}`,
-              paymentMethod: "admin",
-              balanceAfter: nextBalance.toFixed(2),
-            });
+          await tx.insert(walletTransactions).values({
+            userId: input.userId,
+            amount: input.amount.toFixed(2),
+            type: "adjustment",
+            status: "completed",
+            reference: `admin-${Date.now()}`,
+            paymentMethod: "admin",
+            balanceAfter: nextBalance.toFixed(2),
+          });
         });
         await recordAudit({
           actorUserId: ctx.user.id,
@@ -1543,14 +1552,12 @@ export const appRouter = router({
               code: "BAD_REQUEST",
               message: "An API key is required for a new provider",
             });
-          await db
-            .insert(smmProviders)
-            .values({
-              name: input.name,
-              apiUrl: input.apiUrl,
-              apiKey: input.apiKey,
-              isActive: input.isActive,
-            });
+          await db.insert(smmProviders).values({
+            name: input.name,
+            apiUrl: input.apiUrl,
+            apiKey: input.apiKey,
+            isActive: input.isActive,
+          });
         }
         await recordAudit({
           actorUserId: ctx.user.id,
