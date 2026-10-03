@@ -1304,7 +1304,7 @@ export default function Dashboard() {
                               : "Select a service first"
                         }
                         data-order-action="review-submit"
-                        className="order-submit-control relative z-10 hidden min-h-12 h-auto w-full min-w-0 max-w-full shrink-0 justify-center whitespace-normal rounded-xl bg-primary px-5 py-3 text-center text-sm font-semibold !text-white shadow-lg shadow-blue-500/20 hover:bg-primary/90 disabled:bg-slate-700 disabled:!text-white disabled:opacity-100 md:flex"
+                        className="order-submit-control relative z-10 flex min-h-12 h-auto w-full min-w-0 max-w-full shrink-0 justify-center whitespace-normal rounded-xl bg-primary px-5 py-3 text-center text-sm font-semibold !text-white shadow-lg shadow-blue-500/20 hover:bg-primary/90 disabled:bg-slate-700 disabled:!text-white disabled:opacity-100"
                         type="button"
                         disabled={
                           createOrder.isPending ||
@@ -1379,39 +1379,6 @@ export default function Dashboard() {
                     </p>
                   </div>
                 </section>
-                <div className="mobile-order-action theme-card-surface fixed inset-x-3 bottom-[calc(72px+env(safe-area-inset-bottom))] z-30 flex items-center gap-3 rounded-2xl border border-cyan-200/20 bg-card/95 p-3 shadow-[0_-12px_35px_rgba(0,0,0,.28)] backdrop-blur-xl md:hidden">
-                  <div className="min-w-0 flex-1">
-                    <p className="text-[9px] font-semibold uppercase tracking-[.14em] text-cyan-200">
-                      {selected ? "Order total" : "Order setup"}
-                    </p>
-                    <p className="mt-0.5 truncate text-sm font-semibold text-foreground">
-                      {selected
-                        ? `KSh ${charge.toFixed(2)}`
-                        : "Choose a service"}
-                    </p>
-                  </div>
-                  <Button
-                    data-order-action="mobile-review-submit"
-                    type="button"
-                    disabled={
-                      createOrder.isPending ||
-                      !selected ||
-                      !targetLink.trim() ||
-                      Boolean(targetLinkError) ||
-                      quantity < (selected?.minQuantity ?? 0) ||
-                      quantity > (selected?.maxQuantity ?? Infinity)
-                    }
-                    onClick={() => {
-                      createOrder.reset();
-                      setReviewOpen(true);
-                    }}
-                    className="order-submit-control min-h-11 shrink-0 rounded-xl bg-primary px-4 text-xs font-semibold !text-white disabled:bg-slate-700 disabled:!text-white disabled:opacity-100"
-                  >
-                    {createOrder.isPending
-                      ? "Submitting…"
-                      : "Review & place order"}
-                  </Button>
-                </div>
                 {isOverviewPage && (
                   <TopUpCard
                     phone={phone}

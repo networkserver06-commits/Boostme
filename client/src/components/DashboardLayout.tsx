@@ -484,7 +484,7 @@ function DashboardLayoutContent({
             </Button>
           </div>
         </header>
-        <div className="min-w-0 flex-1 p-3 pb-[calc(84px+env(safe-area-inset-bottom))] sm:p-5 sm:pb-5 lg:p-7">
+        <div className="min-w-0 flex-1 p-3 pb-[calc(84px+env(safe-area-inset-bottom))] sm:p-5 md:pb-5 lg:p-7">
           {children}
         </div>
         {mobileMenuOpen && (
