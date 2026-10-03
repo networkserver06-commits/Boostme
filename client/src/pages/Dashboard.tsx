@@ -1245,17 +1245,26 @@ export default function Dashboard() {
                         )}
                       </div>
                     </div>
-                    <div>
+                    <div className="min-w-0">
                       <Label htmlFor="order-link">Target link</Label>
-                      <div className="relative mt-2">
+                      <div className="relative mt-2 min-w-0 max-w-full">
                         <Link2 className="pointer-events-none absolute left-3 top-3.5 h-4 w-4 text-slate-500" />
                         <Input
                           id="order-link"
                           inputMode="url"
                           autoComplete="url"
-                          className="h-11 w-full min-w-0 max-w-full rounded-xl border-white/10 bg-[#0a111b] pl-10"
+                          dir="ltr"
+                          className="order-target-link h-11 w-full min-w-0 max-w-full rounded-xl border-white/10 bg-[#0a111b] pl-10"
                           placeholder={`https://${selected?.platform.toLowerCase() ?? "instagram"}.com/your-post`}
                           value={targetLink}
+                          onPaste={event => {
+                            event.preventDefault();
+                            setTargetLink(
+                              event.clipboardData
+                                .getData("text")
+                                .replace(/[\r\n\t\s]+/g, "")
+                            );
+                          }}
                           onChange={event => setTargetLink(event.target.value)}
                         />
                         {targetLinkError && (

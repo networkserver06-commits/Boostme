@@ -146,6 +146,15 @@ body {
   input {
     max-width: 100%;
   }
+  .order-target-link {
+    display: block !important;
+    box-sizing: border-box !important;
+    min-width: 0 !important;
+    max-width: 100% !important;
+    overflow: hidden !important;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
 }
 button,
 a,
