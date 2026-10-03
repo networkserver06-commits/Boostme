@@ -1281,7 +1281,10 @@ export default function Dashboard() {
                         }
                       />
                     </div>
-                    <div className="theme-card-surface flex w-full min-w-0 max-w-full flex-col gap-3 overflow-hidden rounded-xl border border-cyan-200/15 bg-gradient-to-br from-cyan-300/[.08] to-blue-400/[.04] p-4 shadow-[0_12px_35px_rgba(34,211,238,.07)]">
+                    <div
+                      data-order-summary
+                      className="theme-card-surface flex w-full min-w-0 max-w-full flex-col gap-3 overflow-hidden rounded-xl border border-cyan-200/15 bg-gradient-to-br from-cyan-300/[.08] to-blue-400/[.04] p-4 shadow-[0_12px_35px_rgba(34,211,238,.07)]"
+                    >
                       <div className="min-w-0">
                         <p className="text-[10px] font-semibold uppercase tracking-[.14em] text-cyan-100/80">
                           Order summary
