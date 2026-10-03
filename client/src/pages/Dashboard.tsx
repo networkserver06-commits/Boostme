@@ -782,7 +782,7 @@ export default function Dashboard() {
               <div className="grid min-w-0 max-w-full gap-5 overflow-x-hidden xl:grid-cols-[1.15fr_.85fr]">
                 <section
                   id="new-order"
-                  className="theme-card-surface min-w-0 scroll-mt-20 rounded-2xl border border-blue-200/10 bg-[linear-gradient(145deg,rgba(31,75,143,.12),rgba(13,20,31,.92)_45%)] p-5 shadow-[0_16px_60px_rgba(0,0,0,.14)] sm:p-6"
+                  className="theme-card-surface min-w-0 max-w-full scroll-mt-20 overflow-visible rounded-2xl border border-blue-200/10 bg-[linear-gradient(145deg,rgba(31,75,143,.12),rgba(13,20,31,.92)_45%)] p-4 shadow-[0_16px_60px_rgba(0,0,0,.14)] sm:p-6"
                 >
                   <div className="flex items-start justify-between gap-4">
                     <div>
@@ -1272,7 +1272,7 @@ export default function Dashboard() {
                         }
                       />
                     </div>
-                    <div className="theme-card-surface flex min-w-0 flex-col gap-4 overflow-hidden rounded-xl border border-cyan-200/15 bg-gradient-to-br from-cyan-300/[.08] to-blue-400/[.04] p-4 shadow-[0_12px_35px_rgba(34,211,238,.07)] sm:flex-row sm:items-center sm:justify-between">
+                    <div className="theme-card-surface flex min-w-0 max-w-full flex-col gap-3 overflow-visible rounded-xl border border-cyan-200/15 bg-gradient-to-br from-cyan-300/[.08] to-blue-400/[.04] p-4 shadow-[0_12px_35px_rgba(34,211,238,.07)]">
                       <div className="min-w-0">
                         <p className="text-[10px] font-semibold uppercase tracking-[.14em] text-cyan-100/80">
                           Order summary
@@ -1306,7 +1306,8 @@ export default function Dashboard() {
                               ? "Review and place order"
                               : "Select a service first"
                         }
-                        className="order-submit-control min-h-11 h-auto w-full max-w-full justify-center whitespace-normal rounded-xl bg-primary px-5 py-3 text-center text-sm font-semibold !text-white shadow-lg shadow-blue-500/20 hover:bg-primary/90 disabled:bg-slate-700 disabled:!text-white disabled:opacity-100 sm:w-auto"
+                        data-order-action="review-submit"
+                        className="order-submit-control relative z-10 min-h-12 h-auto w-full min-w-0 max-w-full shrink-0 justify-center whitespace-normal rounded-xl bg-primary px-5 py-3 text-center text-sm font-semibold !text-white shadow-lg shadow-blue-500/20 hover:bg-primary/90 disabled:bg-slate-700 disabled:!text-white disabled:opacity-100"
                         type="button"
                         disabled={
                           createOrder.isPending ||
@@ -1328,7 +1329,9 @@ export default function Dashboard() {
                           </>
                         ) : selected ? (
                           <>
-                            <span>Review & place order</span>{" "}
+                            <span className="order-submit-label">
+                              Review & place order
+                            </span>{" "}
                             <ArrowUpRight className="h-4 w-4" />
                           </>
                         ) : (
@@ -1338,7 +1341,7 @@ export default function Dashboard() {
                             ) : (
                               <ShoppingBag className="h-4 w-4" />
                             )}
-                            <span>
+                            <span className="order-submit-label">
                               {services.isLoading
                                 ? "Loading services…"
                                 : "Select a service first"}
