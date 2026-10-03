@@ -1312,12 +1312,12 @@ export default function Dashboard() {
                           createOrder.isPending
                             ? "Submitting order"
                             : selected
-                              ? "Review and place order"
+                              ? "Submit order"
                               : "Select a service first"
                         }
                         data-order-action="review-submit"
                         size="lg"
-                        className="order-submit-control relative z-10 h-auto min-h-12 w-full min-w-0 max-w-full shrink-0 whitespace-normal rounded-xl px-4 py-3 text-center text-sm font-semibold !text-white shadow-lg shadow-blue-500/20 disabled:bg-slate-700 disabled:!text-white disabled:opacity-100"
+                        className="order-submit-control sticky bottom-[calc(76px+env(safe-area-inset-bottom))] z-20 !flex h-auto min-h-14 w-full min-w-0 max-w-full shrink-0 items-center justify-center gap-2 whitespace-normal rounded-xl !bg-blue-600 px-4 py-3 text-center text-sm font-semibold !text-white shadow-[0_10px_28px_rgba(37,99,235,.28)] hover:!bg-blue-500 disabled:!bg-slate-600 disabled:!text-white disabled:opacity-100 sm:static"
                         type="button"
                         disabled={
                           createOrder.isPending ||
@@ -1339,7 +1339,7 @@ export default function Dashboard() {
                           </>
                         ) : selected ? (
                           <>
-                            <span>Review & place order</span>
+                            <span className="!text-white">Submit order</span>
                             <ArrowUpRight className="h-4 w-4" />
                           </>
                         ) : (
@@ -1349,14 +1349,21 @@ export default function Dashboard() {
                             ) : (
                               <ShoppingBag className="h-4 w-4" />
                             )}
-                            <span>
+                            <span className="!text-white">
                               {services.isLoading
                                 ? "Loading services…"
-                                : "Select a service first"}
+                                : "Select a service to continue"}
                             </span>
                           </>
                         )}
                       </Button>
+                      {!selected &&
+                        !services.isLoading &&
+                        !services.isError && (
+                          <p className="mt-2 text-center text-[10px] text-muted-foreground">
+                            Choose a service above to enable Submit order.
+                          </p>
+                        )}
                     </div>
                     {createOrder.error && (
                       <div
