@@ -818,9 +818,19 @@ export default function Dashboard() {
                         confirming.
                       </p>
                     </div>
-                    <span className="grid h-10 w-10 shrink-0 place-items-center rounded-xl border border-blue-200/10 bg-blue-300/[.08] text-blue-100">
-                      <Plus className="h-4 w-4" />
-                    </span>
+                    <div className="flex shrink-0 items-center gap-2">
+                      <Link
+                        href="/dashboard/wallet"
+                        data-order-action="add-funds-quick"
+                        className="inline-flex min-h-10 items-center justify-center gap-2 rounded-xl border border-amber-300/40 bg-amber-200/[.12] px-3 py-2 text-xs font-bold text-amber-100 shadow-sm hover:bg-amber-200/[.2]"
+                      >
+                        <WalletCards className="h-4 w-4" />
+                        <span>Add funds</span>
+                      </Link>
+                      <span className="grid h-10 w-10 shrink-0 place-items-center rounded-xl border border-blue-200/10 bg-blue-300/[.08] text-blue-100">
+                        <Plus className="h-4 w-4" />
+                      </span>
+                    </div>
                   </div>
                   <details className="group mt-4 rounded-2xl border border-amber-200/15 bg-gradient-to-br from-amber-200/[.08] via-cyan-300/[.04] to-transparent shadow-[0_12px_35px_rgba(245,158,11,.06)] sm:mt-6">
                     <summary className="flex cursor-pointer list-none items-start gap-3 p-3 sm:p-5 [&::-webkit-details-marker]:hidden">
@@ -1247,13 +1257,14 @@ export default function Dashboard() {
                     </div>
                     <div className="min-w-0">
                       <Label htmlFor="order-link">Target link</Label>
-                      <div className="relative mt-2 min-w-0 max-w-full">
+                      <div className="order-link-field relative mt-2 min-w-0 max-w-full">
                         <Link2 className="pointer-events-none absolute left-3 top-3.5 h-4 w-4 text-slate-500" />
                         <Input
                           id="order-link"
                           inputMode="url"
                           autoComplete="url"
                           dir="ltr"
+                          maxLength={4096}
                           className="order-target-link h-11 w-full min-w-0 max-w-full rounded-xl border-white/10 bg-[#0a111b] pl-10"
                           placeholder={`https://${selected?.platform.toLowerCase() ?? "instagram"}.com/your-post`}
                           value={targetLink}
@@ -1265,7 +1276,11 @@ export default function Dashboard() {
                                 .replace(/[\r\n\t\s]+/g, "")
                             );
                           }}
-                          onChange={event => setTargetLink(event.target.value)}
+                          onChange={event =>
+                            setTargetLink(
+                              event.target.value.replace(/[\r\n\t\s]+/g, "")
+                            )
+                          }
                         />
                         {targetLinkError && (
                           <p
