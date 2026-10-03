@@ -782,7 +782,7 @@ export default function Dashboard() {
               <div className="grid min-w-0 max-w-full gap-5 overflow-x-hidden xl:grid-cols-[1.15fr_.85fr]">
                 <section
                   id="new-order"
-                  className="theme-card-surface min-w-0 max-w-full scroll-mt-20 overflow-visible rounded-2xl border border-blue-200/10 bg-[linear-gradient(145deg,rgba(31,75,143,.12),rgba(13,20,31,.92)_45%)] p-4 shadow-[0_16px_60px_rgba(0,0,0,.14)] sm:p-6"
+                  className="theme-card-surface min-w-0 max-w-full scroll-mt-20 overflow-visible rounded-2xl border border-blue-200/10 bg-[linear-gradient(145deg,rgba(31,75,143,.12),rgba(13,20,31,.92)_45%)] p-3 shadow-[0_16px_60px_rgba(0,0,0,.14)] sm:p-6"
                 >
                   <div className="flex items-start justify-between gap-4">
                     <div>
@@ -954,7 +954,7 @@ export default function Dashboard() {
                       </a>
                     </div>
                   </div>
-                  <div className="mt-6 grid gap-4">
+                  <div className="mt-4 grid gap-3 sm:mt-6 sm:gap-4">
                     <div className="relative">
                       <Search className="pointer-events-none absolute left-3 top-3 h-4 w-4 text-slate-500" />
                       <Input
@@ -1379,6 +1379,39 @@ export default function Dashboard() {
                     </p>
                   </div>
                 </section>
+                <div className="mobile-order-action theme-card-surface fixed inset-x-3 bottom-[calc(72px+env(safe-area-inset-bottom))] z-30 flex items-center gap-3 rounded-2xl border border-cyan-200/20 bg-card/95 p-3 shadow-[0_-12px_35px_rgba(0,0,0,.28)] backdrop-blur-xl md:hidden">
+                  <div className="min-w-0 flex-1">
+                    <p className="text-[9px] font-semibold uppercase tracking-[.14em] text-cyan-200">
+                      {selected ? "Order total" : "Order setup"}
+                    </p>
+                    <p className="mt-0.5 truncate text-sm font-semibold text-foreground">
+                      {selected
+                        ? `KSh ${charge.toFixed(2)}`
+                        : "Choose a service"}
+                    </p>
+                  </div>
+                  <Button
+                    data-order-action="mobile-review-submit"
+                    type="button"
+                    disabled={
+                      createOrder.isPending ||
+                      !selected ||
+                      !targetLink.trim() ||
+                      Boolean(targetLinkError) ||
+                      quantity < (selected?.minQuantity ?? 0) ||
+                      quantity > (selected?.maxQuantity ?? Infinity)
+                    }
+                    onClick={() => {
+                      createOrder.reset();
+                      setReviewOpen(true);
+                    }}
+                    className="order-submit-control min-h-11 shrink-0 rounded-xl bg-primary px-4 text-xs font-semibold !text-white disabled:bg-slate-700 disabled:!text-white disabled:opacity-100"
+                  >
+                    {createOrder.isPending
+                      ? "Submitting…"
+                      : "Review & place order"}
+                  </Button>
+                </div>
                 {isOverviewPage && (
                   <TopUpCard
                     phone={phone}
