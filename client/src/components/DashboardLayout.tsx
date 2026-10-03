@@ -293,11 +293,26 @@ function DashboardLayoutContent({
     });
 
   const mobilePrimary = [
-    { icon: Home, label: "Home", path: "/dashboard" },
-    { icon: PlusCircle, label: "Place order", path: "/dashboard/new-order" },
-    { icon: WalletCards, label: "Add funds", path: "/dashboard/wallet" },
-    { icon: ShoppingBag, label: "My orders", path: "/dashboard/orders" },
-    { icon: Menu, label: "Main menu", path: "#menu" },
+    { icon: Home, label: "Home", path: "/dashboard", tone: "blue" },
+    {
+      icon: PlusCircle,
+      label: "Place order",
+      path: "/dashboard/new-order",
+      tone: "cyan",
+    },
+    {
+      icon: WalletCards,
+      label: "Add funds",
+      path: "/dashboard/wallet",
+      tone: "emerald",
+    },
+    {
+      icon: ShoppingBag,
+      label: "My orders",
+      path: "/dashboard/orders",
+      tone: "violet",
+    },
+    { icon: Menu, label: "Main menu", path: "#menu", tone: "slate" },
   ];
 
   return (
@@ -525,9 +540,9 @@ function DashboardLayoutContent({
         )}
         <nav
           aria-label="Mobile account navigation"
-          className="fixed inset-x-0 bottom-0 z-40 border-t border-white/[.08] bg-background/95 px-2 pb-[env(safe-area-inset-bottom)] shadow-[0_-10px_30px_rgba(0,0,0,.22)] backdrop-blur-xl md:hidden"
+          className="fixed inset-x-0 bottom-0 z-40 border-t border-white/[.1] bg-background/95 px-2 pb-[env(safe-area-inset-bottom)] shadow-[0_-14px_40px_rgba(3,8,20,.35)] backdrop-blur-xl md:hidden"
         >
-          <ul className="mx-auto grid max-w-md grid-cols-5">
+          <ul className="mx-auto grid max-w-md grid-cols-5 gap-1 py-1.5">
             {mobilePrimary.map((item, index) => {
               const active =
                 item.path !== "#menu" &&
@@ -555,14 +570,36 @@ function DashboardLayoutContent({
                         : navigate(item.path)
                     }
                     title={item.label}
+                    aria-label={item.label}
+                    role="tab"
+                    aria-selected={
+                      active || (item.path === "#menu" && mobileMenuOpen)
+                    }
                     data-navigation-item={item.label
                       .toLowerCase()
                       .replaceAll(" ", "-")}
                     aria-current={active ? "page" : undefined}
-                    className={`flex min-h-[64px] w-full flex-col items-center justify-center gap-1 rounded-xl px-1 text-[9px] font-medium whitespace-nowrap ${active || (item.path === "#menu" && mobileMenuOpen) ? "bg-cyan-300/[.08] text-cyan-100" : "text-slate-500 hover:bg-white/[.04] hover:text-slate-200"}`}
+                    className={`group relative flex min-h-[66px] w-full flex-col items-center justify-center gap-1 rounded-2xl px-1 text-[9px] font-semibold tracking-[-.01em] whitespace-nowrap transition-all ${
+                      active || (item.path === "#menu" && mobileMenuOpen)
+                        ? item.tone === "blue"
+                          ? "bg-blue-500/[.16] text-blue-100 shadow-[0_8px_24px_rgba(37,99,235,.18)]"
+                          : item.tone === "cyan"
+                            ? "bg-cyan-300/[.16] text-cyan-50 shadow-[0_8px_24px_rgba(34,211,238,.16)]"
+                            : item.tone === "emerald"
+                              ? "bg-emerald-400/[.14] text-emerald-100 shadow-[0_8px_24px_rgba(16,185,129,.14)]"
+                              : item.tone === "violet"
+                                ? "bg-violet-400/[.15] text-violet-100 shadow-[0_8px_24px_rgba(139,92,246,.15)]"
+                                : "bg-slate-400/[.12] text-slate-100"
+                        : "text-slate-500 hover:bg-white/[.045] hover:text-slate-200"
+                    }`}
                   >
                     <item.icon
-                      className={`h-[18px] w-[18px] ${active || (item.path === "#menu" && mobileMenuOpen) ? "text-cyan-200" : ""}`}
+                      strokeWidth={
+                        active || (item.path === "#menu" && mobileMenuOpen)
+                          ? 2.4
+                          : 2
+                      }
+                      className={`h-[19px] w-[19px] transition-transform group-active:scale-90 ${active || (item.path === "#menu" && mobileMenuOpen) ? (item.tone === "blue" ? "text-blue-300" : item.tone === "cyan" ? "text-cyan-200" : item.tone === "emerald" ? "text-emerald-300" : item.tone === "violet" ? "text-violet-300" : "text-slate-200") : "text-slate-500"}`}
                     />
                     <span>{item.label}</span>
                   </button>
