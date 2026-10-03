@@ -801,10 +801,7 @@ export default function Dashboard() {
                       <Plus className="h-4 w-4" />
                     </span>
                   </div>
-                  <details
-                    open
-                    className="group mt-6 rounded-2xl border border-amber-200/15 bg-gradient-to-br from-amber-200/[.08] via-cyan-300/[.04] to-transparent shadow-[0_12px_35px_rgba(245,158,11,.06)]"
-                  >
+                  <details className="group mt-6 rounded-2xl border border-amber-200/15 bg-gradient-to-br from-amber-200/[.08] via-cyan-300/[.04] to-transparent shadow-[0_12px_35px_rgba(245,158,11,.06)]">
                     <summary className="flex cursor-pointer list-none items-start gap-3 p-4 sm:p-5 [&::-webkit-details-marker]:hidden">
                       <span className="grid h-9 w-9 shrink-0 place-items-center rounded-xl border border-amber-200/20 bg-amber-200/[.10] text-amber-100">
                         <Info className="h-4 w-4" />
