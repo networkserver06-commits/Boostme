@@ -1307,73 +1307,78 @@ export default function Dashboard() {
                           </p>
                         )}
                       </div>
-                      <Button
-                        aria-label={
-                          createOrder.isPending
-                            ? "Submitting order"
-                            : selected
-                              ? "Submit order"
-                              : "Select a service first"
-                        }
-                        data-order-action="review-submit"
-                        size="lg"
-                        className="order-submit-control relative z-20 !flex h-auto min-h-14 w-full min-w-0 max-w-full shrink-0 items-center justify-center gap-2 whitespace-normal rounded-xl !bg-blue-600 px-4 py-3 text-center text-sm font-semibold !text-white shadow-[0_10px_28px_rgba(37,99,235,.28)] hover:!bg-blue-500 disabled:!bg-slate-600 disabled:!text-white disabled:opacity-100"
-                        type="button"
-                        disabled={
-                          createOrder.isPending ||
-                          !selected ||
-                          !targetLink.trim() ||
-                          Boolean(targetLinkError) ||
-                          quantity < (selected?.minQuantity ?? 0) ||
-                          quantity > (selected?.maxQuantity ?? Infinity)
-                        }
-                        onClick={() => {
-                          createOrder.reset();
-                          setReviewOpen(true);
-                        }}
+                      <div
+                        data-order-actions
+                        className="w-full min-w-0 max-w-full rounded-2xl border border-blue-200/20 bg-blue-500/[.06] p-2.5 shadow-inner"
                       >
-                        {createOrder.isPending ? (
-                          <>
-                            <Loader2 className="h-4 w-4 animate-spin" />
-                            Submitting order…
-                          </>
-                        ) : selected ? (
-                          <>
-                            <span className="!text-white uppercase tracking-wide">
-                              Submit order
-                            </span>
-                            <ArrowUpRight className="h-4 w-4" />
-                          </>
-                        ) : (
-                          <>
-                            {services.isLoading ? (
+                        <Button
+                          aria-label={
+                            createOrder.isPending
+                              ? "Submitting order"
+                              : selected
+                                ? "Submit order"
+                                : "Select a service first"
+                          }
+                          data-order-action="review-submit"
+                          size="lg"
+                          className="order-submit-control relative z-20 !flex h-auto min-h-14 w-full min-w-0 max-w-full shrink-0 items-center justify-center gap-2 whitespace-normal rounded-xl !bg-blue-600 px-4 py-3 text-center text-sm font-semibold !text-white shadow-[0_10px_28px_rgba(37,99,235,.28)] hover:!bg-blue-500 disabled:!bg-slate-600 disabled:!text-white disabled:opacity-100"
+                          type="button"
+                          disabled={
+                            createOrder.isPending ||
+                            !selected ||
+                            !targetLink.trim() ||
+                            Boolean(targetLinkError) ||
+                            quantity < (selected?.minQuantity ?? 0) ||
+                            quantity > (selected?.maxQuantity ?? Infinity)
+                          }
+                          onClick={() => {
+                            createOrder.reset();
+                            setReviewOpen(true);
+                          }}
+                        >
+                          {createOrder.isPending ? (
+                            <>
                               <Loader2 className="h-4 w-4 animate-spin" />
-                            ) : (
-                              <ShoppingBag className="h-4 w-4" />
-                            )}
-                            <span className="!text-white">
-                              {services.isLoading
-                                ? "Loading services…"
-                                : "Select a service to continue"}
-                            </span>
-                          </>
-                        )}
-                      </Button>
-                      {!selected &&
-                        !services.isLoading &&
-                        !services.isError && (
-                          <p className="mt-2 text-center text-[10px] text-muted-foreground">
-                            Choose a service above to enable Submit order.
-                          </p>
-                        )}
-                      <Link
-                        href="/dashboard/wallet"
-                        data-order-action="add-funds"
-                        className="inline-flex min-h-12 w-full items-center justify-center gap-2 rounded-xl border border-amber-300/30 bg-amber-200/[.10] px-4 py-3 text-sm font-semibold text-amber-100 transition hover:bg-amber-200/[.18]"
-                      >
-                        <WalletCards className="h-4 w-4" />
-                        Add funds
-                      </Link>
+                              Submitting order…
+                            </>
+                          ) : selected ? (
+                            <>
+                              <span className="!text-white uppercase tracking-wide">
+                                Submit order
+                              </span>
+                              <ArrowUpRight className="h-4 w-4" />
+                            </>
+                          ) : (
+                            <>
+                              {services.isLoading ? (
+                                <Loader2 className="h-4 w-4 animate-spin" />
+                              ) : (
+                                <ShoppingBag className="h-4 w-4" />
+                              )}
+                              <span className="!text-white">
+                                {services.isLoading
+                                  ? "Loading services…"
+                                  : "Select a service to continue"}
+                              </span>
+                            </>
+                          )}
+                        </Button>
+                        {!selected &&
+                          !services.isLoading &&
+                          !services.isError && (
+                            <p className="mt-2 text-center text-[10px] text-muted-foreground">
+                              Choose a service above to enable Submit order.
+                            </p>
+                          )}
+                        <Link
+                          href="/dashboard/wallet"
+                          data-order-action="add-funds"
+                          className="inline-flex min-h-12 w-full items-center justify-center gap-2 rounded-xl border border-amber-300/30 bg-amber-200/[.10] px-4 py-3 text-sm font-semibold text-amber-100 transition hover:bg-amber-200/[.18]"
+                        >
+                          <WalletCards className="h-4 w-4" />
+                          Add funds
+                        </Link>
+                      </div>
                     </div>
                     {createOrder.error && (
                       <div
