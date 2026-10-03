@@ -155,6 +155,7 @@ export default function DashboardLayout({
 
   return (
     <SidebarProvider
+      className="overflow-x-clip"
       style={{ "--sidebar-width": `${sidebarWidth}px` } as CSSProperties}
     >
       <DashboardLayoutContent setSidebarWidth={setSidebarWidth}>
@@ -451,7 +452,7 @@ function DashboardLayoutContent({
           aria-hidden="true"
         />
       </div>
-      <SidebarInset className="min-w-0 w-full max-w-full overflow-x-hidden bg-background">
+      <SidebarInset className="min-w-0 w-0 max-w-full basis-0 overflow-x-clip bg-background sm:w-full">
         <header className="sticky top-0 z-30 flex h-[62px] items-center justify-between border-b border-cyan-200/10 bg-background/95 px-4 shadow-[0_8px_30px_rgba(8,13,21,.18)] backdrop-blur-xl sm:px-6">
           <div className="flex min-w-0 items-center gap-3">
             <SidebarTrigger className="h-9 w-9 rounded-lg border border-border text-muted-foreground hover:bg-accent" />
@@ -499,7 +500,7 @@ function DashboardLayoutContent({
             </Button>
           </div>
         </header>
-        <div className="min-w-0 w-full max-w-full flex-1 p-3 pb-[calc(84px+env(safe-area-inset-bottom))] sm:p-5 md:pb-5 lg:p-7">
+        <div className="min-w-0 w-full max-w-full flex-1 overflow-x-clip p-3 pb-[calc(84px+env(safe-area-inset-bottom))] sm:p-5 md:pb-5 lg:p-7">
           {children}
         </div>
         {mobileMenuOpen && (
