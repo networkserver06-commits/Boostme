@@ -502,20 +502,6 @@ function DashboardLayoutContent({
         </header>
         <div className="min-w-0 w-full max-w-full flex-1 overflow-x-clip p-3 pb-[calc(84px+env(safe-area-inset-bottom))] sm:p-5 md:pb-5 lg:p-7">
           {children}
-          <footer className="mx-auto mt-8 flex max-w-7xl flex-wrap items-center justify-center gap-x-3 gap-y-1 border-t border-border/60 pt-4 text-center text-[10px] text-muted-foreground">
-            <a href="tel:+254116553618" className="hover:text-foreground">
-              Support: 0116 553 618
-            </a>
-            <a
-              href="https://wa.me/254116553618?text=Hello%20Orbit%20Growth%20support"
-              target="_blank"
-              rel="noreferrer"
-              className="hover:text-foreground"
-            >
-              WhatsApp support
-            </a>
-            <span>Powered by Lee Tech</span>
-          </footer>
         </div>
         {mobileMenuOpen && (
           <div className="fixed inset-x-3 bottom-[calc(76px+env(safe-area-inset-bottom))] z-50 max-h-[70vh] overflow-y-auto rounded-2xl border border-white/10 bg-popover/[.98] p-3 shadow-2xl backdrop-blur-xl md:hidden">
