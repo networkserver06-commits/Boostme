@@ -37,7 +37,6 @@ import {
   Loader2,
   MessageCircle,
   Music2,
-  PhoneCall,
   Plus,
   RefreshCw,
   Search,
@@ -962,29 +961,6 @@ export default function Dashboard() {
                       </Link>
                     </div>
                   </details>
-                  <div className="mt-4 flex flex-col gap-2 border-t border-amber-200/10 pt-3 sm:flex-row sm:items-center sm:justify-between">
-                    <p className="text-[10px] text-slate-400">
-                      Need help choosing a service?
-                    </p>
-                    <div className="flex flex-wrap gap-2">
-                      <a
-                        href="tel:+254116553618"
-                        className="inline-flex min-h-9 items-center justify-center gap-1.5 rounded-lg border border-cyan-200/20 bg-cyan-300/[.08] px-3 py-2 text-[10px] font-semibold text-cyan-50 hover:bg-cyan-300/[.16]"
-                      >
-                        <PhoneCall className="h-3.5 w-3.5" />
-                        Call 0116 553 618
-                      </a>
-                      <a
-                        href="https://wa.me/254116553618?text=Hello%20Orbit%20Growth%20support"
-                        target="_blank"
-                        rel="noreferrer"
-                        className="inline-flex min-h-9 items-center justify-center gap-1.5 rounded-lg border border-emerald-200/20 bg-emerald-300/[.08] px-3 py-2 text-[10px] font-semibold text-emerald-50 hover:bg-emerald-300/[.16]"
-                      >
-                        <MessageCircle className="h-3.5 w-3.5" />
-                        WhatsApp support
-                      </a>
-                    </div>
-                  </div>
                   <div className="mt-4 grid gap-3 sm:mt-6 sm:gap-4">
                     <div className="relative">
                       <Search className="pointer-events-none absolute left-3 top-3 h-4 w-4 text-slate-500" />
@@ -1346,7 +1322,7 @@ export default function Dashboard() {
                       </div>
                     </div>
                     <div data-order-actions className="order-action-panel">
-                      <div className="min-w-0">
+                      <div className="order-action-intro min-w-0">
                         <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-blue-200">
                           Ready to continue?
                         </p>
